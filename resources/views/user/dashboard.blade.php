@@ -228,7 +228,12 @@
                                     <h4 class="font-medium text-gray-900" id="preview-customer">-</h4>
                                     <p class="text-sm text-gray-500" id="preview-date-region">-</p>
                                 </div>
-                                <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full" id="preview-status">Chờ xử lý</span>
+                                <div class="flex items-center space-x-2">
+                                    <button type="button" id="copy-json-btn" class="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 disabled:opacity-50" disabled>
+                                        <i class="fas fa-copy mr-1"></i>Copy JSON
+                                    </button>
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full" id="preview-status">Chờ xử lý</span>
+                                </div>
                             </div>
                             
                             <!-- Single Bet Preview (Legacy) -->
@@ -471,6 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const emptyPreview = document.getElementById('empty-preview');
     const errorPreview = document.getElementById('error-preview');
     const errorMessage = document.getElementById('error-message');
+    const copyJsonBtn = document.getElementById('copy-json-btn');
     
     let currentParseData = null;
 
@@ -510,6 +516,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.is_valid) {
                     currentParseData = data;
                     showPreview(data);
+                    if (copyJsonBtn) copyJsonBtn.disabled = false;
                     
                     // Auto-fill station if detected from first bet
                     if (data.multiple_bets && data.multiple_bets.length > 0) {
@@ -520,11 +527,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 } else {
                     showError('Lỗi phân tích: ' + (data.errors ? data.errors.join(', ') : 'Không thể phân tích tin nhắn'));
+                    if (copyJsonBtn) copyJsonBtn.disabled = true;
                 }
             })
             .catch(error => {
                 showError('Có lỗi xảy ra khi phân tích tin nhắn');
                 console.error('Error:', error);
+                if (copyJsonBtn) copyJsonBtn.disabled = true;
             });
         });
     }
@@ -540,6 +549,7 @@ document.addEventListener('DOMContentLoaded', function() {
             currentParseData = null;
             hidePreview();
             submitBtn.disabled = true;
+            if (copyJsonBtn) copyJsonBtn.disabled = true;
         });
     }
 
@@ -604,6 +614,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         previewPanel.classList.remove('hidden');
         submitBtn.disabled = false;
+        if (copyJsonBtn) copyJsonBtn.disabled = false;
     }
     
     function showMultipleBetsTable(bets, region) {
@@ -712,6 +723,7 @@ document.addEventListener('DOMContentLoaded', function() {
         errorMessage.textContent = message;
         errorPreview.classList.remove('hidden');
         submitBtn.disabled = true;
+        if (copyJsonBtn) copyJsonBtn.disabled = true;
     }
 
     function hidePreview() {
@@ -726,6 +738,34 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         emptyPreview.classList.remove('hidden');
+        if (copyJsonBtn) copyJsonBtn.disabled = true;
+    }
+
+    // Copy JSON logic
+    if (copyJsonBtn) {
+        copyJsonBtn.addEventListener('click', async function() {
+            if (!currentParseData) return;
+            const jsonText = JSON.stringify(currentParseData, null, 2);
+            try {
+                await navigator.clipboard.writeText(jsonText);
+                copyJsonBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Đã copy';
+                setTimeout(() => {
+                    copyJsonBtn.innerHTML = '<i class="fas fa-copy mr-1"></i>Copy JSON';
+                }, 1500);
+            } catch (e) {
+                // Fallback if Clipboard API not available
+                const ta = document.createElement('textarea');
+                ta.value = jsonText;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch (_) {}
+                document.body.removeChild(ta);
+                copyJsonBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Đã copy';
+                setTimeout(() => {
+                    copyJsonBtn.innerHTML = '<i class="fas fa-copy mr-1"></i>Copy JSON';
+                }, 1500);
+            }
+        });
     }
 
 });

@@ -1,117 +1,89 @@
 <?php
+declare(strict_types=1);
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class LotterySchedule extends Model
 {
     use HasFactory;
 
+    protected $table = 'lottery_schedules';
+
     protected $fillable = [
-        'day_of_week',
-        'region',
-        'main_station',
-        'sub_stations',
+        'day_of_week',   // 'Thứ Hai' ... 'Chủ Nhật'
+        'region',        // 'Bắc' | 'Trung' | 'Nam'
+        'main_station',  // string
+        'sub_stations',  // json array
         'is_active',
     ];
 
     protected $casts = [
         'sub_stations' => 'array',
-        'is_active' => 'boolean',
+        'is_active'    => 'boolean',
     ];
 
     /**
-     * Get all stations for a specific day and region
+     * Lấy 1 dòng lịch tương ứng ngày + miền.
      */
-    public function getAllStations()
+    public static function forDateRegion(CarbonInterface|string $date, string $region): ?self
     {
-        $stations = [$this->main_station];
-        if ($this->sub_stations) {
-            $stations = array_merge($stations, $this->sub_stations);
-        }
-        return $stations;
+        $dt   = $date instanceof CarbonInterface ? $date : CarbonImmutable::parse((string)$date);
+        $dow  = self::viDayOfWeek($dt);
+        $regV = self::titleRegion($region);
+
+        return static::query()
+            ->where('is_active', true)
+            ->where('day_of_week', $dow)
+            ->where('region', $regV)
+            ->first();
     }
 
     /**
-     * Get stations based on count (2d = main + 1 sub, 3d = main + 2 sub)
+     * Helper trả danh sách đài (main + subs) theo giới hạn $limit (2d/3d).
+     *
+     * @return array<int,string>  // giữ nguyên giá trị hiển thị trong DB
      */
-    public function getStationsByCount($count = 2)
+    public function stationsList(?int $limit = null): array
     {
-        $stations = [$this->main_station]; // Luôn bắt đầu với đài chính
-        
-        if ($count == 2) {
-            // 2d: Đài chính + 1 đài phụ ngẫu nhiên
-            if (!empty($this->sub_stations)) {
-                $randomSubStation = $this->sub_stations[array_rand($this->sub_stations)];
-                $stations[] = $randomSubStation;
-            }
-        } elseif ($count == 3) {
-            // 3d: Đài chính + 2 đài phụ ngẫu nhiên
-            if (!empty($this->sub_stations)) {
-                if (count($this->sub_stations) >= 2) {
-                    // Lấy ngẫu nhiên 2 đài phụ
-                    $shuffledSubs = $this->sub_stations;
-                    shuffle($shuffledSubs);
-                    $stations = array_merge($stations, array_slice($shuffledSubs, 0, 2));
-                } else {
-                    // Nếu chỉ có 1 đài phụ thì lấy đài phụ đó
-                    $stations = array_merge($stations, $this->sub_stations);
-                }
-            }
-        } else {
-            // Default: trả về tất cả
-            return $this->getAllStations();
-        }
-        
-        return $stations;
+        $list = array_merge([$this->main_station], is_array($this->sub_stations) ? $this->sub_stations : []);
+        $list = array_values(array_filter($list, fn($x) => is_string($x) && trim($x) !== ''));
+        if ($limit !== null && $limit > 0) $list = array_slice($list, 0, $limit);
+        return $list;
     }
 
     /**
-     * Get random stations for a specific day and region (deprecated - use getStationsByCount)
+     * Chuẩn hoá label thứ (ISO 1..7 -> 'Thứ Hai'..'Chủ Nhật')
      */
-    public function getRandomStations($count = 2)
+    public static function viDayOfWeek(CarbonInterface $date): string
     {
-        return $this->getStationsByCount($count);
+        $map = [
+            1 => 'Thứ Hai',
+            2 => 'Thứ Ba',
+            3 => 'Thứ Tư',
+            4 => 'Thứ Năm',
+            5 => 'Thứ Sáu',
+            6 => 'Thứ Bảy',
+            7 => 'Chủ Nhật',
+        ];
+        return $map[(int)$date->isoWeekday()];
     }
 
     /**
-     * Scope for active schedules
+     * 'nam' -> 'Nam', 'trung' -> 'Trung', 'bac' -> 'Bắc'
      */
-    public function scopeActive($query)
+    public static function titleRegion(string $region): string
     {
-        return $query->where('is_active', true);
-    }
-
-    /**
-     * Scope for specific day
-     */
-    public function scopeForDay($query, $dayOfWeek)
-    {
-        return $query->where('day_of_week', $dayOfWeek);
-    }
-
-    /**
-     * Scope for specific region
-     */
-    public function scopeForRegion($query, $region)
-    {
-        return $query->where('region', $region);
-    }
-
-    /**
-     * Get schedule for today
-     */
-    public static function getTodaySchedule($region = null)
-    {
-        $dayOfWeek = now()->locale('vi')->dayName;
-        $query = static::active()->forDay($dayOfWeek);
-        
-        if ($region) {
-            $query->forRegion($region);
-        }
-        
-        return $query->get();
+        $r = Str::lower($region);
+        return match ($r) {
+            'bac'  => 'Bắc',
+            'trung'=> 'Trung',
+            default=> 'Nam',
+        };
     }
 }

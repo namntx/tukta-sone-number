@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
+use Illuminate\Support\Str;
 class BettingType extends Model
 {
     use HasFactory;
@@ -20,8 +20,43 @@ class BettingType extends Model
 
     protected $casts = [
         'syntaxes' => 'array',
-        'is_active' => 'boolean'
+        'is_active' => 'boolean',
     ];
+
+    /**
+     * alias -> canonical code
+     *
+     * @return array<string,string>
+     */
+    public static function aliasMap(): array
+    {
+        $map = [];
+        $all = static::query()->where('is_active', true)->get(['code', 'syntaxes']);
+        foreach ($all as $type) {
+            $code = (string)$type->code;
+            $aliases = is_array($type->syntaxes) ? $type->syntaxes : [];
+
+            $normCode = self::normalizeToken($code);
+            if ($normCode !== '') $map[$normCode] = $code;
+
+            foreach ($aliases as $alias) {
+                $norm = self::normalizeToken((string)$alias);
+                if ($norm === '') continue;
+                $map[$norm] = $code;
+            }
+        }
+        return $map;
+    }
+
+    public static function normalizeToken(string $token): string
+    {
+        $t = Str::lower($token);
+        $t = Str::ascii($t);
+        $t = str_replace(['đ', 'Đ'], ['d', 'd'], $t);
+        $t = str_replace([',', '.'], '', $t);
+        $t = preg_replace('/[^a-z0-9_]/', '', $t) ?? '';
+        return (string)$t;
+    }
 
     /**
      * Get betting tickets for this type
