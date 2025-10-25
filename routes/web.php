@@ -9,6 +9,7 @@ use App\Http\Controllers\User\BettingTicketController as UserBettingTicketContro
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
+use App\Http\Controllers\User\LotteryResultController as UserLotteryResultController;
 
 // Trang chủ
 Route::get('/', function () {
@@ -67,6 +68,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
         Route::get('/profile', [UserDashboardController::class, 'profile'])->name('profile');
         Route::post('/profile', [UserDashboardController::class, 'updateProfile'])->name('profile.update');
+
+        // Get lottery results
+        Route::get('/kqxs', [UserLotteryResultController::class, 'index'])->name('kqxs');
+        Route::get('/kqxs/session', [UserLotteryResultController::class, 'bySession'])->name('kqxs.bySession');
+        Route::get('/kqxs/{id}', [UserLotteryResultController::class, 'show'])->name('kqxs.show');
         
         // Subscription routes
         Route::get('/subscription', [UserSubscriptionController::class, 'index'])->name('subscription');

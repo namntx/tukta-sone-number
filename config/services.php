@@ -34,5 +34,9 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-
+    'az24' => [
+        'verify_ssl' => env('AZ24_VERIFY_SSL', true), // false = tắt verify
+        'cacert'     => env('AZ24_CACERT_PATH', null),
+        'user_agent' => env('AZ24_USER_AGENT', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...'),
+    ],
 ];
