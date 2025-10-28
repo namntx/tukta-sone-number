@@ -490,7 +490,7 @@ class BettingMessageParser
             return [
                 'is_valid'        => false,
                 'multiple_bets'   => [],
-                'errors'          => [],
+                'errors'          => $errors,
                 'normalized'      => $normalized,
                 'parsed_message'  => $normalized,
                 'tokens'          => $tokens,
