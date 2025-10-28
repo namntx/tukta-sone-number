@@ -14,58 +14,6 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
-    <!-- Custom Scrollbar Styles -->
-    <style>
-        .scrollbar-thin {
-            scrollbar-width: thin;
-        }
-        .scrollbar-thin::-webkit-scrollbar {
-            height: 8px;
-        }
-        .scrollbar-thin::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 4px;
-        }
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-        
-        /* Custom Loading Animations */
-        @keyframes shimmer {
-            0% {
-                transform: translateX(-100%);
-            }
-            100% {
-                transform: translateX(100%);
-            }
-        }
-        
-        @keyframes float {
-            0%, 100% {
-                transform: translateY(0px);
-            }
-            50% {
-                transform: translateY(-2px);
-            }
-        }
-        
-        .shimmer-effect {
-            animation: shimmer 2s infinite;
-        }
-        
-        .float-animation {
-            animation: float 2s ease-in-out infinite;
-        }
-        
-        .loading-dots {
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-    </style>
-    
     @stack('styles')
 </head>
 <body class="h-full bg-gray-50 font-sans antialiased">
@@ -111,13 +59,13 @@
                                    class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('user.betting-tickets*') ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} text-sm font-medium transition-colors duration-200">
                                     Phiếu cược
                                 </a>
-                                <a href="{{ route('user.kqxs') }}" 
-                                   class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('user.kqxs*') ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} text-sm font-medium transition-colors duration-200">
-                                    KQXS
-                                </a>
                                 <a href="{{ route('user.subscription') }}" 
                                    class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('user.subscription*') ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} text-sm font-medium transition-colors duration-200">
                                     Subscription
+                                </a>
+                                <a href="{{ route('user.profile') }}" 
+                                   class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('user.profile') ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} text-sm font-medium transition-colors duration-200">
+                                    Profile
                                 </a>
                             @endif
                         </div>
