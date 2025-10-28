@@ -27,7 +27,7 @@ class DashboardController extends Controller
         
         // Get global date and region
         $globalDate = session('global_date', today());
-        $globalRegion = session('global_region', 'Bắc');
+        $globalRegion = session('global_region', 'bac');
         
         // Lấy phiếu cược theo global date và region
         $todayTickets = $user->bettingTickets()

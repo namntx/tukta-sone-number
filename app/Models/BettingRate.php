@@ -3,88 +3,51 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class BettingRate extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'user_id',
         'customer_id',
-        'betting_type_id',
-        'win_rate',
-        'lose_rate',
-        'is_active'
+        'region',
+        'type_code',
+        'digits',
+        'xien_size',
+        'dai_count',
+        'buy_rate',
+        'payout',
+        'is_active',
     ];
 
     protected $casts = [
-        'win_rate' => 'decimal:4',
-        'lose_rate' => 'decimal:4',
-        'is_active' => 'boolean'
+        'buy_rate'  => 'decimal:2',
+        'payout'    => 'decimal:2',
+        'is_active' => 'boolean',
     ];
 
-    /**
-     * Get the user that owns the rate
-     */
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    /**
-     * Get the customer for this rate
-     */
+    // ===== Relations =====
     public function customer()
     {
         return $this->belongsTo(Customer::class);
     }
 
-    /**
-     * Get the betting type for this rate
-     */
-    public function bettingType()
-    {
-        return $this->belongsTo(BettingType::class);
-    }
+    // ===== Scopes =====
+    public function scopeActive($q)      { return $q->where('is_active', true); }
+    public function scopeRegion($q,$r)   { return $q->where('region', $r); }
+    public function scopeType($q,$code)  { return $q->where('type_code',$code); }
 
-    /**
-     * Get formatted win rate percentage
-     */
-    public function getFormattedWinRateAttribute()
+    // Match phụ: truyền mảng meta ['digits'=>2,'xien_size'=>null,'dai_count'=>2]...
+    public function scopeMatchMeta($q, array $meta)
     {
-        return number_format($this->win_rate * 100, 2) . '%';
-    }
-
-    /**
-     * Get formatted lose rate percentage
-     */
-    public function getFormattedLoseRateAttribute()
-    {
-        return number_format($this->lose_rate * 100, 2) . '%';
-    }
-
-    /**
-     * Scope for active rates
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    /**
-     * Scope for specific customer
-     */
-    public function scopeForCustomer($query, $customerId)
-    {
-        return $query->where('customer_id', $customerId);
-    }
-
-    /**
-     * Scope for specific betting type
-     */
-    public function scopeForBettingType($query, $bettingTypeId)
-    {
-        return $query->where('betting_type_id', $bettingTypeId);
+        foreach (['digits','xien_size','dai_count'] as $k) {
+            $q->where(function($qq) use ($k,$meta){
+                // cho phép null (wildcard) để fallback
+                if (array_key_exists($k,$meta) && $meta[$k] !== null) {
+                    $qq->where($k, $meta[$k])->orWhereNull($k);
+                } else {
+                    $qq->whereNull($k);
+                }
+            });
+        }
+        return $q;
     }
 }

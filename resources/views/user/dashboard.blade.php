@@ -180,9 +180,9 @@
                                 </label>
                                 <select name="region" id="region" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                                     <option value="">Chọn miền</option>
-                                    <option value="Bắc" {{ $global_region == 'Bắc' ? 'selected' : '' }}>Bắc</option>
-                                    <option value="Trung" {{ $global_region == 'Trung' ? 'selected' : '' }}>Trung</option>
-                                    <option value="Nam" {{ $global_region == 'Nam' ? 'selected' : '' }}>Nam</option>
+                                    <option value="bac"  {{ $global_region=='bac'  ? 'selected' : '' }}>Miền Bắc</option>
+                                    <option value="trung"{{ $global_region=='trung'? 'selected' : '' }}>Miền Trung</option>
+                                    <option value="nam"  {{ $global_region=='nam'  ? 'selected' : '' }}>Miền Nam</option>
                                 </select>
                             </div>
                         </div>

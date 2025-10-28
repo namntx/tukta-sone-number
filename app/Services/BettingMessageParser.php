@@ -8,6 +8,8 @@ use App\Models\LotterySchedule;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Str;
+use App\Support\Region;
+
 
 class BettingMessageParser
 {
@@ -28,439 +30,499 @@ class BettingMessageParser
         $this->stationAliasMap = $this->defaultStationAliases();
     }
 
-    /**
-     * Parse 1 tin nhắn cược -> nhiều phiếu
+     /**
+     * Parse betting message to structured bets.
      *
-     * @param  string            $message
-     * @param  array|string|int  $context  (array: ['region'=>..,'date'=>..] | string: region | int: customer_id)
+     * @param  string $message
+     * @param  array  $context  // có thể chứa: ['customer_id'=>..., 'region'=>...]
+     * @return array
      */
     public function parseMessage(string $message, array|string|int $context = []): array
     {
-        // Chuẩn hoá context
-        $ctx = is_array($context)
-            ? $context
-            : (is_string($context) ? ['region' => $context] : (is_int($context) ? ['customer_id' => $context] : []));
+        if (!is_array($context)) {
+            // nếu controller truyền customer_id dạng int/string
+            $context = ['customer_id' => is_numeric($context) ? (int)$context : null];
+        }
+    
+        // Chuẩn hoá region về bac|trung|nam
+        $region = Region::normalizeKey($context['region'] ?? session('global_region', 'nam'));
+        $errors = [];
 
-        $errors     = [];
-        $normalized = $this->normalize($message);
-        $tokens     = $this->tokenize($normalized);
+        // -------------------------------
+        // Helpers (cục bộ cho hàm)
+        // -------------------------------
+        $addEvent = function(array &$events, string $kind, array $extra = []) {
+            $ev = array_merge(['kind' => $kind], $extra);
+            $events[] = $ev;
+        };
+        
 
-        // Region/Date (session fallback)
-        $region  = Str::lower((string)($ctx['region'] ?? session('global_region', 'nam')));
-        $dateStr = (string)($ctx['date']   ?? session('global_date', CarbonImmutable::now()->toDateString()));
-        $date    = CarbonImmutable::parse($dateStr);
+        $stripAccents = function(string $s): string {
+            // Quan trọng: ép về string trước, tránh Stringable cho preg_replace
+            // Có thể dùng 1 trong 2 cách:
+            // $s = (string) Str::of($s)->lower();
+            // hoặc:
+            $s = mb_strtolower($s, 'UTF-8');
+        
+            // Bỏ dấu tiếng Việt
+            $replacements = [
+                'à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ' => 'a',
+                'è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ'             => 'e',
+                'ì|í|ị|ỉ|ĩ'                         => 'i',
+                'ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ' => 'o',
+                'ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ'             => 'u',
+                'ỳ|ý|ỵ|ỷ|ỹ'                         => 'y',
+                'đ'                                  => 'd',
+            ];
+            foreach ($replacements as $re => $to) {
+                // thêm ?? để phòng khi preg_replace trả null
+                $s = preg_replace("/$re/u", $to, $s) ?? $s;
+            }
+        
+            // Chuẩn alias hay gặp (sau khi bỏ dấu)
+            // Lưu ý: sau khi bỏ dấu, 'tphố' -> 'tpho'
+            $s = str_replace(['t,pho','t,phố','tphố','tpho','tp.hcm','tphcm','tp ho chi minh'], 'tphcm', $s);
+            $s = str_replace(['t,ninh','t ninh','tninh','tn'], 'tn', $s);
+        
+            // Đổi dấu phẩy thành khoảng trắng
+            $s = preg_replace('/[,]+/u',' ', $s) ?? $s;
+        
+            return trim($s);
+        };
 
-        // Rule 5: Đài mặc định -> CHỈ MAIN (1 đài)
-        $defaultStations = $this->normalizedStationsFor($date, $region, 1);
-        if (empty($defaultStations)) $defaultStations = ['tp.hcm'];
+        $splitTokens = function(string $s): array {
+            // Tách giữ lại dấu chấm (.), các cụm combo dính (vd: 121xc25n)
+            // và số có leading zero (2/3/4 chữ số).
+            $s = preg_replace('/[^\w\.]/u', ' ', $s);
+            $s = preg_replace('/\s+/',' ', $s);
 
-        $bets         = [];
-        $lastNumbers  = [];                // Rule 1: reuse số gần nhất
-        $lastStations = $defaultStations;  // Rule 2 + 5: reuse đài gần nhất
+            // Bóc tách các combo phổ biến dính liền: (\d+)(xc|lo|d|dd)(\d+)(n|k)?
+            $s = preg_replace('/(\d{2,4})(xc)(\d+)(n|k)/', '$1 $2 $3$4', $s);
+            $s = preg_replace('/(\d{2,4})(lo)(\d+)(n|k)/', '$1 $2 $3$4', $s);
+            $s = preg_replace('/(\d{2,4})(dd)(\d+)(n|k)/', '$1 $2 $3$4', $s);
+            $s = preg_replace('/(\d{2,4})(d)(\d+)(n|k)/',  '$1 $2 $3$4', $s);
 
-        // Streaming state
-        $groupNumbers = [];
-        $groupPairs   = [];                // [type, amount] theo thứ tự nhập
-        $pendingType  = null;              // khi gặp type rời chờ amount
-        $lastTypeUsed = null;              // nhớ loại cược gần nhất để reuse khi gặp amount rời
+            // Chèn khoảng trắng quanh dấu chấm để xem như token
+            $s = str_replace('.', ' . ', $s);
+            $s = preg_replace('/\s+/', ' ', $s);
 
-        // Giữ-dồn số qua nhiều dấu chấm cho đến khi gặp kiểu/tiền
-        $heldNumbers  = [];
+            $parts = array_values(array_filter(explode(' ', trim($s)), fn($t)=>$t!==''));
+            return $parts;
+        };
 
-        // ✨ Kéo: chỉ thị tạo dãy số
-        $keoPending   = false;             // đang chờ số-kết cho "kéo"
-        $keoStart     = null;              // số-bắt-đầu cho "kéo"
+        $joinStations = function(array $stations): ?string {
+            if (!count($stations)) return null;
+            if (count($stations) === 1) return $stations[0];
+            return implode(' + ', $stations);
+        };
 
-        // Debug (tuỳ bạn bật/tắt trả ra)
-        $debug = [
-            'stations_default' => $defaultStations,
-            'events' => [],
+        $resetGroup = function(array &$ctx) {
+            $ctx['numbers_group'] = [];
+            $ctx['current_type']  = null;
+            $ctx['amount']        = null;
+            $ctx['meta']          = [];
+            $ctx['pair_d_dau']    = [];
+        
+            // NEW:
+            $ctx['xc_d_list']     = [];
+            $ctx['xc_dd_amount']  = null;
+        };
+
+        $emitBet = function(array &$outBets, array &$ctx, array $bet) use ($joinStations) {
+            // Áp đài hiện tại
+            $bet['station'] = $bet['station'] ?? $joinStations($ctx['stations']);
+            $bet['meta']    = $bet['meta']    ?? [];
+            $outBets[] = $bet;
+        };
+
+        // MỚI: tách lô theo độ dài số
+        $emitBaoLoByDigits = function(array &$outBets, array &$ctx) use ($emitBet) {
+            $numbers = array_values(array_unique($ctx['numbers_group']));
+            if (!count($numbers) || !$ctx['amount']) return;
+
+            $groups = [2=>[],3=>[],4=>[]];
+            foreach ($numbers as $n) {
+                $len = strlen($n);
+                if (isset($groups[$len])) $groups[$len][] = $n;
+            }
+            foreach ($groups as $digits => $nums) {
+                if (!count($nums)) continue;
+                $emitBet($outBets, $ctx, [
+                    'numbers' => $nums,
+                    'type'    => 'bao_lo',
+                    'amount'  => (int)$ctx['amount'],
+                    'meta'    => ['digits' => $digits],
+                ]);
+            }
+        };
+
+        $flushGroup = function(array &$outBets, array &$ctx, array &$events, ?string $reason=null) use ($emitBet, $emitBaoLoByDigits, $addEvent, &$errors) {
+            if ($reason) $addEvent($events, $reason);
+
+            $numbers = array_values(array_unique($ctx['numbers_group'] ?? []));
+            $type    = $ctx['current_type'] ?? null;
+            $amount  = (int)($ctx['amount'] ?? 0);
+
+            if (!$type) { $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; return; }
+            if (!count($numbers) && !in_array($type, ['xiu_chu','xiu_chu_dau','xiu_chu_duoi'], true)) {
+                // những loại cần số mà không có số → bỏ
+                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; return;
+            }
+
+            // TÁCH LÔ THEO ĐỘ DÀI
+            if ($type === 'bao_lo') {
+                $emitBaoLoByDigits($outBets, $ctx);
+                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+                return;
+            }
+
+            if ($type === 'xiu_chu') {
+                $numbers = array_values(array_unique($ctx['numbers_group'] ?? []));
+                $region  = $ctx['region'] ?? 'nam';
+            
+                if (count($numbers)) {
+                    // Ưu tiên 1: 'xc dd10n' → đầu & đuôi cùng amount
+                    if (!empty($ctx['xc_dd_amount'])) {
+                        foreach ($numbers as $n) {
+                            // Đầu
+                            $emitBet($outBets, $ctx, [
+                                'numbers' => [$n],
+                                'type'    => ($region === 'bac') ? 'xiu_chu_dau' : 'xiu_chu_dau',
+                                'amount'  => (int)$ctx['xc_dd_amount'],
+                                'meta'    => [],
+                            ]);
+                            // Đuôi
+                            $emitBet($outBets, $ctx, [
+                                'numbers' => [$n],
+                                'type'    => ($region === 'bac') ? 'xiu_chu_duoi' : 'xiu_chu_duoi',
+                                'amount'  => (int)$ctx['xc_dd_amount'],
+                                'meta'    => [],
+                            ]);
+                        }
+                        $addEvent($events, 'emit_xc_head_tail', [
+                            'mode'=>'dd',
+                            'amount'=>$ctx['xc_dd_amount'],
+                            'numbers'=>$numbers
+                        ]);
+                    }
+                    // Ưu tiên 2: 'xc d10n d5n' → map d[0] = đầu, d[1] = đuôi
+                    elseif (!empty($ctx['xc_d_list'])) {
+                        $dauAmt  = $ctx['xc_d_list'][0] ?? null;
+                        $duoiAmt = $ctx['xc_d_list'][1] ?? null;
+                        foreach ($numbers as $n) {
+                            if ($dauAmt !== null) {
+                                $emitBet($outBets, $ctx, [
+                                    'numbers' => [$n],
+                                    'type'    => 'xiu_chu_dau',
+                                    'amount'  => (int)$dauAmt,
+                                    'meta'    => [],
+                                ]);
+                            }
+                            if ($duoiAmt !== null) {
+                                $emitBet($outBets, $ctx, [
+                                    'numbers' => [$n],
+                                    'type'    => 'xiu_chu_duoi',
+                                    'amount'  => (int)$duoiAmt,
+                                    'meta'    => [],
+                                ]);
+                            }
+                        }
+                        $addEvent($events, 'emit_xc_head_tail', [
+                            'mode'=>'d_sequence',
+                            'dau'=>$dauAmt,'duoi'=>$duoiAmt,'numbers'=>$numbers
+                        ]);
+                    }
+                    // Mặc định: 'xc 10n' → mỗi số 1 vé xỉu chủ (không tách đầu/đuôi)
+                    else {
+                        $amt = (int)($ctx['amount'] ?? 0);
+                        foreach ($numbers as $n) {
+                            $emitBet($outBets, $ctx, [
+                                'numbers' => [$n],
+                                'type'    => 'xiu_chu',
+                                'amount'  => $amt,
+                                'meta'    => [],
+                            ]);
+                        }
+                        $addEvent($events, 'emit_xc_split_per_number', [
+                            'amount'=>$amt, 'numbers'=>$numbers
+                        ]);
+                    }
+                }
+            
+                // reset
+                $ctx['numbers_group'] = [];
+                $ctx['amount']        = null;
+                $ctx['meta']          = [];
+                $ctx['xc_d_list']     = [];
+                $ctx['xc_dd_amount']  = null;
+                $ctx['current_type']  = null;
+                return;
+            }
+
+            // XIÊN MB: tạo 1 vé với meta.xien_size
+            if ($type === 'xien') {
+                $x = (int)($ctx['meta']['xien_size'] ?? 0);
+                $regionCtx = $ctx['region'] ?? 'nam';
+
+                if ($regionCtx !== 'bac') {
+                    $msg = "Loại cược xiên (xi{$x}) chỉ áp dụng cho Miền Bắc. Khu vực hiện tại: {$regionCtx}.";
+                    $errors[] = $msg; // <— PHẢI có dòng này
+                    $addEvent($events, 'block_emit_xien_wrong_region', [
+                        'region'=>$regionCtx, 'message'=>$msg
+                    ]);
+                    $resetGroup($ctx);
+                    return;
+                }
+
+                if ($x >= 2 && $x <= 4) {
+                    if (count($numbers) >= $x) {
+                        $emitBet($outBets, $ctx, [
+                            'numbers' => $numbers,
+                            'type'    => 'xien',
+                            'amount'  => $amount,
+                            'meta'    => ['xien_size' => $x],
+                        ]);
+                        $addEvent($events, 'emit_xien', ['xien_size'=>$x,'numbers'=>$numbers,'amount'=>$amount]);
+                    } else {
+                        $addEvent($events, 'error_xien_numbers_not_enough', ['need'=>$x,'have'=>count($numbers)]);
+                    }
+                }
+                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+                return;
+            }
+
+            // các loại khác giữ nguyên (dau/duoi/dd/xc... theo logic cũ)
+            if ($type) {
+                $emitBet($outBets, $ctx, [
+                    'numbers' => $numbers,
+                    'type'    => $type,
+                    'amount'  => $amount,
+                    'meta'    => $ctx['meta'] ?? [],
+                ]);
+            }
+
+            $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+        };
+
+        // -------------------------------
+        // 1) Chuẩn hoá & context
+        // -------------------------------
+        $normalized = $stripAccents($message);
+        $tokens = $splitTokens($normalized);
+
+        // Region & stations default (đã có sẵn trong app bạn; ở đây fallback an toàn)
+        $defaultStations = match ($region) {
+            'bac'   => ['mien bac'],
+            'trung' => ['dak lak','khanh hoa','phu yen','quang nam','quang ngai','binh dinh','thua thien hue'],
+            default => ['tp.hcm'],
+        };
+
+        $events = [];
+        $addEvent($events, 'stations_default', ['list'=>$defaultStations]);
+
+        // -------------------------------
+        // 2) State
+        // -------------------------------
+        $ctx = [
+            'region'         => $region,
+            'stations'       => [],
+            'numbers_group'  => [],
+            'current_type'   => null,
+            'amount'         => null,
+            'meta'           => [],
+            'pair_d_dau'     => [],
+        
+            // NEW: gom amount khi gặp 'xc d.../dd...'
+            'xc_d_list'      => [],   // ví dụ ['d10k','d5k'] => [10000, 5000]
+            'xc_dd_amount'   => null, // ví dụ 'dd10k' => 10000
         ];
 
-        // ======= FLUSH (đã hỗ trợ dt, dx theo luật mới) =======
-        $flush = function () use (
-            &$bets, &$groupNumbers, &$groupPairs, &$lastNumbers, &$lastStations, &$heldNumbers, &$errors
-        )
-        {
-            if (empty($groupPairs)) {
-                $groupNumbers = [];
-                return;
-            }
+        $outBets = [];
 
-            // Rule 1: nếu nhóm không có số -> dùng số gần nhất (có thể là union trong $heldNumbers)
-            $numbers = !empty($groupNumbers) ? $groupNumbers : $lastNumbers;
-            if (empty($numbers)) {
-                $groupPairs   = [];
-                $groupNumbers = [];
-                return;
-            }
-            $lastNumbers = $numbers;
+        // -------------------------------
+        // 3) Dicts
+        // -------------------------------
+        $stationAliases = [
+            // miền nam
+            'tphcm' => 'tp.hcm', 'sg'=>'tp.hcm', 'hcm'=>'tp.hcm',
+            'tn'    => 'tay ninh', 'ag'=>'an giang', 'tg'=>'tien giang', 'bt'=>'ben tre',
+            'vl'    => 'vinh long', 'tv'=>'tra vinh', 'kg'=>'kien giang', 'dl'=>'da lat',
+            // miền trung/bắc
+            'hn'    => 'mien bac', 'mb'=>'mien bac',
+        ];
 
-            // 1) Xen kẽ 'd' trong CÙNG NHÓM, chỉ xét {dau, duoi, dau_duoi}
-            $dirTypes = ['dau', 'duoi', 'dau_duoi'];
-            $hasDuoi  = false;
-            $hasDD    = false;
-            $dauIdx   = [];
+        $typeAliases = [
+            'lo'   => 'bao_lo',
+            'dau'  => 'dau',
+            'duoi' => 'duoi',
+            'dd'   => 'dau_duoi',
+            'xc'   => 'xiu_chu',
+            'keo'  => 'keo_hang_don_vi',
+            // đá/cặp trước đây (dt/dx) vẫn giữ nếu bạn đã có
+            'dt'   => 'da_thang',
+            'dx'   => 'da_xien',
+        ];
 
-            foreach ($groupPairs as $i => [$t, $_]) {
-                if (!in_array($t, $dirTypes, true)) continue; // bỏ qua lo, xiu_chu, da_xien, da_thang...
-                if     ($t === 'duoi')      $hasDuoi = true;
-                elseif ($t === 'dau_duoi')  $hasDD   = true;
-                elseif ($t === 'dau')       $dauIdx[] = $i;
-            }
-
-            if (!$hasDuoi && !$hasDD && count($dauIdx) >= 2) {
-                // chỉ có các cặp 'd' -> xen kẽ: đầu, đuôi, đầu, đuôi...
-                $toggle = 0;
-                foreach ($dauIdx as $i) {
-                    $groupPairs[$i][0] = ($toggle % 2 === 0) ? 'dau' : 'duoi';
-                    $toggle++;
-                }
-            }
-
-            // 2) Ghi bet
-            foreach ($groupPairs as [$type, $amount]) {
-                // ================= DT (ĐÁ THẲNG) =================
-                if ($type === 'da_thang') {
-                    // Ghép cặp theo thứ tự 2–2: (n1,n2), (n3,n4), ...
-                    $uniq = array_values(array_unique($numbers));
-                    $pairs = [];
-                    for ($i = 0; $i + 1 < count($uniq); $i += 2) {
-                        $pairs[] = [$uniq[$i], $uniq[$i+1]];
-                    }
-                    if (empty($pairs)) {
-                        // không đủ số để tạo ít nhất 1 cặp
-                        continue;
-                    }
-
-                    // DT áp dụng cho 1 đài: chọn đài đầu tiên, cảnh báo nếu khác 1
-                    $st = $lastStations[0] ?? null;
-                    if (count($lastStations) !== 1) {
-                        $errors[] = 'Đá thẳng (dt) yêu cầu đúng 1 đài, hiện có: '.count($lastStations).'. Sẽ dùng đài đầu tiên: '.($st ?? 'null');
-                    }
-
-                    foreach ($pairs as $p) {
-                        $bets[] = [
-                            'station' => $st,
-                            'type'    => 'da_thang',
-                            'numbers' => $p,             // một vé = một cặp
-                            'amount'  => $amount,
-                            'meta'    => [],
-                        ];
-                    }
-                    continue;
-                }
-
-                // ================= DX (ĐÁ XIÊN ≥ 2 ĐÀI) =================
-                if ($type === 'da_xien') {
-                    // Phải có ≥ 2 đài
-                    if (count($lastStations) < 2) {
-                        $errors[] = 'Đá xiên (dx) yêu cầu tối thiểu 2 đài. Bỏ qua nhóm này.';
-                        continue;
-                    }
-                
-                    // Sinh mọi cặp số C(n,2)
-                    $uniqNums = array_values(array_unique($numbers));
-                    if (count($uniqNums) < 2) continue;
-                
-                    $numPairs = [];
-                    for ($i = 0; $i < count($uniqNums) - 1; $i++) {
-                        for ($j = $i + 1; $j < count($uniqNums); $j++) {
-                            $numPairs[] = [$uniqNums[$i], $uniqNums[$j]];
-                        }
-                    }
-                
-                    // Cặp đài C(m,2) để ghi vào meta
-                    $stationPairs = [];
-                    for ($a = 0; $a < count($lastStations) - 1; $a++) {
-                        for ($b = $a + 1; $b < count($lastStations); $b++) {
-                            $stationPairs[] = [$lastStations[$a], $lastStations[$b]];
-                        }
-                    }
-                    $stationLabel = implode(' + ', $lastStations);
-                
-                    foreach ($numPairs as $pair) {
-                        $bets[] = [
-                            'station' => $stationLabel,
-                            'type'    => 'da_xien',
-                            'numbers' => $pair, // một vé = một cặp số
-                            'amount'  => $amount,
-                            'meta'    => [
-                                'xien_size'     => 2,
-                                'station_pairs' => $stationPairs,
-                            ],
-                        ];
-                    }
-                    continue;
-                }
-                // ================= DD (ĐẦU & ĐUÔI) — giữ nguyên logic tách 2 vé/1 số =================
-                if ($type === 'dau_duoi') {
-                    foreach ($numbers as $num) {
-                        foreach ($lastStations as $st) {
-                            $bets[] = ['station'=>$st,'type'=>'dau','numbers'=>[$num],'amount'=>$amount,'meta'=>[]];
-                            $bets[] = ['station'=>$st,'type'=>'duoi','numbers'=>[$num],'amount'=>$amount,'meta'=>[]];
-                        }
-                    }
-                    continue;
-                }
-
-                // ================= CÁC LOẠI KHÁC (dau/duoi/bao_lo/xiu_chu/...) =================
-                $meta = [];
-                // (giữ nguyên meta cho da_xien cũ nếu có, nhưng giờ dx đã xử lý ở trên)
-
-                // TÁCH PHIẾU THEO TỪNG SỐ cho: dau, duoi, bao_lo, xiu_chu (khi nhóm có >1 số)
-                if (in_array($type, ['dau', 'duoi', 'bao_lo', 'xiu_chu'], true) && count($numbers) > 1) {
-                    foreach ($numbers as $num) {
-                        foreach ($lastStations as $st) {
-                            $bets[] = ['station'=>$st,'type'=>$type,'numbers'=>[$num],'amount'=>$amount,'meta'=>$meta];
-                        }
-                    }
-                } else {
-                    // Các loại khác (hoặc chỉ 1 số) -> giữ nguyên nhóm
-                    foreach ($lastStations as $st) {
-                        $bets[] = ['station'=>$st,'type'=>$type,'numbers'=>array_values($numbers),'amount'=>$amount,'meta'=>$meta];
-                    }
-                }
-            }
-
-            // reset nhóm
-            $groupPairs   = [];
-            $groupNumbers = [];
-            $heldNumbers  = [];   // reset buffer sau khi ghi bet
-        };
-        // ======= /FLUSH =======
-
-
-        // ==================== STREAM ====================
-        $i = 0;
-        while ($i < count($tokens)) {
-            $tk = $tokens[$i];
-
-            // Kết tiểu câu
-            if ($tk === '.') {
-                if (empty($groupPairs) && !empty($groupNumbers)) {
-                    // Chưa có kiểu/tiền -> cộng dồn số vào buffer, set lastNumbers = buffer
-                    $heldNumbers  = array_values(array_unique(array_merge($heldNumbers, $groupNumbers)));
-                    $lastNumbers  = $heldNumbers;
-                    $groupNumbers = [];
-                } else {
-                    // Có cặp kiểu/tiền -> chốt nhóm bình thường
-                    $flush(); // sẽ reset $heldNumbers
-                }
-                $pendingType = null;
-                $keoPending  = false; $keoStart = null; // kết câu thì hủy kéo đang chờ
-                $debug['events'][] = ['kind' => 'dot_flush_or_hold'];
-                $i++; continue;
-            }
-
-            // Directive 2d/3d
-            if ($this->isMultiStationDirective($tk)) {
-                $n = $this->directiveSize($tk);
-                $stations = $this->normalizedStationsFor($date, $region, $n); // đúng 2 hoặc 3 đài
-                if (!empty($stations)) $lastStations = $stations; // Rule 4
-                $debug['events'][] = ['kind' => 'directive', 'token' => $tk, 'stations' => $stations];
-                $i++; continue;
-            }
-
-            // Chuỗi đài
-            if ($this->isStationToken($tk)) {
-                $stations = [];
-                while ($i < count($tokens) && $this->isStationToken($tokens[$i])) {
-                    $stations[] = $this->canonicalStation($tokens[$i]); $i++;
-                }
-                if (!empty($stations)) {
-                    $lastStations = $stations; // Rule 2
-                    $debug['events'][] = ['kind' => 'stations', 'set' => $stations];
-                }
-                // đổi đài thì cũng kết thúc "kéo" đang chờ (nếu có)
-                $keoPending = false; $keoStart = null;
+        // -------------------------------
+        // 4) Scan tokens
+        // -------------------------------
+        foreach ($tokens as $tok) {
+            // số thuần 2-4 chữ số (giữ leading zero)
+            if (preg_match('/^\d{2,4}$/', $tok)) {
+                $ctx['numbers_group'][] = $tok;
+                $addEvent($events, 'number', ['value'=>$tok]);
                 continue;
             }
 
-            // Combo "station+number"? vd 'tn21'
-            [$stCombo, $numCombo] = $this->splitStationNumberToken($tk);
-            if ($stCombo !== null) {
-                // set đài
-                $lastStations = [$stCombo];
-
-                // nếu đang có nhóm đã có số + có cặp -> chốt nhóm cũ
-                if (!empty($groupPairs) && !empty($groupNumbers)) {
-                    $flush();
-                }
-                // thêm số vào nhóm hiện tại
-                $groupNumbers[] = $numCombo;
-                $debug['events'][] = ['kind'=>'station_number_combo', 'token'=>$tk, 'station'=>$stCombo, 'number'=>$numCombo];
-
-                // đổi đài/xảy ra combo thì hủy "kéo" đang chờ
-                $keoPending = false; $keoStart = null;
-
-                $i++; continue;
-            }
-
-            // Combo "number+type+amount"? vd '952xc13n'
-            [$numNTA, $typeNTA, $amtNTA] = $this->splitNumberTypeAmountToken($tk);
-            if ($numNTA !== null) {
-                // nếu đã có nhóm (có số & có cặp) -> chốt nhóm cũ trước
-                if (!empty($groupPairs) && !empty($groupNumbers)) {
-                    $flush();
-                }
-                // gộp số vào nhóm hiện tại
-                $groupNumbers[] = $numNTA;
-                $groupPairs[]   = [$typeNTA, $amtNTA];
-                $lastTypeUsed   = $typeNTA;   // nhớ loại
-                $pendingType    = null;
-
-                // combo này không liên quan "kéo" => hủy nếu đang chờ
-                $keoPending = false; $keoStart = null;
-
-                $debug['events'][] = [
-                    'kind'=>'combo_num_type_amount',
-                    'token'=>$tk, 'number'=>$numNTA, 'type'=>$typeNTA, 'amount'=>$amtNTA
-                ];
-                $i++; continue;
-            }
-
-            // Token gộp type+amount? (vd 'd100n', 'dd20', 'lo5n', 'dx1n')
-            [$comboType, $comboAmount] = $this->splitTypeAmountToken($tk);
-            if ($comboType !== null && $comboAmount !== null) {
-                $groupPairs[]  = [$comboType, $comboAmount];
-                $lastTypeUsed  = $comboType; // nhớ loại vừa dùng
-                $pendingType   = null;
-
-                // gặp cặp kiểu+tiền thì hủy "kéo" đang chờ (nếu có)
-                $keoPending = false; $keoStart = null;
-
-                $debug['events'][] = ['kind'=>'pair_combo', 'token'=>$tk, 'type'=>$comboType, 'amount'=>$comboAmount];
-                $i++; continue;
-            }
-
-            // Type rời?
-            $key = $this->cleanAlphaToken($tk);
-            if ($key !== '' && isset($this->typeAliasMap[$key])) {
-                $cand = $this->canonicalizeTypeCode($this->typeAliasMap[$key]);
-
-                // ✨ "kéo" là CHỈ THỊ sinh dãy số, không phải loại cược
-                if ($cand === 'keo_hang_don_vi') {
-                    $keoPending = true;
-                    // ưu tiên lấy số cuối cùng ngay trước "kéo" trong nhóm hiện tại; nếu chưa có thì dùng lastNumbers
-                    $keoStart = !empty($groupNumbers)
-                        ? end($groupNumbers)
-                        : (!empty($lastNumbers) ? end($lastNumbers) : null);
-
-                    $debug['events'][] = ['kind'=>'keo_begin', 'start'=>$keoStart];
-                    $i++; 
-                    continue; // KHÔNG set pendingType
-                }
-
-                $pendingType = $cand;
-                $debug['events'][] = ['kind'=>'type_loose', 'token'=>$tk, 'type'=>$pendingType];
-
-                // set loại cược xong thì cũng kết thúc "kéo" đang chờ
-                $keoPending = false; $keoStart = null;
-
-                $i++; continue;
-            }
-
-            // ✨ Hoàn tất "kéo": số-kết sau "kéo" -> tạo dãy số theo mask
-            if ($keoPending && $this->isPureNumberToken($tk)) {
-                if ($keoStart !== null) {
-                    // giữ padding theo độ dài số-bắt-đầu
-                    $end   = str_pad($tk, strlen($keoStart), '0', STR_PAD_LEFT);
-                    $range = $this->generateKeoRange($keoStart, $end);
-
-                    if (!empty($range)) {
-                        // thay nhóm số hiện tại bằng dãy kéo (unique & giữ thứ tự)
-                        $groupNumbers = array_values(array_unique($range));
-                        $lastNumbers  = $groupNumbers;
-                        $debug['events'][] = ['kind'=>'keo_range', 'start'=>$keoStart, 'end'=>$end, 'numbers'=>$groupNumbers];
-                    } else {
-                        $debug['events'][] = ['kind'=>'keo_range_invalid', 'start'=>$keoStart, 'end'=>$tk];
-                    }
-                } else {
-                    $debug['events'][] = ['kind'=>'keo_no_start'];
-                }
-
-                // reset trạng thái "kéo"
-                $keoPending = false;
-                $keoStart   = null;
-                $i++; 
+            // Dấu chấm: flush/hard-sep
+            if ($tok === '.') {
+                $addEvent($events, 'dot_flush_or_hold');
+                $flushGroup($outBets, $ctx, $events, null);
                 continue;
             }
 
-            // SPECIAL (refined):
-            // Chỉ coi "số 1-4 chữ số" là AMOUNT nếu đang có pendingType
-            // VÀ đã có số trong NGỮ CẢNH HIỆN TẠI (groupNumbers hoặc heldNumbers).
-            if (
-                $pendingType !== null
-                && preg_match('/^\d{1,4}$/', $tk)
-                && ( !empty($groupNumbers) || !empty($heldNumbers) )
-            ) {
-                $amt = (int) $tk * 1000;
-                $groupPairs[]  = [$pendingType, $amt];
-                $lastTypeUsed  = $pendingType;
-                $pendingType   = null;
-                $debug['events'][] = [
-                    'kind'=>'amount_numeric_after_type',
-                    'token'=>$tk,
-                    'type'=>($groupPairs[count($groupPairs)-1][0] ?? null),
-                    'amount'=>$amt
-                ];
-                $i++; 
+            // Nhận amount loose: 10n|10k
+            if (preg_match('/^(\d+)(n|k)$/', $tok, $m)) {
+                $ctx['amount'] = (int)$m[1] * 1000;
+                $currType = $ctx['current_type'] ?? null;
+                $addEvent($events, 'amount_loose', [
+                    'token'=>$tok, 'type'=>$currType, 'amount'=>$ctx['amount']
+                ]);
                 continue;
             }
 
-            // Số? (ƯU TIÊN nhận diện số trước amount rời)
-            if ($this->isPureNumberToken($tk)) {
-                if (!empty($groupPairs) && !empty($groupNumbers)) {
-                    $debug['events'][] = ['kind'=>'new_number_flush', 'prev_numbers'=>$groupNumbers];
-                    $flush();
-                }
-                $groupNumbers[] = $tk;
-                $debug['events'][] = ['kind'=>'number', 'value'=>$tk];
-                $i++; continue;
-            }
-
-            // Amount rời? (phải có đơn vị n/k, hoặc >= 5 chữ số)
-            if ($this->isAmountToken($tk)) {
-                $typeToUse = $pendingType ?? $lastTypeUsed; // ưu tiên pending, không có thì lấy loại gần nhất
-                if ($typeToUse !== null) {
-                    $amt = $this->parseAmount($tk);
-
-                    // nếu token không có n/k & là số <=4 chữ số -> *1000
-                    if (!preg_match('/[nk]$/i', $tk) && preg_match('/^\d{1,4}$/', $tk)) {
-                        $amt *= 1000;
+            // Nhận cặp dính: d100n / dd20n / lo5n
+            if (preg_match('/^(d|dd|lo)(\d+)(n|k)$/', $tok, $m)) {
+                $code = $m[1];
+                $amt  = (int)$m[2] * 1000;
+            
+                // Nếu đang ở ngữ cảnh XỈU CHỦ → không đổi current_type,
+                // mà gom amount vào list để lúc flush tách "đầu/đuôi" đúng ý.
+                if (($ctx['current_type'] ?? null) === 'xiu_chu') {
+                    if ($code === 'lo') {
+                        // hiếm khi user gõ "xc lo10n" → coi như amount chung cho xc
+                        $ctx['amount'] = $amt;
+                        $addEvent($events, 'xc_amount_through_lo', ['token'=>$tok,'amount'=>$amt]);
+                    } elseif ($code === 'dd') {
+                        // 'xc dd10n' → đầu = đuôi = 10k
+                        $ctx['xc_dd_amount'] = $amt;
+                        $addEvent($events, 'xc_pair_dd', ['token'=>$tok,'amount'=>$amt]);
+                    } else { // 'd'
+                        // 'xc d10n d5n' → d đầu = 10k, d sau = 5k (đầu/đuôi)
+                        $ctx['xc_d_list'][] = $amt;
+                        $addEvent($events, 'xc_pair_d', ['token'=>$tok,'amount'=>$amt,'index'=>count($ctx['xc_d_list'])]);
                     }
-
-                    $groupPairs[]  = [$typeToUse, $amt];
-                    $lastTypeUsed  = $typeToUse;
-                    $pendingType   = null;
-                    $debug['events'][] = ['kind'=>'amount_loose','token'=>$tk,'type'=>$typeToUse,'amount'=>$amt];
-                } else {
-                    $debug['events'][] = ['kind'=>'amount_orphan','token'=>$tk];
+                    continue;
                 }
-                $i++; continue;
+            
+                // Ngữ cảnh bình thường (không phải xc)
+                if ($code === 'lo') {
+                    $ctx['current_type'] = 'bao_lo';
+                    $ctx['amount']       = $amt;
+                    $addEvent($events, 'pair_combo', ['token'=>$tok,'type'=>'bao_lo','amount'=>$amt]);
+                } elseif ($code === 'dd') {
+                    $ctx['current_type'] = 'dau_duoi';
+                    $ctx['amount']       = $amt;
+                    $addEvent($events, 'pair_combo', ['token'=>$tok,'type'=>'dau_duoi','amount'=>$amt]);
+                } else { // 'd'
+                    $ctx['current_type'] = 'dau';
+                    $ctx['amount']       = $amt;
+                    $addEvent($events, 'pair_combo', ['token'=>$tok,'type'=>'dau','amount'=>$amt]);
+                }
+                continue;
             }
 
-            // Khác -> bỏ qua
-            $debug['events'][] = ['kind'=>'skip', 'token'=>$tk];
-            $i++;
+            // Nhận combo số + xc/lo/dd/d: 121 xc 25n đã được tách ở tokenizer (ở trên)
+            // -> đã xử lý ở 2 case trên (type_loose + amount_loose)
+
+            // Nhận kiểu cược rời:
+            if (isset($typeAliases[$tok])) {
+                $ctx['current_type'] = $typeAliases[$tok];
+                $addEvent($events, 'type_loose', ['token'=>$tok,'type'=>$ctx['current_type']]);
+                continue;
+            }
+
+            // MỚI: Xiên 2/3/4 (MB only)
+            if (preg_match('/^(xi(?:en)?([234]))$/', $tok, $m)) {
+                $size = (int)$m[2];
+            
+                // Nếu KHÔNG phải MB → bỏ qua luôn, chỉ log event
+                if ($region !== 'bac') {
+                    $msg = "Loại cược xiên (xi{$size}) chỉ áp dụng cho Miền Bắc. Khu vực hiện tại: {$region}.";
+                    $errors[] = $msg; // <— PHẢI có dòng này
+                    $addEvent($events, 'skip_xien_wrong_region', [
+                        'token'=>$tok, 'region'=>$region, 'message'=>$msg
+                    ]);
+                    continue;
+                }
+            
+                // MB: set type & meta
+                $ctx['current_type'] = 'xien';
+                $ctx['meta']['xien_size'] = $size;
+                $addEvent($events, 'type_loose', ['token'=>$tok, 'type'=>'xien', 'xien_size'=>$size]);
+                continue;
+            }
+
+            // Nhận station
+            if (isset($stationAliases[$tok])) {
+                $name = $stationAliases[$tok];
+                // Xoá stations cũ nếu bắt đầu cụm đài mới?
+                // Ở đây, giữ quy tắc cũ: set/append
+                if (!in_array($name, $ctx['stations'], true)) {
+                    $ctx['stations'][] = $name;
+                }
+                $addEvent($events, 'stations', ['set'=>array_values($ctx['stations'])]);
+                continue;
+            }
+
+            // Bỏ qua rác
+            $addEvent($events, 'skip', ['token'=>$tok]);
         }
 
-        // flush phần cuối
-        $flush();
+        // -------------------------------
+        // 5) Flush cuối
+        // -------------------------------
+        $flushGroup($outBets, $ctx, $events, 'final_flush');
+
+        // Nếu chưa có đài → áp mặc định theo miền (rule 2/4/5)
+        if (empty($outBets)) {
+            // không có vé => invalid, nhưng vẫn trả tokens/debug
+            return [
+                'is_valid'        => false,
+                'multiple_bets'   => [],
+                'errors'          => [],
+                'normalized'      => $normalized,
+                'parsed_message'  => $normalized,
+                'tokens'          => $tokens,
+                'debug'           => [
+                    'stations_default' => $defaultStations,
+                    'events'           => $events,
+                ],
+            ];
+        }
+
+        // Nếu một số bet chưa có station → gán station từ ctx hoặc default
+        foreach ($outBets as &$b) {
+            if (empty($b['station'])) {
+                $b['station'] = $joinStations(count($ctx['stations']) ? $ctx['stations'] : $defaultStations);
+            }
+            $b['meta'] = $b['meta'] ?? [];
+        }
+        unset($b);
 
         return [
-            'is_valid'       => count($bets) > 0,
-            'multiple_bets'  => $bets,
-            'errors'         => $errors,
-            'normalized'     => $normalized,
-            'parsed_message' => $normalized,
-            'tokens'         => $tokens,
-            'debug'          => $debug, // bỏ nếu không muốn trả ra
+            'is_valid'        => !empty($outBets), // ✅ có bet mới là hợp lệ
+            'multiple_bets'   => $outBets,
+            'errors'          => $errors,
+            'normalized'      => $normalized,
+            'parsed_message'  => $normalized,
+            'tokens'          => $tokens,
+            'debug'           => [
+                'stations_default' => array_values($defaultStations),
+                'events'           => $events,
+            ],
         ];
     }
-
-
 
 
 

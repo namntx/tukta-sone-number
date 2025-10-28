@@ -39,7 +39,9 @@ class BettingTicketController extends Controller
         $query->whereDate('betting_date', $filterDate);
 
         // Filter by region (use global region if not specified)
-        $filterRegion = $request->filled('region') ? $request->region : session('global_region', 'Bắc');
+        $filterRegion = $request->filled('region')
+                        ? Region::normalizeKey($request->region)
+                        : session('global_region', 'nam');
         $query->where('region', $filterRegion);
 
         // Filter by customer
@@ -62,7 +64,7 @@ class BettingTicketController extends Controller
 
         // Calculate statistics using global date
         $globalDate = session('global_date', today());
-        $globalRegion = session('global_region', 'Bắc');
+        $globalRegion = session('global_region', 'nam');
         
         $todayStats = [
             'total_tickets' => $user->bettingTickets()->whereDate('betting_date', $globalDate)->where('region', $globalRegion)->count(),

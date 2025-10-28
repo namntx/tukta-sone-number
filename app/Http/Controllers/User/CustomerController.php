@@ -7,12 +7,93 @@ use App\Models\Customer;
 use App\Models\BettingType;
 use App\Models\BettingRate;
 use Illuminate\Http\Request;
+use App\Services\BettingRateResolver;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class CustomerController extends Controller
 {
     use AuthorizesRequests;
+
+    /**
+     * Map bet_key (trong form) -> type_code + meta cho BettingRateResolver.
+     * Dùng chung cho create/edit để lấy default/override.
+     */
+    protected function betKeyToResolverArgs(string $betKey): array
+    {
+        // type_code phải trùng seed/DB của bạn
+        return match ($betKey) {
+            // MB – Đề
+            'de_dau'        => ['type_code' => 'de_dau',      'meta' => []],
+            'de_duoi'       => ['type_code' => 'de_duoi',     'meta' => []],
+            'de_duoi_4so'   => ['type_code' => 'de_duoi_4',   'meta' => []], // hoặc 'de_duoi' + ['digits'=>4] nếu DB bạn đang dùng vậy
+
+            // Bao lô
+            'bao_lo_2'      => ['type_code' => 'bao_lo',      'meta' => ['digits'=>2]],
+            'bao_lo_3'      => ['type_code' => 'bao_lo',      'meta' => ['digits'=>3]],
+            'bao_lo_4'      => ['type_code' => 'bao_lo',      'meta' => ['digits'=>4]],
+
+            // Xiên đá
+            'da_thang_1dai' => ['type_code' => 'da_thang',    'meta' => ['dai_count'=>1]],
+            'da_cheo_2dai'  => ['type_code' => 'da_xien',     'meta' => ['dai_count'=>2]],
+            'xien_2'        => ['type_code' => 'xien',        'meta' => ['xien_size'=>2]],
+            'xien_3'        => ['type_code' => 'xien',        'meta' => ['xien_size'=>3]],
+            'xien_4'        => ['type_code' => 'xien',        'meta' => ['xien_size'=>4]],
+
+            // Xỉu chủ
+            'xiu_chu'       => ['type_code' => 'xiu_chu',     'meta' => []],
+
+            // Bảy lô (MT/MN)
+            'baylo_2'       => ['type_code' => 'bay_lo',      'meta' => ['digits'=>2]],
+            'baylo_3'       => ['type_code' => 'bay_lo',      'meta' => ['digits'=>3]],
+
+            default         => ['type_code' => null,          'meta' => []],
+        };
+    }
+
+    // ====== cấu hình chuẩn bet_key theo nhóm (để render view & validate) ======
+    protected function rateGroups(): array
+    {
+        // bet_key => label
+        return [
+            'Giá đề' => [
+                'de_dau'       => 'Đề đầu',
+                'de_duoi'      => 'Đề đuôi (GĐB)',
+                'de_duoi_4so'  => 'Đề đuôi 4 số',
+            ],
+            'Giá bao lô' => [
+                'bao_lo_2'     => 'Bao lô 2 số',
+                'bao_lo_3'     => 'Bao lô 3 số',
+                'bao_lo_4'     => 'Bao lô 4 số',
+            ],
+            'Giá xiên đá' => [
+                'da_thang_1dai'=> 'Đá thẳng (1 đài)',
+                'da_cheo_2dai' => 'Đá chéo (2 đài)',
+                'xien_2'       => 'Xiên 2',
+                'xien_3'       => 'Xiên 3',
+                'xien_4'       => 'Xiên 4',
+            ],
+            'Giá Xỉu chủ' => [
+                'xiu_chu'      => 'Xỉu chủ',
+            ],
+            'Giá Bảy lô (7 giải cuối) — chỉ MT/MN' => [
+                'baylo_2'      => 'Bảy lô 2 số',
+                'baylo_3'      => 'Bảy lô 3 số',
+            ],
+        ];
+    }
+
+    protected function regions(): array
+    {
+        // key => label
+        return [
+            'bac'  => 'Miền Bắc',
+            'trung'=> 'Miền Trung',
+            'nam'  => 'Miền Nam',
+        ];
+    }
+    
     /**
      * Display a listing of customers
      */
@@ -89,75 +170,93 @@ class CustomerController extends Controller
         return view('user.customers.index', compact('customers', 'todayStats', 'monthlyStats', 'yearlyStats'));
     }
 
-    /**
-     * Show the form for creating a new customer
-     */
+    // ====== CREATE (đã sửa) ======
     public function create()
     {
-        $bettingTypes = BettingType::active()->ordered()->get();
-        return view('user.customers.create', compact('bettingTypes'));
-    }
+        $regions    = $this->regions();     // ['bac'=>'Miền Bắc', ...]
+        $rateGroups = $this->rateGroups();  // group -> [bet_key=>label]
+        $resolver   = app(BettingRateResolver::class);
 
-    /**
-     * Store a newly created customer
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|unique:customers,phone|max:20|regex:/^[0-9+\-\s()]+$/',
-            'betting_rates' => 'array',
-            'betting_rates.*.betting_type_id' => 'required|exists:betting_types,id',
-            'betting_rates.*.win_rate' => 'required|numeric|min:0|max:1',
-            'betting_rates.*.lose_rate' => 'required|numeric|min:0|max:1',
-        ], [
-            'name.required' => 'Tên khách hàng là bắt buộc.',
-            'name.max' => 'Tên khách hàng không được vượt quá 255 ký tự.',
-            'phone.required' => 'Số điện thoại là bắt buộc.',
-            'phone.unique' => 'Số điện thoại này đã được sử dụng.',
-            'phone.regex' => 'Số điện thoại không đúng định dạng.',
-            'betting_rates.*.win_rate.required' => 'Hệ số thu là bắt buộc.',
-            'betting_rates.*.win_rate.numeric' => 'Hệ số thu phải là số.',
-            'betting_rates.*.win_rate.min' => 'Hệ số thu phải lớn hơn hoặc bằng 0.',
-            'betting_rates.*.win_rate.max' => 'Hệ số thu phải nhỏ hơn hoặc bằng 1.',
-            'betting_rates.*.lose_rate.required' => 'Hệ số trả là bắt buộc.',
-            'betting_rates.*.lose_rate.numeric' => 'Hệ số trả phải là số.',
-            'betting_rates.*.lose_rate.min' => 'Hệ số trả phải lớn hơn hoặc bằng 0.',
-            'betting_rates.*.lose_rate.max' => 'Hệ số trả phải nhỏ hơn hoặc bằng 1.',
-        ]);
+        // Prefill từ DEFAULT (customer_id=null)
+        $initialRates = [];
+        foreach ($regions as $regionKey => $label) {
+            $initialRates[$regionKey] = [];
+            foreach ($rateGroups as $groupTitle => $pairs) {
+                $isBayLoGroup = str_contains($groupTitle, 'Bảy lô');
+                foreach ($pairs as $betKey => $lbl) {
+                    if ($regionKey === 'bac' && $isBayLoGroup) continue;
 
-        try {
-            $customer = Auth::user()->customers()->create([
-                'name' => $request->name,
-                'phone' => $request->phone,
-            ]);
+                    $map = $this->betKeyToResolverArgs($betKey);
+                    if (!$map['type_code']) continue;
 
-            // Create betting rates
-            if ($request->has('betting_rates')) {
-                foreach ($request->betting_rates as $rateData) {
-                    // Validate that win_rate + lose_rate = 1
-                    $totalRate = $rateData['win_rate'] + $rateData['lose_rate'];
-                    if (abs($totalRate - 1.0) > 0.01) {
-                        throw new \Exception("Tổng hệ số thu và trả phải bằng 1.0 cho loại cược ID: {$rateData['betting_type_id']}");
-                    }
-
-                    $customer->bettingRates()->create([
-                        'user_id' => Auth::id(),
-                        'betting_type_id' => $rateData['betting_type_id'],
-                        'win_rate' => $rateData['win_rate'],
-                        'lose_rate' => $rateData['lose_rate'],
-                    ]);
+                    $rate = $resolver->get(null, $regionKey, $map['type_code'], $map['meta']);
+                    // Resolver trả ['buy_rate'=>..., 'payout'=>...] → map về commission/payout_times cho form
+                    $initialRates[$regionKey][$betKey] = [
+                        'commission'   => $rate['buy_rate'] ?? null,
+                        'payout_times' => $rate['payout']   ?? null,
+                    ];
                 }
             }
-
-            return redirect()->route('user.customers.index')
-                ->with('success', 'Khách hàng đã được tạo thành công.');
-
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Có lỗi xảy ra khi tạo khách hàng: ' . $e->getMessage());
         }
+
+        return view('user.customers.create', compact('regions','rateGroups','initialRates'));
+    }
+
+    public function store(Request $request)
+    {
+        $regions = array_keys($this->regions());
+        $rateGroups = $this->rateGroups();
+        $allKeys = collect($rateGroups)->flatMap(fn($pairs)=>array_keys($pairs))->values()->all();
+
+        $data = $request->validate([
+            'name'      => ['required','string','max:255'],
+            'phone'     => ['nullable','string','max:50'],
+            'note'      => ['nullable','string','max:255'],
+            'is_owner'  => ['required', Rule::in(['0','1'])],
+            'is_active' => ['required', Rule::in(['0','1'])],
+
+            'rates'     => ['required','array'],
+            'rates.*'   => ['array'], // rates[region]
+        ]);
+
+        $customer = Customer::create([
+            'name'      => $data['name'],
+            'phone'     => $data['phone'] ?? null,
+            'note'      => $data['note'] ?? null,
+            'is_owner'  => (int)$data['is_owner'],
+            'is_active' => (int)$data['is_active'],
+        ]);
+
+        // Lưu rates: upsert theo (customer_id, region, bet_key)
+        foreach ($regions as $region) {
+            $rows = $data['rates'][$region] ?? [];
+            foreach ($rows as $betKey => $row) {
+                if (!in_array($betKey, $allKeys, true)) continue;
+                if ($region === 'bac' && in_array($betKey, ['baylo_2','baylo_3'], true)) continue;
+
+                $commission   = $row['commission'] ?? null;
+                $payout_times = $row['payout_times'] ?? null;
+
+                if ($commission === null && $payout_times === null) {
+                    // bỏ qua nếu cả 2 trống
+                    continue;
+                }
+
+                BettingRate::updateOrCreate(
+                    [
+                        'customer_id' => $customer->id,
+                        'region'      => $region,
+                        'bet_key'     => $betKey,
+                    ],
+                    [
+                        'commission'   => $commission !== null ? (float)$commission : 0,
+                        'payout_times' => $payout_times !== null ? (int)$payout_times : 0,
+                    ]
+                );
+            }
+        }
+
+        return redirect()->route('user.customers.edit', $customer)->with('status', 'Đã tạo khách và lưu bảng giá.');
     }
 
     /**
@@ -178,85 +277,97 @@ class CustomerController extends Controller
         return view('user.customers.show', compact('customer', 'recentTickets'));
     }
 
-    /**
-     * Show the form for editing the customer
-     */
+    // ====== EDIT (đã sửa) ======
     public function edit(Customer $customer)
     {
-        $this->authorize('update', $customer);
+        $regions    = $this->regions();
+        $rateGroups = $this->rateGroups();
+        $resolver   = app(BettingRateResolver::class);
 
-        $bettingTypes = BettingType::active()->ordered()->get();
-        $customer->load('bettingRates');
+        // Prefill từ GIÁ HIỆU LỰC (override KH if any → else default)
+        $initialRates = [];
+        foreach ($regions as $regionKey => $label) {
+            $initialRates[$regionKey] = [];
+            foreach ($rateGroups as $groupTitle => $pairs) {
+                $isBayLoGroup = str_contains($groupTitle, 'Bảy lô');
+                foreach ($pairs as $betKey => $lbl) {
+                    if ($regionKey === 'bac' && $isBayLoGroup) continue;
 
-        return view('user.customers.edit', compact('customer', 'bettingTypes'));
-    }
+                    $map = $this->betKeyToResolverArgs($betKey);
+                    if (!$map['type_code']) continue;
 
-    /**
-     * Update the specified customer
-     */
-    public function update(Request $request, Customer $customer)
-    {
-        $this->authorize('update', $customer);
-
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20|unique:customers,phone,' . $customer->id . '|regex:/^[0-9+\-\s()]+$/',
-            'betting_rates' => 'array',
-            'betting_rates.*.betting_type_id' => 'required|exists:betting_types,id',
-            'betting_rates.*.win_rate' => 'required|numeric|min:0|max:1',
-            'betting_rates.*.lose_rate' => 'required|numeric|min:0|max:1',
-        ], [
-            'name.required' => 'Tên khách hàng là bắt buộc.',
-            'name.max' => 'Tên khách hàng không được vượt quá 255 ký tự.',
-            'phone.required' => 'Số điện thoại là bắt buộc.',
-            'phone.unique' => 'Số điện thoại này đã được sử dụng.',
-            'phone.regex' => 'Số điện thoại không đúng định dạng.',
-            'betting_rates.*.win_rate.required' => 'Hệ số thu là bắt buộc.',
-            'betting_rates.*.win_rate.numeric' => 'Hệ số thu phải là số.',
-            'betting_rates.*.win_rate.min' => 'Hệ số thu phải lớn hơn hoặc bằng 0.',
-            'betting_rates.*.win_rate.max' => 'Hệ số thu phải nhỏ hơn hoặc bằng 1.',
-            'betting_rates.*.lose_rate.required' => 'Hệ số trả là bắt buộc.',
-            'betting_rates.*.lose_rate.numeric' => 'Hệ số trả phải là số.',
-            'betting_rates.*.lose_rate.min' => 'Hệ số trả phải lớn hơn hoặc bằng 0.',
-            'betting_rates.*.lose_rate.max' => 'Hệ số trả phải nhỏ hơn hoặc bằng 1.',
-        ]);
-
-        try {
-            $customer->update([
-                'name' => $request->name,
-                'phone' => $request->phone,
-            ]);
-
-            // Update betting rates
-            if ($request->has('betting_rates')) {
-                // Delete existing rates
-                $customer->bettingRates()->delete();
-
-                // Create new rates
-                foreach ($request->betting_rates as $rateData) {
-                    // Validate that win_rate + lose_rate = 1
-                    $totalRate = $rateData['win_rate'] + $rateData['lose_rate'];
-                    if (abs($totalRate - 1.0) > 0.01) {
-                        throw new \Exception("Tổng hệ số thu và trả phải bằng 1.0 cho loại cược ID: {$rateData['betting_type_id']}");
-                    }
-
-                    $customer->bettingRates()->create([
-                        'user_id' => Auth::id(),
-                        'betting_type_id' => $rateData['betting_type_id'],
-                        'win_rate' => $rateData['win_rate'],
-                        'lose_rate' => $rateData['lose_rate'],
-                    ]);
+                    $rate = $resolver->get($customer->id, $regionKey, $map['type_code'], $map['meta']);
+                    $initialRates[$regionKey][$betKey] = [
+                        'commission'   => $rate['buy_rate'] ?? null,
+                        'payout_times' => $rate['payout']   ?? null,
+                    ];
                 }
             }
-
-            return redirect()->route('user.customers.index')
-                ->with('success', 'Thông tin khách hàng đã được cập nhật.');
-
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Có lỗi xảy ra khi cập nhật khách hàng: ' . $e->getMessage());
         }
+
+        return view('user.customers.edit', compact('customer','regions','rateGroups','initialRates'));
+    }
+
+    public function update(Request $request, Customer $customer)
+    {
+        $regions = array_keys($this->regions());
+        $rateGroups = $this->rateGroups();
+        $allKeys = collect($rateGroups)->flatMap(fn($pairs)=>array_keys($pairs))->values()->all();
+
+        $data = $request->validate([
+            'name'      => ['required','string','max:255'],
+            'phone'     => ['nullable','string','max:50'],
+            'note'      => ['nullable','string','max:255'],
+            'is_owner'  => ['required', Rule::in(['0','1'])],
+            'is_active' => ['required', Rule::in(['0','1'])],
+            'rates'     => ['required','array'],
+            'rates.*'   => ['array'],
+        ]);
+
+        // Cập nhật Customer
+        $customer->update([
+            'name'      => $data['name'],
+            'phone'     => $data['phone'] ?? null,
+            'note'      => $data['note'] ?? null,
+            'is_owner'  => (int)$data['is_owner'],
+            'is_active' => (int)$data['is_active'],
+        ]);
+
+        // Upsert rates
+        foreach ($regions as $region) {
+            $rows = $data['rates'][$region] ?? [];
+            foreach ($rows as $betKey => $row) {
+                if (!in_array($betKey, $allKeys, true)) continue;
+                if ($region === 'bac' && in_array($betKey, ['baylo_2','baylo_3'], true)) continue;
+
+                $commission   = $row['commission'] ?? null;
+                $payout_times = $row['payout_times'] ?? null;
+
+                if ($commission === null && $payout_times === null) {
+                    // nếu cả 2 trống → xóa override để fallback default
+                    BettingRate::where([
+                        'customer_id' => $customer->id,
+                        'region'      => $region,
+                        'bet_key'     => $betKey,
+                    ])->delete();
+                    continue;
+                }
+
+                BettingRate::updateOrCreate(
+                    [
+                        'customer_id' => $customer->id,
+                        'region'      => $region,
+                        'bet_key'     => $betKey,
+                    ],
+                    [
+                        'commission'   => $commission !== null ? (float)$commission : 0,
+                        'payout_times' => $payout_times !== null ? (int)$payout_times : 0,
+                    ]
+                );
+            }
+        }
+
+        return back()->with('status', 'Đã lưu thay đổi & bảng giá.');
     }
 
     /**

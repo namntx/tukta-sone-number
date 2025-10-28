@@ -78,9 +78,9 @@
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 @error('region') border-red-500 @enderror"
                                 required>
                             <option value="">Chọn miền</option>
-                            <option value="Bắc" {{ old('region', $global_region) == 'Bắc' ? 'selected' : '' }}>Bắc</option>
-                            <option value="Trung" {{ old('region', $global_region) == 'Trung' ? 'selected' : '' }}>Trung</option>
-                            <option value="Nam" {{ old('region', $global_region) == 'Nam' ? 'selected' : '' }}>Nam</option>
+                            <option value="bac" {{ old('region', $global_region) == 'bac' ? 'selected' : '' }}>Bắc</option>
+                            <option value="trung" {{ old('region', $global_region) == 'trung' ? 'selected' : '' }}>Trung</option>
+                            <option value="nam" {{ old('region', $global_region) == 'nam' ? 'selected' : '' }}>Nam</option>
                         </select>
                         @error('region')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>

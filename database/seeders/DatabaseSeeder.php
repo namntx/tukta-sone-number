@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             StationSeeder::class,
             LotteryScheduleSeeder::class,
             BettingTypeSeeder::class,
+            BettingRateSeeder::class
         ]);
     }
 }

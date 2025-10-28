@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\PlanController as AdminPlanController;
 use App\Http\Controllers\User\LotteryResultController as UserLotteryResultController;
+use App\Http\Controllers\User\CustomerRateController as UserCustomerRateController;
 
 // Trang chủ
 Route::get('/', function () {
@@ -81,7 +82,13 @@ Route::middleware(['auth'])->group(function () {
         
         // Customer routes
         Route::resource('customers', UserCustomerController::class);
-        Route::get('/customers/{customer}/rates', [UserCustomerController::class, 'getRates'])->name('customers.rates');
+        // Route::get('/customers/{customer}/rates', [UserCustomerController::class, 'getRates'])->name('customers.rates');
+
+        Route::prefix('customers/{customer}')->group(function () {
+            Route::get('rates', [\App\Http\Controllers\User\CustomerRateController::class, 'edit'])->name('customers.rates.edit');
+            Route::post('rates',[\App\Http\Controllers\User\CustomerRateController::class, 'update'])->name('customers.rates.update');
+            Route::delete('rates/{rate}',[\App\Http\Controllers\User\CustomerRateController::class, 'destroy'])->name('customers.rates.destroy');
+        });
         
         // Betting ticket routes
         Route::resource('betting-tickets', UserBettingTicketController::class);

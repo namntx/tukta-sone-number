@@ -148,9 +148,9 @@
                                                     name="global_region" 
                                                     class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                                                     onchange="updateGlobalFilters()">
-                                                <option value="Bắc" {{ $global_region == 'Bắc' ? 'selected' : '' }}>Bắc</option>
-                                                <option value="Trung" {{ $global_region == 'Trung' ? 'selected' : '' }}>Trung</option>
-                                                <option value="Nam" {{ $global_region == 'Nam' ? 'selected' : '' }}>Nam</option>
+                                                <option value="bac" {{ $global_region == 'bac' ? 'selected' : '' }}>Bắc</option>
+                                                <option value="Trtrungung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
+                                                <option value="nam" {{ $global_region == 'nam' ? 'selected' : '' }}>Nam</option>
                                             </select>
                                         </div>
                                     </form>
