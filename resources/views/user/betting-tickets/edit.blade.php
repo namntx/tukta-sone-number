@@ -79,9 +79,9 @@
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 @error('region') border-red-500 @enderror"
                                 required>
                             <option value="">Chọn miền</option>
-                            <option value="Bắc" {{ old('region', $bettingTicket->region) == 'Bắc' ? 'selected' : '' }}>Bắc</option>
-                            <option value="Trung" {{ old('region', $bettingTicket->region) == 'Trung' ? 'selected' : '' }}>Trung</option>
-                            <option value="Nam" {{ old('region', $bettingTicket->region) == 'Nam' ? 'selected' : '' }}>Nam</option>
+                            <option value="bac" {{ old('region', $bettingTicket->region) == 'Bắc' ? 'selected' : '' }}>Bắc</option>
+                            <option value="trung" {{ old('region', $bettingTicket->region) == 'Trung' ? 'selected' : '' }}>Trung</option>
+                            <option value="nam" {{ old('region', $bettingTicket->region) == 'Nam' ? 'selected' : '' }}>Nam</option>
                         </select>
                         @error('region')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>

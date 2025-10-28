@@ -9,7 +9,8 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Str;
 use App\Support\Region;
-
+use App\Services\BetPricingService;
+use App\Services\BettingRateResolver;
 
 class BettingMessageParser
 {
@@ -19,8 +20,12 @@ class BettingMessageParser
     /** @var array<string,string> station alias -> canonical station key */
     private array $stationAliasMap = [];
 
-    public function __construct()
+    protected BetPricingService $pricing;
+
+    public function __construct(BetPricingService $pricing)
     {
+        $this->pricing = $pricing;
+        
         // Fallback luôn có; DB override/thêm vào
         $this->typeAliasMap = $this->defaultTypeAliases();
         $dbMap = BettingType::aliasMap();
@@ -136,27 +141,31 @@ class BettingMessageParser
         };
 
         // MỚI: tách lô theo độ dài số
-        $emitBaoLoByDigits = function(array &$outBets, array &$ctx) use ($emitBet) {
-            $numbers = array_values(array_unique($ctx['numbers_group']));
-            if (!count($numbers) || !$ctx['amount']) return;
-
-            $groups = [2=>[],3=>[],4=>[]];
+        $emitBaoLoSplitPerNumber = function(array &$outBets, array &$ctx) use ($emitBet) {
+            $numbers = array_values(array_unique($ctx['numbers_group'] ?? []));
+            $amt     = (int)($ctx['amount'] ?? 0);
+            if (!count($numbers) || $amt <= 0) return;
+        
             foreach ($numbers as $n) {
                 $len = strlen($n);
-                if (isset($groups[$len])) $groups[$len][] = $n;
-            }
-            foreach ($groups as $digits => $nums) {
-                if (!count($nums)) continue;
+                $type = match ($len) {
+                    2 => 'bao_lo',   // Bao lô 2 số
+                    3 => 'bao3_lo',  // Bao lô 3 số
+                    4 => 'bao4_lo',  // Bao lô 4 số
+                    default => null,
+                };
+                if (!$type) continue; // bỏ qua số không hợp lệ
+        
                 $emitBet($outBets, $ctx, [
-                    'numbers' => $nums,
-                    'type'    => 'bao_lo',
-                    'amount'  => (int)$ctx['amount'],
-                    'meta'    => ['digits' => $digits],
+                    'numbers' => [$n],
+                    'type'    => $type,
+                    'amount'  => $amt,
+                    'meta'    => ['digits' => $len],
                 ]);
             }
         };
 
-        $flushGroup = function(array &$outBets, array &$ctx, array &$events, ?string $reason=null) use ($emitBet, $emitBaoLoByDigits, $addEvent, &$errors) {
+        $flushGroup = function(array &$outBets, array &$ctx, array &$events, ?string $reason=null) use ($emitBet, $emitBaoLoSplitPerNumber, $addEvent, &$errors) {
             if ($reason) $addEvent($events, $reason);
 
             $numbers = array_values(array_unique($ctx['numbers_group'] ?? []));
@@ -171,8 +180,12 @@ class BettingMessageParser
 
             // TÁCH LÔ THEO ĐỘ DÀI
             if ($type === 'bao_lo') {
-                $emitBaoLoByDigits($outBets, $ctx);
-                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+                // TÁCH mỗi số 1 vé và map type theo độ dài (2/3/4 số)
+                $emitBaoLoSplitPerNumber($outBets, $ctx);
+                $ctx['numbers_group'] = [];
+                $ctx['amount']        = null;
+                $ctx['meta']          = [];
+                $ctx['current_type']  = null;
                 return;
             }
 
@@ -501,7 +514,7 @@ class BettingMessageParser
             ];
         }
 
-        // Nếu một số bet chưa có station → gán station từ ctx hoặc default
+        // 1) Điền station mặc định cho vé thiếu
         foreach ($outBets as &$b) {
             if (empty($b['station'])) {
                 $b['station'] = $joinStations(count($ctx['stations']) ? $ctx['stations'] : $defaultStations);
@@ -510,13 +523,43 @@ class BettingMessageParser
         }
         unset($b);
 
+        // 2) Pricing (customer-aware + cached)
+        $customerId = isset($context['customer_id']) && is_numeric($context['customer_id'])
+            ? (int)$context['customer_id'] : null;
+
+        $this->pricing->begin($customerId, $region);
+
+        foreach ($outBets as &$b) {
+            // đảm bảo digits cho lô
+            if (!isset($b['meta']['digits']) && in_array($b['type'], ['bao_lo','bao3_lo','bao4_lo'], true)) {
+                $first = $b['numbers'][0] ?? null;
+                if ($first) $b['meta']['digits'] = strlen((string)$first);
+            }
+            // đếm đài cho đá xiên (nếu cần)
+            if ($b['type'] === 'da_xien' && empty($b['meta']['dai_count'])) {
+                $stations = explode('+', (string)$b['station']);
+                $b['meta']['dai_count'] = count(array_filter(array_map('trim', $stations)));
+            }
+
+            $b['pricing'] = $this->pricing->previewForBet($b);
+        }
+        unset($b);
+
+        // 3) Breakdown
+        $pv = \App\Services\BetPricingService::buildBreakdown($outBets);
+
+        // 4) Return
         return [
-            'is_valid'        => !empty($outBets), // ✅ có bet mới là hợp lệ
+            'is_valid'        => !empty($outBets),
             'multiple_bets'   => $outBets,
             'errors'          => $errors,
             'normalized'      => $normalized,
             'parsed_message'  => $normalized,
             'tokens'          => $tokens,
+            'preview'         => [
+                'by_type' => $pv['breakdown'],   // [{label, cost_xac, potential_win, count}, ...]
+                'total'   => $pv['total'],       // {cost_xac_total, potential_win_total}
+            ],
             'debug'           => [
                 'stations_default' => array_values($defaultStations),
                 'events'           => $events,

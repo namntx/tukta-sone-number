@@ -111,9 +111,9 @@
                 <label for="region" class="block text-sm font-medium text-gray-700 mb-1">Miền</label>
                 <select name="region" id="region" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="">Tất cả miền</option>
-                    <option value="Bắc" {{ request('region', $global_region) == 'Bắc' ? 'selected' : '' }}>Bắc</option>
-                    <option value="Trung" {{ request('region', $global_region) == 'Trung' ? 'selected' : '' }}>Trung</option>
-                    <option value="Nam" {{ request('region', $global_region) == 'Nam' ? 'selected' : '' }}>Nam</option>
+                    <option value="bac" {{ request('region', $global_region) == 'Bắc' ? 'selected' : '' }}>Bắc</option>
+                    <option value="trung" {{ request('region', $global_region) == 'Trung' ? 'selected' : '' }}>Trung</option>
+                    <option value="nam" {{ request('region', $global_region) == 'Nam' ? 'selected' : '' }}>Nam</option>
                 </select>
             </div>
             <div>

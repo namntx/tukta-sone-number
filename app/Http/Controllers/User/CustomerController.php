@@ -150,7 +150,7 @@ class CustomerController extends Controller
         
         // Calculate statistics using global date and region
         $globalDate = session('global_date', today());
-        $globalRegion = session('global_region', 'Bắc');
+        $globalRegion = session('global_region', 'bac');
         
         $todayStats = [
             'total_win' => $user->bettingTickets()->whereDate('betting_date', $globalDate)->where('region', $globalRegion)->where('result', 'win')->sum('win_amount'),
@@ -202,61 +202,14 @@ class CustomerController extends Controller
         return view('user.customers.create', compact('regions','rateGroups','initialRates'));
     }
 
-    public function store(Request $request)
+    public function store(CustomerRequest $request): RedirectResponse
     {
-        $regions = array_keys($this->regions());
-        $rateGroups = $this->rateGroups();
-        $allKeys = collect($rateGroups)->flatMap(fn($pairs)=>array_keys($pairs))->values()->all();
+        $customer = Customer::create($request->validated());
 
-        $data = $request->validate([
-            'name'      => ['required','string','max:255'],
-            'phone'     => ['nullable','string','max:50'],
-            'note'      => ['nullable','string','max:255'],
-            'is_owner'  => ['required', Rule::in(['0','1'])],
-            'is_active' => ['required', Rule::in(['0','1'])],
-
-            'rates'     => ['required','array'],
-            'rates.*'   => ['array'], // rates[region]
-        ]);
-
-        $customer = Customer::create([
-            'name'      => $data['name'],
-            'phone'     => $data['phone'] ?? null,
-            'note'      => $data['note'] ?? null,
-            'is_owner'  => (int)$data['is_owner'],
-            'is_active' => (int)$data['is_active'],
-        ]);
-
-        // Lưu rates: upsert theo (customer_id, region, bet_key)
-        foreach ($regions as $region) {
-            $rows = $data['rates'][$region] ?? [];
-            foreach ($rows as $betKey => $row) {
-                if (!in_array($betKey, $allKeys, true)) continue;
-                if ($region === 'bac' && in_array($betKey, ['baylo_2','baylo_3'], true)) continue;
-
-                $commission   = $row['commission'] ?? null;
-                $payout_times = $row['payout_times'] ?? null;
-
-                if ($commission === null && $payout_times === null) {
-                    // bỏ qua nếu cả 2 trống
-                    continue;
-                }
-
-                BettingRate::updateOrCreate(
-                    [
-                        'customer_id' => $customer->id,
-                        'region'      => $region,
-                        'bet_key'     => $betKey,
-                    ],
-                    [
-                        'commission'   => $commission !== null ? (float)$commission : 0,
-                        'payout_times' => $payout_times !== null ? (int)$payout_times : 0,
-                    ]
-                );
-            }
-        }
-
-        return redirect()->route('user.customers.edit', $customer)->with('status', 'Đã tạo khách và lưu bảng giá.');
+        // Không xử lý bảng giá ở đây. Chuyển sang màn riêng để cấu hình.
+        return redirect()
+            ->route('user.customers.rates.edit', $customer->id)
+            ->with('success', 'Tạo khách hàng thành công. Hãy cấu hình bảng giá.');
     }
 
     /**
@@ -308,66 +261,14 @@ class CustomerController extends Controller
         return view('user.customers.edit', compact('customer','regions','rateGroups','initialRates'));
     }
 
-    public function update(Request $request, Customer $customer)
+    public function update(CustomerRequest $request, Customer $customer): RedirectResponse
     {
-        $regions = array_keys($this->regions());
-        $rateGroups = $this->rateGroups();
-        $allKeys = collect($rateGroups)->flatMap(fn($pairs)=>array_keys($pairs))->values()->all();
+        $customer->update($request->validated());
 
-        $data = $request->validate([
-            'name'      => ['required','string','max:255'],
-            'phone'     => ['nullable','string','max:50'],
-            'note'      => ['nullable','string','max:255'],
-            'is_owner'  => ['required', Rule::in(['0','1'])],
-            'is_active' => ['required', Rule::in(['0','1'])],
-            'rates'     => ['required','array'],
-            'rates.*'   => ['array'],
-        ]);
-
-        // Cập nhật Customer
-        $customer->update([
-            'name'      => $data['name'],
-            'phone'     => $data['phone'] ?? null,
-            'note'      => $data['note'] ?? null,
-            'is_owner'  => (int)$data['is_owner'],
-            'is_active' => (int)$data['is_active'],
-        ]);
-
-        // Upsert rates
-        foreach ($regions as $region) {
-            $rows = $data['rates'][$region] ?? [];
-            foreach ($rows as $betKey => $row) {
-                if (!in_array($betKey, $allKeys, true)) continue;
-                if ($region === 'bac' && in_array($betKey, ['baylo_2','baylo_3'], true)) continue;
-
-                $commission   = $row['commission'] ?? null;
-                $payout_times = $row['payout_times'] ?? null;
-
-                if ($commission === null && $payout_times === null) {
-                    // nếu cả 2 trống → xóa override để fallback default
-                    BettingRate::where([
-                        'customer_id' => $customer->id,
-                        'region'      => $region,
-                        'bet_key'     => $betKey,
-                    ])->delete();
-                    continue;
-                }
-
-                BettingRate::updateOrCreate(
-                    [
-                        'customer_id' => $customer->id,
-                        'region'      => $region,
-                        'bet_key'     => $betKey,
-                    ],
-                    [
-                        'commission'   => $commission !== null ? (float)$commission : 0,
-                        'payout_times' => $payout_times !== null ? (int)$payout_times : 0,
-                    ]
-                );
-            }
-        }
-
-        return back()->with('status', 'Đã lưu thay đổi & bảng giá.');
+        // Không đụng vào bảng giá ở đây.
+        return redirect()
+            ->route('user.customers.rates.edit', $customer->id)
+            ->with('success', 'Cập nhật khách hàng thành công.');
     }
 
     /**

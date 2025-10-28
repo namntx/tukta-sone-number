@@ -19,7 +19,7 @@ class StationSeeder extends Seeder
                 'name' => 'Đài chánh',
                 'code' => 'dc',
                 'syntaxes' => ['dc', 'chanh', 'ch', 'daichanh', 'dchanh'],
-                'region' => 'Bắc',
+                'region' => 'bac',
                 'sort_order' => 1,
             ],
             
@@ -28,16 +28,16 @@ class StationSeeder extends Seeder
                 'name' => 'Đài phụ',
                 'code' => 'dp',
                 'syntaxes' => ['dp', 'phu', 'ph', 'dphu', 'daiphu'],
-                'region' => 'Bắc',
+                'region' => 'bac',
                 'sort_order' => 2,
             ],
             
-            // Hà nội, miền bắc
+            // Hà nội, miền bac
             [
                 'name' => 'Hà Nội',
                 'code' => 'hn',
                 'syntaxes' => ['mb', 'hn', 'hanoi', 'ha noi'],
-                'region' => 'Bắc',
+                'region' => 'bac',
                 'sort_order' => 3,
             ],
             
@@ -46,7 +46,7 @@ class StationSeeder extends Seeder
                 'name' => 'An Giang',
                 'code' => 'ag',
                 'syntaxes' => ['ag', 'angiang', 'an giang'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 4,
             ],
             
@@ -55,7 +55,7 @@ class StationSeeder extends Seeder
                 'name' => 'Bạc Liêu',
                 'code' => 'bl',
                 'syntaxes' => ['bl', 'blieu', 'baclieu', 'bac lieu'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 5,
             ],
             
@@ -64,7 +64,7 @@ class StationSeeder extends Seeder
                 'name' => 'Bến Tre',
                 'code' => 'bt',
                 'syntaxes' => ['bt', 'btre', 'bentre', 'ben tre'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 6,
             ],
             
@@ -73,7 +73,7 @@ class StationSeeder extends Seeder
                 'name' => 'Bình Dương',
                 'code' => 'bd',
                 'syntaxes' => ['db', 'bduong', 'sb', 'binhduong', 'binh duong'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 7,
             ],
             
@@ -82,7 +82,7 @@ class StationSeeder extends Seeder
                 'name' => 'Bình Phước',
                 'code' => 'bp',
                 'syntaxes' => ['bp', 'bphuoc', 'binhphuoc', 'binh phuoc'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 8,
             ],
             
@@ -91,7 +91,7 @@ class StationSeeder extends Seeder
                 'name' => 'Bình Thuận',
                 'code' => 'bth',
                 'syntaxes' => ['bth', 'bthuan', 'binhthuan', 'binh thuan'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 9,
             ],
             
@@ -100,7 +100,7 @@ class StationSeeder extends Seeder
                 'name' => 'Cà Mau',
                 'code' => 'cm',
                 'syntaxes' => ['cm', 'camau', 'ca mau'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 10,
             ],
             
@@ -109,7 +109,7 @@ class StationSeeder extends Seeder
                 'name' => 'Cần Thơ',
                 'code' => 'ct',
                 'syntaxes' => ['ct', 'ctho', 'cantho', 'can tho'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 11,
             ],
             
@@ -118,7 +118,7 @@ class StationSeeder extends Seeder
                 'name' => 'Đà Lạt',
                 'code' => 'dl',
                 'syntaxes' => ['dl', 'dlat', 'dalat', 'da lat'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 12,
             ],
             
@@ -127,7 +127,7 @@ class StationSeeder extends Seeder
                 'name' => 'Đồng Nai',
                 'code' => 'dn',
                 'syntaxes' => ['dn', 'dnai', 'dongnai', 'dong nai'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 13,
             ],
             
@@ -136,7 +136,7 @@ class StationSeeder extends Seeder
                 'name' => 'Đồng Tháp',
                 'code' => 'dt',
                 'syntaxes' => ['dt', 'dthap', 'dongthap', 'dong thap'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 14,
             ],
             
@@ -145,7 +145,7 @@ class StationSeeder extends Seeder
                 'name' => 'Hậu Giang',
                 'code' => 'hg',
                 'syntaxes' => ['hg', 'hgiang', 'haugiang'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 15,
             ],
             
@@ -154,7 +154,7 @@ class StationSeeder extends Seeder
                 'name' => 'Kiên Giang',
                 'code' => 'kg',
                 'syntaxes' => ['kg', 'kgiang', 'kiengiang', 'kien giang'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 16,
             ],
             
@@ -163,7 +163,7 @@ class StationSeeder extends Seeder
                 'name' => 'Long An',
                 'code' => 'la',
                 'syntaxes' => ['la', 'lan', 'longan', 'long an'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 17,
             ],
             
@@ -172,7 +172,7 @@ class StationSeeder extends Seeder
                 'name' => 'Sóc Trăng',
                 'code' => 'st',
                 'syntaxes' => ['st', 'strang', 'soctrang', 'soc trang'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 18,
             ],
             
@@ -181,7 +181,7 @@ class StationSeeder extends Seeder
                 'name' => 'Tây Ninh',
                 'code' => 'tn',
                 'syntaxes' => ['tn', 'tninh', 'tayninh', 'tay ninh'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 19,
             ],
             
@@ -190,7 +190,7 @@ class StationSeeder extends Seeder
                 'name' => 'Tiền Giang',
                 'code' => 'tg',
                 'syntaxes' => ['tg', 'tgiang', 'tien giang', 'tiengiang'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 20,
             ],
             
@@ -199,7 +199,7 @@ class StationSeeder extends Seeder
                 'name' => 'TP.HCM',
                 'code' => 'tp',
                 'syntaxes' => ['tp', 'hcm'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 21,
             ],
             
@@ -208,7 +208,7 @@ class StationSeeder extends Seeder
                 'name' => 'Trà Vinh',
                 'code' => 'tv',
                 'syntaxes' => ['tv', 'tvinh', 'travinh', 'tra vinh'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 22,
             ],
             
@@ -217,7 +217,7 @@ class StationSeeder extends Seeder
                 'name' => 'Vĩnh Long',
                 'code' => 'vl',
                 'syntaxes' => ['vl', 'vlong', 'vinhlong', 'vinh long'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 23,
             ],
             
@@ -226,7 +226,7 @@ class StationSeeder extends Seeder
                 'name' => 'Vũng Tàu',
                 'code' => 'vt',
                 'syntaxes' => ['vt', 'vtau', 'vungtau', 'vung tau'],
-                'region' => 'Nam',
+                'region' => 'nam',
                 'sort_order' => 24,
             ],
         ];

@@ -3,77 +3,95 @@
 namespace App\Services;
 
 use App\Models\BettingRate;
-use Illuminate\Support\Facades\Cache;
 
-class BettingRateResolver
+class BettingRateResolver 
 {
-    /**
-     * Lấy 1 rate (buy_rate, payout) theo ưu tiên:
-     * customer-specific > default-by-region. Fallback: null nếu không có.
-     *
-     * @param  int|null     $customerId  cho phép null (khách vãng lai)
-     * @param  string       $region      bac|trung|nam
-     * @param  string       $typeCode    ví dụ: 'dau','duoi','de_duoi_4','bao_lo','xien','da_thang','da_xien','xiu_chu','bay_lo'
-     * @param  array        $meta        ['digits'=>2,'xien_size'=>2,'dai_count'=>2] (tùy type)
-     * @return array|null   ['buy_rate'=>float,'payout'=>float]
-     */
-    public function get(?int $customerId, string $region, string $typeCode, array $meta = []): ?array
+    /** @var array<string,array{buy_rate:float,payout:float}> */
+    protected array $map = [];
+    protected ?int $customerId = null;
+    protected string $region = 'nam';
+
+    public static function key(string $type, ?int $digits, ?int $xienSize, ?int $daiCount): string
     {
-        $key = $this->cacheKey($customerId, $region, $typeCode, $meta);
-        return Cache::remember($key, now()->addMinutes(10), function () use ($customerId, $region, $typeCode, $meta) {
+        return implode('|', [
+            $type,
+            is_null($digits)    ? '-' : (string)$digits,
+            is_null($xienSize)  ? '-' : (string)$xienSize,
+            is_null($daiCount)  ? '-' : (string)$daiCount,
+        ]);
+    }
 
-            $base = BettingRate::query()
-                ->active()
-                ->region($region)
-                ->type($typeCode)
-                ->matchMeta($meta)
-                ->orderByRaw('customer_id IS NULL') // ưu tiên có customer_id trước
-                ->orderByDesc('customer_id');       // rồi mới default
+    public function build(?int $customerId, string $region): self
+    {
+        $this->map = [];
+        $this->customerId = $customerId;
+        $this->region = $region;
 
-            $rate = (clone $base)->when($customerId, fn($q)=>$q->where('customer_id', $customerId))
-                                 ->first();
+        // GLOBAL (*)
+        $globals = BettingRate::query()
+            ->whereNull('customer_id')
+            ->where(function($q){ $q->whereNull('region')->orWhere('region','*'); })
+            ->get();
 
-            if (!$rate) {
-                $rate = (clone $base)->whereNull('customer_id')->first();
+        foreach ($globals as $r) {
+            $k = self::key($r->type_code, $r->digits, $r->xien_size, $r->dai_count);
+            $this->map[$k] = ['buy_rate'=>(float)$r->buy_rate, 'payout'=>(float)$r->payout];
+        }
+
+        // REGION DEFAULT
+        $byRegion = BettingRate::query()
+            ->whereNull('customer_id')
+            ->where('region', $region)
+            ->get();
+
+        foreach ($byRegion as $r) {
+            $k = self::key($r->type_code, $r->digits, $r->xien_size, $r->dai_count);
+            $this->map[$k] = ['buy_rate'=>(float)$r->buy_rate, 'payout'=>(float)$r->payout];
+        }
+
+        // CUSTOMER OVERRIDE
+        if ($customerId) {
+            $byCustomer = BettingRate::query()
+                ->where('customer_id', $customerId)
+                ->where('region', $region)
+                ->get();
+
+            foreach ($byCustomer as $r) {
+                $k = self::key($r->type_code, $r->digits, $r->xien_size, $r->dai_count);
+                $this->map[$k] = ['buy_rate'=>(float)$r->buy_rate, 'payout'=>(float)$r->payout];
             }
+        }
 
-            return $rate ? [
-                'buy_rate' => (float)$rate->buy_rate,
-                'payout'   => (float)$rate->payout,
-            ] : null;
-        });
+        return $this;
     }
 
-    public function getAllForCustomerRegion(?int $customerId, string $region)
+    public function resolve(string $typeCode, ?int $digits=null, ?int $xienSize=null, ?int $daiCount=null): array
     {
-        // Dùng cho UI: gộp customer-specific đè lên default
-        $defaults = BettingRate::active()->region($region)->whereNull('customer_id')->get();
-        $customs  = $customerId
-            ? BettingRate::active()->region($region)->where('customer_id',$customerId)->get()
-            : collect();
+        $typeCandidates = [$typeCode];
+        if ($typeCode === 'xien' && $xienSize) {
+            $typeCandidates[] = 'xi'.$xienSize; // hỗ trợ data kiểu xi2/xi3/xi4
+        }
 
-        // Map theo signature
-        $map = [];
-        $put = function($r) use (&$map){
-            $sig = self::signature($r->type_code, [
-                'digits'=>$r->digits, 'xien_size'=>$r->xien_size, 'dai_count'=>$r->dai_count
-            ]);
-            $map[$sig] = $r;
-        };
+        $combos = [
+            [$digits, $xienSize, $daiCount],
+            [$digits, $xienSize, null],
+            [$digits, null,      $daiCount],
+            [$digits, null,      null],
+            [null,    $xienSize, $daiCount],
+            [null,    $xienSize, null],
+            [null,    null,      $daiCount],
+            [null,    null,      null],
+        ];
 
-        foreach ($defaults as $r) $put($r);
-        foreach ($customs as $r)  $put($r);
+        foreach ($typeCandidates as $t) {
+            foreach ($combos as [$dg,$xs,$dc]) {
+                $k = self::key($t, $dg, $xs, $dc);
+                if (isset($this->map[$k])) {
+                    return [$this->map[$k]['buy_rate'], $this->map[$k]['payout']];
+                }
+            }
+        }
 
-        return collect($map)->values();
-    }
-
-    public static function signature(string $typeCode, array $meta = []): string
-    {
-        return $typeCode.'|'.($meta['digits'] ?? '').'|'.($meta['xien_size'] ?? '').'|'.($meta['dai_count'] ?? '');
-    }
-
-    protected function cacheKey(?int $customerId, string $region, string $typeCode, array $meta): string
-    {
-        return 'rate:'.($customerId ?? 'none').":$region:".self::signature($typeCode,$meta);
+        return [1.0, 0.0];
     }
 }
