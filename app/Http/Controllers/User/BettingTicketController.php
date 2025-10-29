@@ -336,7 +336,7 @@ class BettingTicketController extends Controller
                 // ví dụ: da_xien hiển thị "Xiên (2)" nếu có xien_size
                 $type = $bet['type'] ?? 'unknown';
                 $label = match ($type) {
-                    'bao_lo'     => 'Bao lô 2 số',
+                    'bao_lo'     => 'Bao lô ' . (($bet['meta']['digits'] ?? 2)) . ' số',
                     'bao3_lo'    => 'Bao lô 3 số',
                     'bao4_lo'    => 'Bao lô 4 số',
                     'bao_lo_dao' => 'Bao lô đảo',
@@ -344,7 +344,6 @@ class BettingTicketController extends Controller
                     'duoi'       => 'Đuôi',
                     'dau_duoi'   => 'Đầu & Đuôi',
                     'xiu_chu'    => 'Xỉu chủ',
-                    'xiu_chu_dao'=> 'Xỉu chủ đảo',
                     'xiu_chu_dau'=> 'Xỉu chủ đầu',
                     'xiu_chu_duoi'=>'Xỉu chủ đuôi',
                     'da_thang'   => 'Đá thẳng',
