@@ -3,163 +3,31 @@
 @section('title', 'Dashboard - Keki SaaS')
 
 @section('content')
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">
-                    Chào mừng, {{ $user->name }}!
-                </h1>
-                <p class="text-gray-600 mt-1">
-                    Đây là dashboard của bạn
-                </p>
-            </div>
-            <div class="mt-4 sm:mt-0">
-                @php
-                    $statusColors = [
-                        'active' => 'bg-green-100 text-green-800',
-                        'expired' => 'bg-red-100 text-red-800',
-                        'none' => 'bg-gray-100 text-gray-800'
-                    ];
-                    $statusTexts = [
-                        'active' => 'Active',
-                        'expired' => 'Expired',
-                        'none' => 'No Plan'
-                    ];
-                @endphp
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $statusColors[$subscriptionStatus] }}">
-                    {{ $statusTexts[$subscriptionStatus] }}
-                </span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Subscription Status Card -->
-    @if($activeSubscription)
-    <div class="bg-white shadow rounded-lg p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-gray-900">
-                Subscription hiện tại
-            </h2>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                {{ $activeSubscription->plan->name }}
-            </span>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-gray-50 rounded-lg p-4">
-                <div class="text-sm font-medium text-gray-500">Gói</div>
-                <div class="text-lg font-semibold text-gray-900">{{ $activeSubscription->plan->name }}</div>
-            </div>
-            <div class="bg-gray-50 rounded-lg p-4">
-                <div class="text-sm font-medium text-gray-500">Hết hạn</div>
-                <div class="text-lg font-semibold text-gray-900">{{ $activeSubscription->formatted_expiry_date }}</div>
-            </div>
-            <div class="bg-gray-50 rounded-lg p-4">
-                <div class="text-sm font-medium text-gray-500">Còn lại</div>
-                <div class="text-lg font-semibold text-gray-900">{{ $daysRemaining }} ngày</div>
-            </div>
-        </div>
-        
-        @if($daysRemaining <= 7 && $daysRemaining > 0)
-        <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <h3 class="text-sm font-medium text-yellow-800">
-                        Cảnh báo hết hạn
-                    </h3>
-                    <div class="mt-2 text-sm text-yellow-700">
-                        <p>Subscription của bạn sẽ hết hạn trong {{ $daysRemaining }} ngày. Vui lòng liên hệ admin để gia hạn.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        @endif
-    </div>
-    @else
-    <div class="bg-white shadow rounded-lg p-6">
-        <div class="text-center">
-            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100">
-                <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                </svg>
-            </div>
-            <h3 class="mt-2 text-sm font-medium text-gray-900">Chưa có subscription</h3>
-            <p class="mt-1 text-sm text-gray-500">Bạn chưa có gói subscription nào. Vui lòng liên hệ admin để đăng ký.</p>
-            <div class="mt-6">
-                <a href="{{ route('user.subscription') }}" 
-                   class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Xem các gói
-                </a>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- Recent Subscriptions -->
-    @if($recentSubscriptions->count() > 0)
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">
-                Lịch sử subscription
-            </h2>
-        </div>
-        <div class="divide-y divide-gray-200">
-            @foreach($recentSubscriptions as $subscription)
-            <div class="px-6 py-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center">
-                            <h3 class="text-sm font-medium text-gray-900">
-                                {{ $subscription->plan->name }}
-                            </h3>
-                            <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                @if($subscription->status === 'active') bg-green-100 text-green-800
-                                @elseif($subscription->status === 'expired') bg-red-100 text-red-800
-                                @elseif($subscription->status === 'cancelled') bg-gray-100 text-gray-800
-                                @else bg-yellow-100 text-yellow-800
-                                @endif">
-                                {{ ucfirst($subscription->status) }}
-                            </span>
-                        </div>
-                        <p class="text-sm text-gray-500">
-                            {{ $subscription->formatted_amount_paid }} • {{ $subscription->formatted_expiry_date }}
-                        </p>
-                    </div>
-                    <div class="text-sm text-gray-500">
-                        {{ $subscription->created_at->format('d/m/Y') }}
-                    </div>
-                </div>
-            </div>
-            @endforeach
-        </div>
-    </div>
-    @endif
-
+<div class="space-y-3 md:space-y-6">
     @if($subscriptionStatus === 'active')
     <!-- Betting Message Input Form -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">
-            <i class="fas fa-ticket-alt mr-2"></i>Phân tích tin nhắn cược
+    <div class="bg-white shadow rounded-lg p-4 md:p-6">
+        <h2 class="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4 flex items-center">
+            <svg class="w-5 h-5 md:w-6 md:h-6 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
+            </svg>
+            Phân tích tin nhắn cược
         </h2>
         
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <!-- Input Form -->
             <div>
                 <form id="betting-form" action="{{ route('user.betting-tickets.store') }}" method="POST">
                     @csrf
-                    <div class="space-y-4">
+                    <div class="space-y-3 md:space-y-4">
                         <div>
-                            <label for="customer_id" class="block text-sm font-medium text-gray-700 mb-1">
-                                <i class="fas fa-user mr-1"></i>Khách hàng
+                            <label for="customer_id" class="block text-xs md:text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                Khách hàng
                             </label>
-                            <select name="customer_id" id="customer_id" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                            <select name="customer_id" id="customer_id" class="w-full text-sm md:text-base border border-gray-300 rounded-md px-3 py-2.5 md:py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                                 <option value="">Chọn khách hàng</option>
                                 @foreach($customers as $customer)
                                     <option value="{{ $customer->id }}">{{ $customer->name }} ({{ $customer->phone }})</option>
@@ -167,18 +35,25 @@
                             </select>
                         </div>
                         
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="grid grid-cols-2 gap-2 md:gap-4">
                             <div>
-                                <label for="betting_date" class="block text-sm font-medium text-gray-700 mb-1">
-                                    <i class="fas fa-calendar mr-1"></i>Ngày cược
+                                <label for="betting_date" class="block text-xs md:text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                    <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    Ngày cược
                                 </label>
-                                <input type="date" name="betting_date" id="betting_date" value="{{ $global_date }}" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                                <input type="date" name="betting_date" id="betting_date" value="{{ $global_date }}" class="w-full text-sm md:text-base border border-gray-300 rounded-md px-2 md:px-3 py-2.5 md:py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                             </div>
                             <div>
-                                <label for="region" class="block text-sm font-medium text-gray-700 mb-1">
-                                    <i class="fas fa-map-marker-alt mr-1"></i>Miền
+                                <label for="region" class="block text-xs md:text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                    <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    </svg>
+                                    Miền
                                 </label>
-                                <select name="region" id="region" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                                <select name="region" id="region" class="w-full text-sm md:text-base border border-gray-300 rounded-md px-2 md:px-3 py-2.5 md:py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                                     <option value="">Chọn miền</option>
                                     <option value="bac"  {{ $global_region=='bac'  ? 'selected' : '' }}>Miền Bắc</option>
                                     <option value="trung"{{ $global_region=='trung'? 'selected' : '' }}>Miền Trung</option>
@@ -216,13 +91,13 @@
             
             <!-- Preview Panel -->
             <div>
-                <div class="bg-gray-50 rounded-lg p-4 h-full">
+                <div class="bg-gray-50 rounded-lg h-full">
                     <h3 class="text-sm font-medium text-gray-700 mb-3">
                         <i class="fas fa-eye mr-1"></i>Preview phiếu cược
                     </h3>
                     
                     <div id="preview-panel" class="hidden">
-                        <div class="bg-white rounded-lg border p-4 space-y-3">
+                        <div class="bg-white">
                             <div class="flex justify-between items-start">
                                 <div>
                                     <h4 class="font-medium text-gray-900" id="preview-customer">-</h4>
@@ -258,31 +133,77 @@
                                 </div>
                             </div>
                             
-                            <!-- Multiple Bets Table -->
+                            <!-- Multiple Bets Preview -->
                             <div class="border-t pt-3 hidden" id="multiple-bets-preview">
-                                <h4 class="text-sm font-medium text-gray-900 mb-3">Chi tiết các phiếu cược:</h4>
-                                <div class="overflow-x-auto">
-                                    <table class="min-w-full divide-y divide-gray-200">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="text-sm font-medium text-gray-900">Chi tiết các phiếu cược: <span id="bets-count" class="text-indigo-600">0</span></h4>
+                                    <!-- Group Toggle (Mobile) -->
+                                    <button type="button" id="toggle-group-btn" class="md:hidden text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                                        </svg>
+                                        <span id="toggle-group-text">Danh sách</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Mobile: Card Layout -->
+                                <div class="md:hidden space-y-2" id="bets-cards-mobile">
+                                    <!-- Cards will be populated by JavaScript -->
+                                </div>
+                                
+                                <!-- Show More Button (Mobile) -->
+                                <button type="button" id="show-more-btn" class="hidden md:hidden w-full mt-2 py-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors">
+                                    Xem thêm (<span id="remaining-count">0</span>)
+                                </button>
+                                
+                                <!-- Desktop: Table Layout -->
+                                <div class="hidden md:block overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200 text-xs">
                                         <thead class="bg-gray-50">
                                             <tr>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Miền</th>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đài</th>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số cược</th>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại cược</th>
-                                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Số tiền</th>
+                                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
+                                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Miền</th>
+                                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đài</th>
+                                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số</th>
+                                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại</th>
+                                                <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cược</th>
+                                                <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Xác</th>
+                                                <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Thắng</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200" id="bets-table-body">
                                             <!-- Rows will be populated by JavaScript -->
                                         </tbody>
                                         <tfoot class="bg-gray-50">
-                                            <tr>
-                                                <td colspan="5" class="px-3 py-2 text-sm font-medium text-gray-900 text-right">Tổng cộng:</td>
-                                                <td class="px-3 py-2 text-sm font-bold text-red-600 text-right" id="total-amount">0 VNĐ</td>
+                                            <tr class="font-bold">
+                                                <td colspan="5" class="px-2 py-2 text-sm text-gray-900 text-right">Tổng:</td>
+                                                <td class="px-2 py-2 text-sm text-red-600 text-right" id="total-amount">0</td>
+                                                <td class="px-2 py-2 text-sm text-orange-600 text-right" id="total-cost-xac">0</td>
+                                                <td class="px-2 py-2 text-sm text-green-600 text-right" id="total-potential-win">0</td>
                                             </tr>
                                         </tfoot>
                                     </table>
+                                </div>
+                                
+                                <!-- Total Summary (Mobile) -->
+                                <div class="md:hidden mt-2 p-2.5 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg border border-indigo-200">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-medium text-gray-700">Tổng cộng:</span>
+                                        <div class="flex items-center gap-3">
+                                            <div class="text-right">
+                                                <div class="text-sm font-bold text-red-600" id="total-amount-mobile">0</div>
+                                                <div class="text-xs text-gray-600">Cược</div>
+                                            </div>
+                                            <div class="text-right">
+                                                <div class="text-sm font-bold text-orange-600" id="total-cost-xac-mobile">0</div>
+                                                <div class="text-xs text-gray-600">Xác</div>
+                                            </div>
+                                            <div class="text-right">
+                                                <div class="text-sm font-bold text-green-600" id="total-potential-win-mobile">0</div>
+                                                <div class="text-xs text-gray-600">Thắng</div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -298,7 +219,7 @@
                                         <p class="font-medium text-green-600" id="preview-win-amount">-</p>
                                     </div>
                                     <div>
-                                        <span class="text-gray-500">Tỷ lệ:</span>
+                                        <span class="text-gray-500">Tiền xác:</span>
                                         <p class="font-medium" id="preview-rate">-</p>
                                     </div>
                                 </div>
@@ -327,7 +248,7 @@
     </div>
 
     <!-- Today's Statistics -->
-    <div class="bg-white shadow rounded-lg p-6">
+    <!-- <div class="bg-white shadow rounded-lg p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">
             Thống kê hôm nay
         </h2>
@@ -349,7 +270,7 @@
                 <div class="text-2xl font-bold text-red-900">{{ number_format($todayStats['total_lose_amount'], 0, ',', '.') }} VNĐ</div>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- Today's Tickets -->
     @if($todayTickets->count() > 0)
@@ -389,74 +310,6 @@
     </div>
     @endif
     @endif
-
-    <!-- Quick Actions -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">
-            Thao tác nhanh
-        </h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <a href="{{ route('user.customers.index') }}" 
-               class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm font-medium text-gray-900">Khách hàng</p>
-                    <p class="text-sm text-gray-500">Quản lý khách hàng</p>
-                </div>
-            </a>
-            
-            <a href="{{ route('user.betting-tickets.index') }}" 
-               class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm font-medium text-gray-900">Phiếu cược</p>
-                    <p class="text-sm text-gray-500">Quản lý phiếu cược</p>
-                </div>
-            </a>
-            
-            <a href="{{ route('user.subscription') }}" 
-               class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                        <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm font-medium text-gray-900">Subscription</p>
-                    <p class="text-sm text-gray-500">Xem và quản lý gói</p>
-                </div>
-            </a>
-            
-            <a href="{{ route('user.profile') }}" 
-               class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm font-medium text-gray-900">Profile</p>
-                    <p class="text-sm text-gray-500">Cập nhật thông tin</p>
-                </div>
-            </a>
-        </div>
-    </div>
 </div>
 
 @if($subscriptionStatus === 'active')
@@ -508,7 +361,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({
                     message: message,
-                    customer_id: customer
+                    customer_id: customer,
+                    region: region.value
                 })
             })
             .then(response => response.json())
@@ -617,56 +471,278 @@ document.addEventListener('DOMContentLoaded', function() {
         if (copyJsonBtn) copyJsonBtn.disabled = false;
     }
     
+    // State for pagination
+    let allBets = [];
+    let currentRegion = '';
+    let isGrouped = true;
+    let visibleCount = 20; // Show first 20 cards
+    
     function showMultipleBetsTable(bets, region) {
-        const tableBody = document.getElementById('bets-table-body');
-        const totalAmountEl = document.getElementById('total-amount');
+        allBets = bets;
+        currentRegion = region;
+        visibleCount = 20; // Reset
         
-        // Clear existing rows
+        const tableBody = document.getElementById('bets-table-body');
+        const cardsContainer = document.getElementById('bets-cards-mobile');
+        const betsCountEl = document.getElementById('bets-count');
+        const showMoreBtn = document.getElementById('show-more-btn');
+        const remainingCountEl = document.getElementById('remaining-count');
+        const totalAmountEl = document.getElementById('total-amount');
+        const totalCostXacEl = document.getElementById('total-cost-xac');
+        const totalPotentialWinEl = document.getElementById('total-potential-win');
+        const totalAmountMobileEl = document.getElementById('total-amount-mobile');
+        const totalCostXacMobileEl = document.getElementById('total-cost-xac-mobile');
+        const totalPotentialWinMobileEl = document.getElementById('total-potential-win-mobile');
+        
+        // Update count
+        betsCountEl.textContent = bets.length;
+        
+        // Clear existing content
         tableBody.innerHTML = '';
+        cardsContainer.innerHTML = '';
         
         let totalAmount = 0;
+        let totalCostXac = 0;
+        let totalPotentialWin = 0;
+        
+        // Format numbers
+        const formatNumber = (num) => {
+            if (num >= 1000) {
+                return (num / 1000).toFixed(0) + 'k';
+            }
+            return num.toLocaleString();
+        };
+        
+        const formatTotal = (num) => {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(0) + 'k';
+            }
+            return num.toLocaleString();
+        };
+        
+        // Render mobile cards (with pagination or grouped)
+        if (isGrouped) {
+            renderGroupedBets(bets);
+        } else {
+            renderListBets(bets.slice(0, visibleCount));
+        }
         
         bets.forEach((bet, index) => {
+            const amount = bet.amount || 0;
+            const costXac = bet.cost_xac || 0;
+            const potentialWin = bet.potential_win || 0;
+            
+            totalAmount += amount;
+            totalCostXac += costXac;
+            totalPotentialWin += potentialWin;
+            
+            // Create desktop table row (all rows)
+            const stationName = bet.station || '-';
+            let numbersDisplay = '-';
+            if (Array.isArray(bet.numbers) && bet.numbers.length > 0) {
+                const pretty = bet.numbers.map(n => Array.isArray(n) ? n.join('-') : n);
+                numbersDisplay = pretty.length > 5 ? pretty.slice(0,5).join(', ') + `... (+${pretty.length - 5})` : pretty.join(', ');
+            }
+            const bettingTypeName = bet.type || 'Không xác định';
+            
             const row = document.createElement('tr');
             row.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
-            
-            // Get station name (new format)
+            row.innerHTML = `
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">${index + 1}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">${region}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">${stationName}</td>
+                <td class="px-2 py-2 text-xs text-gray-900">
+                    <div class="max-w-xs truncate" title="${bet.numbers ? bet.numbers.join(', ') : ''}">
+                        ${numbersDisplay}
+                    </div>
+                </td>
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">${bettingTypeName}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-red-600 text-right font-medium">${formatNumber(amount)}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-orange-600 text-right">${formatNumber(costXac)}</td>
+                <td class="px-2 py-2 whitespace-nowrap text-xs text-green-600 text-right">${formatNumber(potentialWin)}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+        
+        // Show "Show More" button if needed
+        if (bets.length > visibleCount && !isGrouped) {
+            showMoreBtn.classList.remove('hidden');
+            remainingCountEl.textContent = bets.length - visibleCount;
+        } else {
+            showMoreBtn.classList.add('hidden');
+        }
+        
+        // Update totals (desktop)
+        totalAmountEl.textContent = formatTotal(totalAmount);
+        totalCostXacEl.textContent = formatTotal(totalCostXac);
+        totalPotentialWinEl.textContent = formatTotal(totalPotentialWin);
+        
+        // Update totals (mobile)
+        totalAmountMobileEl.textContent = formatTotal(totalAmount);
+        totalCostXacMobileEl.textContent = formatTotal(totalCostXac);
+        totalPotentialWinMobileEl.textContent = formatTotal(totalPotentialWin);
+    }
+    
+    // Render list of bets (normal view)
+    function renderListBets(bets) {
+        const cardsContainer = document.getElementById('bets-cards-mobile');
+        
+        bets.forEach((bet, index) => {
             const stationName = bet.station || '-';
-            
-            // Get numbers display (new format)
-            // Get numbers display (xiên -> nối bằng dấu '-')
             let numbersDisplay = '-';
             if (Array.isArray(bet.numbers) && bet.numbers.length > 0) {
                 const pretty = bet.numbers.map(n => Array.isArray(n) ? n.join('-') : n);
                 numbersDisplay = pretty.length > 5 ? pretty.slice(0,5).join(', ') + `... (+${pretty.length - 5})` : pretty.join(', ');
             }
             
-            // Get betting type name (new format)
             const bettingTypeName = bet.type || 'Không xác định';
-            
-            // Calculate amount
             const amount = bet.amount || 0;
-            totalAmount += amount;
+            const costXac = bet.cost_xac || 0;
             
-            row.innerHTML = `
-                <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900">${index + 1}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900">${region}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900">${stationName}</td>
-                <td class="px-3 py-2 text-sm text-gray-900">
-                    <div class="max-w-xs truncate" title="${bet.numbers ? bet.numbers.join(', ') : ''}">
-                        ${numbersDisplay}
+            const formatNumber = (num) => {
+                if (num >= 1000) return (num / 1000).toFixed(0) + 'k';
+                return num.toLocaleString();
+            };
+            
+            const card = document.createElement('div');
+            card.className = 'bg-white border border-gray-200 rounded-lg p-2 hover:shadow transition-shadow';
+            card.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded bg-indigo-100 text-indigo-800 text-xs font-bold flex-shrink-0">
+                            ${allBets.indexOf(bet) + 1}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs font-semibold text-gray-900 truncate">${bettingTypeName}</div>
+                            <div class="text-xs text-red-600 truncate">${stationName}</div>
+                            <div class="text-xs text-gray-500 truncate">${numbersDisplay}</div>
+                        </div>
                     </div>
-                </td>
-                <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900">${bettingTypeName}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-sm text-red-600 text-right font-medium">${amount.toLocaleString()} VNĐ</td>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <div class="text-right">
+                            <div class="text-xs font-bold text-red-600">${formatNumber(amount)}</div>
+                            <div class="text-xs text-gray-500">cược</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs font-bold text-orange-600">${formatNumber(costXac)}</div>
+                            <div class="text-xs text-gray-500">xác</div>
+                        </div>
+                    </div>
+                </div>
             `;
-            
-            tableBody.appendChild(row);
+            cardsContainer.appendChild(card);
+        });
+    }
+    
+    // Render grouped bets (grouped by type)
+    function renderGroupedBets(bets) {
+        const cardsContainer = document.getElementById('bets-cards-mobile');
+        
+        // Group by betting type
+        const groups = {};
+        bets.forEach(bet => {
+            const type = bet.type || 'Khác';
+            if (!groups[type]) {
+                groups[type] = {
+                    bets: [],
+                    totalAmount: 0,
+                    totalCostXac: 0,
+                    count: 0
+                };
+            }
+            groups[type].bets.push(bet);
+            groups[type].totalAmount += bet.amount || 0;
+            groups[type].totalCostXac += bet.cost_xac || 0;
+            groups[type].count++;
         });
         
-        // Update total amount
-        totalAmountEl.textContent = totalAmount.toLocaleString() + ' VNĐ';
+        const formatNumber = (num) => {
+            if (num >= 1000) return (num / 1000).toFixed(0) + 'k';
+            return num.toLocaleString();
+        };
+        
+        // Render each group
+        Object.keys(groups).forEach(type => {
+            const group = groups[type];
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'border border-gray-200 rounded-lg overflow-hidden';
+            
+            groupDiv.innerHTML = `
+                <div class="bg-gray-50 p-2 flex items-center justify-between cursor-pointer hover:bg-gray-100" onclick="toggleGroup(this)">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                        <span class="text-sm font-semibold text-gray-900">${type}</span>
+                        <span class="text-xs text-gray-600">(${group.count} phiếu)</span>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs">
+                        <div class="text-right">
+                            <div class="font-bold text-red-600">${formatNumber(group.totalAmount)}</div>
+                            <div class="text-gray-500">cược</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-orange-600">${formatNumber(group.totalCostXac)}</div>
+                            <div class="text-gray-500">xác</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hidden space-y-1 p-2 bg-gray-50" data-group-content>
+                    ${group.bets.map((bet, idx) => {
+                        const stationName = bet.station || '-';
+                        let numbersDisplay = '-';
+                        if (Array.isArray(bet.numbers) && bet.numbers.length > 0) {
+                            const pretty = bet.numbers.map(n => Array.isArray(n) ? n.join('-') : n);
+                            numbersDisplay = pretty.length > 3 ? pretty.slice(0,3).join(', ') + '...' : pretty.join(', ');
+                        }
+                        return `
+                        <div class="bg-white border border-gray-100 rounded p-1.5 text-xs flex items-center justify-between">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-blue-600 mb-0.5">${stationName}</div>
+                                <span class="font-mono text-gray-900">${numbersDisplay}</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="font-bold text-red-600">${formatNumber(bet.amount || 0)}</span>
+                                <span class="text-gray-400">•</span>
+                                <span class="font-bold text-orange-600">${formatNumber(bet.cost_xac || 0)}</span>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            cardsContainer.appendChild(groupDiv);
+        });
     }
+    
+    // Toggle group expand/collapse
+    window.toggleGroup = function(element) {
+        const content = element.nextElementSibling;
+        const icon = element.querySelector('svg');
+        if (content.classList.contains('hidden')) {
+            content.classList.remove('hidden');
+            icon.style.transform = 'rotate(90deg)';
+        } else {
+            content.classList.add('hidden');
+            icon.style.transform = 'rotate(0deg)';
+        }
+    };
+    
+    // Show More button handler
+    document.getElementById('show-more-btn')?.addEventListener('click', function() {
+        visibleCount += 20;
+        showMultipleBetsTable(allBets, currentRegion);
+    });
+    
+    // Toggle Group button handler
+    document.getElementById('toggle-group-btn')?.addEventListener('click', function() {
+        isGrouped = !isGrouped;
+        const toggleText = document.getElementById('toggle-group-text');
+        toggleText.textContent = isGrouped ? 'Danh sách' : 'Nhóm lại';
+        showMultipleBetsTable(allBets, currentRegion);
+    });
 
     function updatePreviewRates() {
         if (!currentParseData || !customerId.value) return;
@@ -675,8 +751,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentParseData.multiple_bets && currentParseData.multiple_bets.length > 0) {
             // Calculate total amount from all bets
             const totalAmount = currentParseData.multiple_bets.reduce((sum, bet) => sum + (bet.amount || 0), 0);
-            document.getElementById('preview-win-amount').textContent = 'Tính toán phức tạp';
-            document.getElementById('preview-rate').textContent = 'Nhiều tỷ lệ khác nhau';
+            document.getElementById('preview-win-amount').textContent = currentParseData.summary.total_potential_win.toLocaleString() + ' VNĐ';
+            document.getElementById('preview-rate').textContent = currentParseData.summary.total_cost_xac.toLocaleString() + ' VNĐ';
             return;
         }
         

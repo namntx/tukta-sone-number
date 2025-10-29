@@ -7,6 +7,7 @@ use App\Models\BettingTicket;
 use App\Models\Customer;
 use App\Models\BettingType;
 use App\Services\BettingMessageParser;
+use App\Services\BetPricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -320,19 +321,38 @@ class BettingTicketController extends Controller
     /**
      * Parse betting message via AJAX
      */
-    public function parseMessage(Request $request, BettingMessageParser $parser)
+    public function parseMessage(Request $request, BettingMessageParser $parser, BetPricingService $pricing)
     {
         $data = $request->validate([
             'message'     => 'required|string',
             'customer_id' => 'required|exists:customers,id',
         ]);
 
-        // Gọi parser mới
-        $parsed = $parser->parseMessage($data['message'], $data['customer_id']);
+        // Get region from request or session
+        $region = $request->input('region', session('global_region', 'nam'));
+        $region = match (strtolower((string)$region)) {
+            'bac','mb'   => 'bac',
+            'trung','mt' => 'trung',
+            default      => 'nam',
+        };
+
+        // Gọi parser mới với context
+        $context = [
+            'customer_id' => $data['customer_id'],
+            'region' => $region,
+        ];
+        $parsed = $parser->parseMessage($data['message'], $context);
+
+        // Initialize pricing service
+        $pricing->begin($data['customer_id'], $region);
 
         // Map hiển thị nhẹ: type code -> label ngắn để bảng dễ đọc
+        // Và tính toán pricing (tiền xác, tiền thắng dự kiến)
         if (!empty($parsed['multiple_bets'])) {
-            $parsed['multiple_bets'] = collect($parsed['multiple_bets'])->map(function ($bet, $idx) {
+            $totalCostXac = 0;
+            $totalPotentialWin = 0;
+
+            $parsed['multiple_bets'] = collect($parsed['multiple_bets'])->map(function ($bet, $idx) use ($pricing, &$totalCostXac, &$totalPotentialWin) {
                 // ví dụ: da_xien hiển thị "Xiên (2)" nếu có xien_size
                 $type = $bet['type'] ?? 'unknown';
                 $label = match ($type) {
@@ -348,6 +368,7 @@ class BettingTicketController extends Controller
                     'xiu_chu_duoi'=>'Xỉu chủ đuôi',
                     'da_thang'   => 'Đá thẳng',
                     'da_xien'    => 'Đá xiên'.(isset($bet['meta']['xien_size']) ? ' ('.$bet['meta']['xien_size'].')' : ''),
+                    'xien'       => 'Xiên '.(isset($bet['meta']['xien_size']) ? $bet['meta']['xien_size'] : ''),
                     default      => $type,
                 };
 
@@ -358,14 +379,30 @@ class BettingTicketController extends Controller
                     $numbers = collect($numbers)->map(fn($g)=>is_array($g)?implode('-', $g):$g)->all();
                 }
 
+                // Calculate pricing for this bet
+                $pricingData = $pricing->previewForBet($bet);
+                $totalCostXac += $pricingData['cost_xac'];
+                $totalPotentialWin += $pricingData['potential_win'];
+
                 return [
-                    'station' => $bet['station'] ?? null,
-                    'numbers' => $numbers,
-                    'type'    => $label,
-                    'amount'  => (int)($bet['amount'] ?? 0),
-                    'meta'    => $bet['meta'] ?? [],
+                    'station'       => $bet['station'] ?? null,
+                    'numbers'       => $numbers,
+                    'type'          => $label,
+                    'amount'        => (int)($bet['amount'] ?? 0),
+                    'meta'          => $bet['meta'] ?? [],
+                    'cost_xac'      => $pricingData['cost_xac'],
+                    'potential_win' => $pricingData['potential_win'],
+                    'buy_rate'      => $pricingData['buy_rate'],
+                    'payout'        => $pricingData['payout'],
                 ];
             })->values()->all();
+
+            // Add summary totals
+            $parsed['summary'] = [
+                'total_cost_xac'      => $totalCostXac,
+                'total_potential_win' => $totalPotentialWin,
+                'total_bets'          => count($parsed['multiple_bets']),
+            ];
         }
 
         // UI đang dùng các key: is_valid, multiple_bets, parsed_message, errors

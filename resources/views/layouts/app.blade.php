@@ -2,10 +2,20 @@
 <html lang="vi" class="h-full">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4f46e5">
     
     <title>@yield('title', 'Keki SaaS')</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/images/icon-192x192.png">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -64,23 +74,133 @@
         .loading-dots {
             animation: pulse 1.5s ease-in-out infinite;
         }
+        
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            body {
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
+            }
+            
+            /* Smooth scrolling on mobile */
+            html {
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Better touch targets */
+            button, a, input, select, textarea {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            /* Hide scrollbars on mobile for cleaner look */
+            .hide-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .hide-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+        }
+        
+        /* Bottom Navigation Styles */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            top:auto;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            z-index: 50;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .bottom-nav-item {
+            transition: all 0.2s ease;
+        }
+        
+        .bottom-nav-item.active {
+            color: #4f46e5;
+        }
+        
+        .bottom-nav-item:active {
+            transform: scale(0.95);
+        }
+        
+        /* Slide up animation */
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        /* Compact header on mobile */
+        @media (max-width: 768px) {
+            nav {
+                position: sticky;
+                top: 0;
+                z-index: 40;
+            }
+        }
     </style>
     
     @stack('styles')
 </head>
-<body class="h-full bg-gray-50 font-sans antialiased">
-    <div class="min-h-full">
+<body class="h-full bg-gray-50 font-sans antialiased @auth @if(!auth()->user()->isAdmin()) has-bottom-nav @endif @endauth">
+    <div class="min-h-full pb-20 md:pb-6">
         <!-- Navigation -->
         <nav class="bg-white shadow-sm border-b border-gray-200">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex items-center">
+            <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-14 md:h-16">
+                    <div class="flex items-center space-x-4">
                         <!-- Logo -->
                         <div class="flex-shrink-0">
-                            <a href="{{ route('user.dashboard') }}" class="text-2xl font-bold text-indigo-600">
+                            <a href="{{ route('user.dashboard') }}" class="text-xl md:text-2xl font-bold text-indigo-600">
                                 Keki
                             </a>
                         </div>
+                        
+                        <!-- Mobile Date/Region (Compact) -->
+                        @auth
+                        @if(!auth()->user()->isAdmin())
+                            <!-- Global Date and Region Selectors -->
+                            <div class="lg:flex items-center space-x-3 mr-4">
+                                <form method="POST" action="{{ route('global-filters.update') }}" class="flex items-center space-x-2" id="global-filters-form">
+                                    @csrf
+                                    <div class="flex items-center space-x-1">
+                                        <input type="date" 
+                                                id="global_date" 
+                                                name="global_date" 
+                                                value="{{ $global_date }}"
+                                                class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                                onchange="updateGlobalFilters()">
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <select id="global_region" 
+                                                name="global_region" 
+                                                class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                                onchange="updateGlobalFilters()">
+                                            <option value="bac" {{ $global_region == 'bac' ? 'selected' : '' }}>Bắc</option>
+                                            <option value="Trtrungung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
+                                            <option value="nam" {{ $global_region == 'nam' ? 'selected' : '' }}>Nam</option>
+                                        </select>
+                                    </div>
+                                </form>
+                            </div>
+                        @endif
+                        @endauth
+                    </div>
                         
                         <!-- Navigation Links -->
                         @auth
@@ -121,11 +241,9 @@
                                 </a>
                             @endif
                         </div>
-                        @endauth
-                    </div>
-                    
+                        @endauth                    
                     <!-- Right side -->
-                    <div class="flex items-center space-x-2">
+                    <div class="flex items-center space-x-1 md:space-x-2">
                         @auth
                             <!-- Global Filters (for users only) -->
                             @if(!auth()->user()->isAdmin())
@@ -167,7 +285,7 @@
                                 
                                 @if($subscription && $status === 'active')
                                     <!-- Days Remaining Badge -->
-                                    <div class="hidden sm:flex items-center space-x-2">
+                                    <div class="hidden md:flex items-center space-x-2">
                                         <div class="subscription-timer flex items-center space-x-1 bg-gradient-to-r from-indigo-50 to-blue-50 px-3 py-1.5 rounded-full border border-indigo-200 shadow-sm">
                                             <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -189,14 +307,14 @@
                                         @endif
                                     </div>
                                     
-                                    <!-- Mobile Timer -->
-                                    <div class="sm:hidden">
-                                        <div class="flex items-center space-x-1 bg-gradient-to-r from-indigo-50 to-blue-50 px-2 py-1 rounded-full border border-indigo-200">
+                                    <!-- Mobile Timer (Compact) -->
+                                    <div class="md:hidden">
+                                        <div class="flex items-center space-x-1 bg-gradient-to-r from-indigo-50 to-blue-50 px-2 py-0.5 rounded-full border border-indigo-200">
                                             <svg class="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
                                             <span class="text-xs font-semibold text-indigo-800">
-                                                {{ $daysRemaining }} ngày
+                                                {{ $daysRemaining }}
                                             </span>
                                         </div>
                                     </div>
@@ -214,20 +332,20 @@
                             @endif
                             
                             <!-- User Info -->
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-1 md:space-x-2">
                                 <!-- User name (hidden on mobile) -->
-                                <span class="hidden sm:block text-sm font-medium text-gray-700">
+                                <span class="hidden lg:block text-sm font-medium text-gray-700">
                                     {{ auth()->user()->name }}
                                 </span>
                                 
-                                <!-- Mobile Menu Button -->
-                                <button type="button" class="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500" onclick="toggleMobileMenu()">
+                                <!-- Mobile Menu Button
+                                <button type="button" class="md:hidden inline-flex items-center justify-center p-1.5 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none" onclick="toggleMobileMenu()">
                                     <span class="sr-only">Mở menu</span>
                                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                                     </svg>
                                 </button>
-                                
+                                 -->
                                 <!-- Desktop Logout -->
                                 <form method="POST" action="{{ route('logout') }}" class="hidden md:inline">
                                     @csrf
@@ -371,7 +489,7 @@
         </nav>
         
         <!-- Main content -->
-        <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <main class="max-w-7xl mx-auto py-3 md:py-6 px-3 md:px-4 sm:px-6 lg:px-8 pb-20 md:pb-6">
             <!-- Flash Messages -->
             @if(session('success'))
                 <div class="mb-4 rounded-md bg-green-50 p-4">
@@ -452,9 +570,83 @@
             
             @yield('content')
         </main>
+        
+        <!-- Bottom Navigation (Mobile Only) -->
+        @auth
+        @if(!auth()->user()->isAdmin())
+        <nav class="bottom-nav md:hidden slide-up">
+            <div class="flex justify-around items-center px-2 py-2">
+                <!-- Dashboard -->
+                <a href="{{ route('user.dashboard') }}" 
+                   class="bottom-nav-item flex flex-col items-center justify-center flex-1 py-2 {{ request()->routeIs('user.dashboard') ? 'active' : 'text-gray-600' }}">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                    <span class="text-xs font-medium">Trang chủ</span>
+                </a>
+                
+                <!-- Khách hàng -->
+                <a href="{{ route('user.customers.index') }}" 
+                   class="bottom-nav-item flex flex-col items-center justify-center flex-1 py-2 {{ request()->routeIs('user.customers*') ? 'active' : 'text-gray-600' }}">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <span class="text-xs font-medium">Khách hàng</span>
+                </a>
+                
+                <!-- Phiếu cược -->
+                <a href="{{ route('user.betting-tickets.index') }}" 
+                   class="bottom-nav-item flex flex-col items-center justify-center flex-1 py-2 {{ request()->routeIs('user.betting-tickets*') ? 'active' : 'text-gray-600' }}">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span class="text-xs font-medium">Phiếu cược</span>
+                </a>
+                
+                <!-- KQXS -->
+                <a href="{{ route('user.kqxs') }}" 
+                   class="bottom-nav-item flex flex-col items-center justify-center flex-1 py-2 {{ request()->routeIs('user.kqxs*') ? 'active' : 'text-gray-600' }}">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <span class="text-xs font-medium">KQXS</span>
+                </a>
+                
+                <!-- More/Menu -->
+                <button type="button" onclick="toggleMobileMenu()" 
+                        class="bottom-nav-item flex flex-col items-center justify-center flex-1 py-2 text-gray-600">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                    <span class="text-xs font-medium">Menu</span>
+                </button>
+            </div>
+        </nav>
+        @endif
+        @endauth
     </div>
     
     @stack('scripts')
+    
+    <!-- PWA Installation Script -->
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('SW registered:', registration))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+        
+        // PWA Install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Show install button if you have one
+        });
+    </script>
     
     <script>
         function toggleMobileMenu() {
