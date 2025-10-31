@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\BettingType;
 use App\Services\BettingMessageParser;
 use App\Services\BetPricingService;
+use App\Services\BettingSettlementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -511,6 +512,82 @@ class BettingTicketController extends Controller
             $customer->decrement('daily_lose_amount', $ticket->bet_amount);
             $customer->decrement('monthly_lose_amount', $ticket->bet_amount);
             $customer->decrement('yearly_lose_amount', $ticket->bet_amount);
+        }
+    }
+
+    /**
+     * Settle (quyết toán) một phiếu cược dựa trên kết quả xổ số
+     */
+    public function settle(BettingTicket $bettingTicket, BettingSettlementService $settlementService)
+    {
+        $this->authorize('update', $bettingTicket);
+
+        try {
+            $result = $settlementService->settleTicket($bettingTicket);
+
+            if ($result['settled']) {
+                return redirect()->back()
+                    ->with('success', "Quyết toán thành công! Kết quả: " . strtoupper($result['result']) .
+                           ", Tiền trả: " . number_format($result['payout_amount'], 0, ',', '.') . " VNĐ");
+            } else {
+                return redirect()->back()
+                    ->with('warning', "Chưa thể quyết toán: " . ($result['details']['error'] ?? 'Chưa có kết quả xổ số'));
+            }
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', "Lỗi khi quyết toán: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Settle tất cả phiếu cược pending cho một ngày cụ thể
+     */
+    public function settleBatch(Request $request, BettingSettlementService $settlementService)
+    {
+        $request->validate([
+            'date' => 'required|date',
+            'region' => 'nullable|in:bac,trung,nam',
+        ]);
+
+        $date = $request->input('date');
+        $region = $request->input('region');
+
+        // Kiểm tra quyền: chỉ settle cho tickets của user hiện tại
+        $user = Auth::user();
+
+        try {
+            // Lấy các tickets pending của user cho ngày này
+            $query = $user->bettingTickets()
+                ->where('betting_date', $date)
+                ->where('result', 'pending');
+
+            if ($region) {
+                $query->where('region', $region);
+            }
+
+            $tickets = $query->get();
+            $settled = 0;
+            $failed = 0;
+
+            foreach ($tickets as $ticket) {
+                try {
+                    $result = $settlementService->settleTicket($ticket);
+                    if ($result['settled']) {
+                        $settled++;
+                    } else {
+                        $failed++;
+                    }
+                } catch (\Exception $e) {
+                    $failed++;
+                }
+            }
+
+            return redirect()->back()
+                ->with('success', "Đã quyết toán {$settled} phiếu cược thành công" .
+                       ($failed > 0 ? ", {$failed} phiếu thất bại." : "."));
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', "Lỗi khi quyết toán hàng loạt: " . $e->getMessage());
         }
     }
 }
