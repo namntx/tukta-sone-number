@@ -305,7 +305,15 @@ class BettingMessageParser
                 $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
                 return;
             }
-    
+
+            // Đá xiên / Đá thẳng: set meta.dai_count từ số lượng stations
+            if (in_array($type, ['da_xien', 'da_thang'], true)) {
+                $stationCount = count($ctx['stations'] ?? []);
+                if ($stationCount > 1) {
+                    $ctx['meta']['dai_count'] = $stationCount;
+                }
+            }
+
             // fallback
             $emitBet($outBets, $ctx, [
                 'numbers' => $numbers,
@@ -567,19 +575,18 @@ class BettingMessageParser
                     $addEvent($events, 'stations', ['set' => array_values($ctx['stations'])]);
                     continue;
                 }
-            
-                // - Nếu CHƯA có số và CHƯA set current_type → coi là phase "khai báo đài",
-                //   cộng dồn nhiều mã đài liên tiếp.
-                if (empty($ctx['numbers_group']) && ($ctx['current_type'] === null)) {
+
+                // - Nếu CHƯA có kiểu cược → coi là phase "khai báo đài", cộng dồn nhiều mã đài liên tiếp
+                //   (cho phép "14 27 72 tn bt dx" → 2 đài cho đá xiên)
+                if ($ctx['current_type'] === null) {
                     if (!in_array($name, $ctx['stations'], true)) {
                         $ctx['stations'][] = $name;
                     }
                     $addEvent($events, 'stations', ['set' => array_values($ctx['stations'])]);
                     continue;
                 }
-            
-                // - Còn lại: đã có số/kiểu mà không pending (hoặc vừa flush bởi dấu .),
-                //   thì bắt đầu bộ đài mới (không cộng dồn).
+
+                // - Còn lại: đã có kiểu cược → bắt đầu bộ đài mới (không cộng dồn)
                 $ctx['stations'] = [$name];
                 $addEvent($events, 'stations', ['set' => array_values($ctx['stations'])]);
                 continue;
