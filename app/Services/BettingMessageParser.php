@@ -306,12 +306,105 @@ class BettingMessageParser
                 return;
             }
 
-            // Đá xiên / Đá thẳng: set meta.dai_count từ số lượng stations
-            if (in_array($type, ['da_xien', 'da_thang'], true)) {
+            // Đá thẳng: 1 đài, ghép cặp 2-2 theo thứ tự
+            if ($type === 'da_thang') {
                 $stationCount = count($ctx['stations'] ?? []);
-                if ($stationCount > 1) {
-                    $ctx['meta']['dai_count'] = $stationCount;
+
+                // Validate: bắt buộc 1 đài
+                if ($stationCount !== 1) {
+                    $addEvent($events, 'error_da_thang_wrong_station_count', [
+                        'expected' => 1,
+                        'got' => $stationCount,
+                        'message' => 'Đá thẳng yêu cầu đúng 1 đài'
+                    ]);
+                    $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+                    return;
                 }
+
+                // Ghép cặp 2-2
+                $pairs = [];
+                for ($i = 0; $i < count($numbers) - 1; $i += 2) {
+                    $pairs[] = [$numbers[$i], $numbers[$i + 1]];
+                }
+
+                // Nếu lẻ số → log warning
+                if (count($numbers) % 2 !== 0) {
+                    $addEvent($events, 'warning_da_thang_odd_numbers', [
+                        'total' => count($numbers),
+                        'dropped' => $numbers[count($numbers) - 1],
+                        'message' => 'Số lẻ, bỏ số cuối: ' . $numbers[count($numbers) - 1]
+                    ]);
+                }
+
+                // Emit mỗi cặp là 1 vé
+                foreach ($pairs as $pair) {
+                    $emitBet($outBets, $ctx, [
+                        'numbers' => $pair,
+                        'type'    => 'da_thang',
+                        'amount'  => $amount,
+                        'meta'    => $ctx['meta'] ?? [],
+                    ]);
+                }
+
+                $addEvent($events, 'emit_da_thang', ['pairs' => $pairs, 'station' => $ctx['stations'][0]]);
+                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+                return;
+            }
+
+            // Đá xiên: ≥2 đài, sinh C(n,2) combinations
+            if ($type === 'da_xien') {
+                $stations = $ctx['stations'] ?? [];
+                $stationCount = count($stations);
+
+                // Validate: tối thiểu 2 đài
+                if ($stationCount < 2) {
+                    $addEvent($events, 'error_da_xien_min_stations', [
+                        'expected' => '>=2',
+                        'got' => $stationCount,
+                        'message' => 'Đá xiên yêu cầu tối thiểu 2 đài'
+                    ]);
+                    $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+                    return;
+                }
+
+                // Sinh C(n,2) cặp số
+                $numberPairs = [];
+                for ($i = 0; $i < count($numbers); $i++) {
+                    for ($j = $i + 1; $j < count($numbers); $j++) {
+                        $numberPairs[] = [$numbers[$i], $numbers[$j]];
+                    }
+                }
+
+                // Sinh C(m,2) cặp đài
+                $stationPairs = [];
+                for ($i = 0; $i < $stationCount; $i++) {
+                    for ($j = $i + 1; $j < $stationCount; $j++) {
+                        $stationPairs[] = [$stations[$i], $stations[$j]];
+                    }
+                }
+
+                // Emit mỗi cặp số là 1 vé
+                foreach ($numberPairs as $pair) {
+                    $emitBet($outBets, $ctx, [
+                        'numbers' => $pair,
+                        'type'    => 'da_xien',
+                        'amount'  => $amount,
+                        'meta'    => [
+                            'station_mode' => 'across',
+                            'station_pairs' => $stationPairs,
+                            'dai_count' => $stationCount,
+                        ],
+                        'station' => null, // Multi-station
+                    ]);
+                }
+
+                $addEvent($events, 'emit_da_xien', [
+                    'number_pairs' => $numberPairs,
+                    'station_pairs' => $stationPairs,
+                    'stations' => $stations
+                ]);
+                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+                return;
             }
 
             // fallback
