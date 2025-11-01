@@ -93,6 +93,8 @@ Route::middleware(['auth'])->group(function () {
         // Betting ticket routes
         Route::resource('betting-tickets', UserBettingTicketController::class);
         Route::post('/betting-tickets/parse-message', [UserBettingTicketController::class, 'parseMessage'])->name('betting-tickets.parse-message');
+        Route::post('/betting-tickets/{bettingTicket}/settle', [UserBettingTicketController::class, 'settle'])->name('betting-tickets.settle');
+        Route::post('/betting-tickets/settle-batch', [UserBettingTicketController::class, 'settleBatch'])->name('betting-tickets.settle-batch');
     });
     
     // Protected routes (cần subscription active)
