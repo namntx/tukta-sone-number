@@ -351,7 +351,8 @@ class BettingMessageParser
             'xc_dd_amount'        => null,
             'last_numbers'        => [],
             'just_saw_station'    => false,
-    
+            'last_token_type'     => null,  // track loại token trước: 'number', 'd', 'dd', etc.
+
             // NEW: chế độ bắt N đài (2d/3d/4d/2dai/3dai/4dai)
             'dai_count'           => null,  // 2|3|4
             'dai_capture_remaining'=> 0,    // còn bao nhiêu đài cần bắt sau token Ndai
@@ -393,6 +394,12 @@ class BettingMessageParser
     
             // số 2-4 chữ số (giữ leading zero)
             if (preg_match('/^\d{2,4}$/', $tok)) {
+                // QUAN TRỌNG: Nếu token trước là 'd' và đang có group pending với pair_d_dau
+                // → flush group cũ trước khi bắt đầu nhóm số mới
+                if ($ctx['last_token_type'] === 'd' && !empty($ctx['pair_d_dau']) && $isGroupPending($ctx)) {
+                    $flushGroup($outBets, $ctx, $events, 'd_then_number_flush');
+                }
+
                 // nếu đang ở 'kéo' và có start → expand
                 if (($ctx['current_type'] ?? null) === 'keo_hang_don_vi' && !empty($ctx['meta']['keo_start'])) {
                     $start = (string)$ctx['meta']['keo_start'];
@@ -408,11 +415,13 @@ class BettingMessageParser
                         $addEvent($events, 'number', ['value'=>$tok,'note'=>'keo_expand_failed']);
                     }
                     $ctx['just_saw_station'] = false;
+                    $ctx['last_token_type'] = 'number';
                     continue;
                 }
                 $ctx['numbers_group'][] = $tok;
                 $ctx['last_numbers']    = $ctx['numbers_group'];
                 $ctx['just_saw_station']= false;
+                $ctx['last_token_type'] = 'number';
                 $addEvent($events, 'number', ['value'=>$tok]);
                 continue;
             }
@@ -457,22 +466,20 @@ class BettingMessageParser
                 if ($targetType==='bao_lo') {
                     $ctx['current_type']='bao_lo';
                     $ctx['amount']=$amt;
+                    $ctx['last_token_type'] = 'lo';
                     $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'bao_lo','amount'=>$amt]);
                 }
                 elseif ($targetType==='dau_duoi') {
                     $ctx['current_type']='dau_duoi';
                     $ctx['amount']=$amt;
+                    $ctx['last_token_type'] = 'dd';
                     $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'dau_duoi','amount'=>$amt]);
                 }
                 else {
                     $ctx['current_type']='dau';
                     $ctx['pair_d_dau'][]=$amt;
+                    $ctx['last_token_type'] = 'd';
                     $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'dau','amount'=>$amt]);
-
-                    // Khi đã có đủ 2 phần tử (đầu + đuôi), flush ngay lập tức
-                    if (count($ctx['pair_d_dau']) >= 2 && $isGroupPending($ctx)) {
-                        $flushGroup($outBets, $ctx, $events, 'pair_d_auto_flush');
-                    }
                 }
 
                 $ctx['just_saw_station'] = false;
