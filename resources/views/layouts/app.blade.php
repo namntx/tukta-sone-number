@@ -192,7 +192,7 @@
                                                 class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                                                 onchange="updateGlobalFilters()">
                                             <option value="bac" {{ $global_region == 'bac' ? 'selected' : '' }}>Bắc</option>
-                                            <option value="Trtrungung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
+                                            <option value="trung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
                                             <option value="nam" {{ $global_region == 'nam' ? 'selected' : '' }}>Nam</option>
                                         </select>
                                     </div>
@@ -267,7 +267,7 @@
                                                     class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                                                     onchange="updateGlobalFilters()">
                                                 <option value="bac" {{ $global_region == 'bac' ? 'selected' : '' }}>Bắc</option>
-                                                <option value="Trtrungung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
+                                                <option value="trung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
                                                 <option value="nam" {{ $global_region == 'nam' ? 'selected' : '' }}>Nam</option>
                                             </select>
                                         </div>
