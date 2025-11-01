@@ -454,10 +454,27 @@ class BettingMessageParser
                     $addEvent($events,'inherit_numbers_for_amount',['numbers'=>$ctx['numbers_group']]);
                 }
     
-                if ($targetType==='bao_lo') { $ctx['current_type']='bao_lo'; $ctx['amount']=$amt; $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'bao_lo','amount'=>$amt]); }
-                elseif ($targetType==='dau_duoi') { $ctx['current_type']='dau_duoi'; $ctx['amount']=$amt; $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'dau_duoi','amount'=>$amt]); }
-                else { $ctx['current_type']='dau'; $ctx['pair_d_dau'][]=$amt; $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'dau','amount'=>$amt]); }
-    
+                if ($targetType==='bao_lo') {
+                    $ctx['current_type']='bao_lo';
+                    $ctx['amount']=$amt;
+                    $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'bao_lo','amount'=>$amt]);
+                }
+                elseif ($targetType==='dau_duoi') {
+                    $ctx['current_type']='dau_duoi';
+                    $ctx['amount']=$amt;
+                    $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'dau_duoi','amount'=>$amt]);
+                }
+                else {
+                    $ctx['current_type']='dau';
+                    $ctx['pair_d_dau'][]=$amt;
+                    $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'dau','amount'=>$amt]);
+
+                    // Khi đã có đủ 2 phần tử (đầu + đuôi), flush ngay lập tức
+                    if (count($ctx['pair_d_dau']) >= 2 && $isGroupPending($ctx)) {
+                        $flushGroup($outBets, $ctx, $events, 'pair_d_auto_flush');
+                    }
+                }
+
                 $ctx['just_saw_station'] = false;
                 continue;
             }
