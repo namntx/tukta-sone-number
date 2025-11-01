@@ -13,6 +13,7 @@ class Customer extends Model
         'user_id',
         'name',
         'phone',
+        'betting_rates',
         'total_win_amount',
         'total_lose_amount',
         'daily_win_amount',
@@ -25,6 +26,7 @@ class Customer extends Model
     ];
 
     protected $casts = [
+        'betting_rates' => 'array',
         'total_win_amount' => 'decimal:2',
         'total_lose_amount' => 'decimal:2',
         'daily_win_amount' => 'decimal:2',
@@ -53,11 +55,80 @@ class Customer extends Model
     }
 
     /**
-     * Get betting rates for this customer
+     * Get betting rates for this customer (legacy table relationship)
      */
     public function bettingRates()
     {
         return $this->hasMany(BettingRate::class);
+    }
+
+    /**
+     * Set a betting rate for specific type and region
+     *
+     * @param string $region  Region: bac, trung, nam
+     * @param string $typeCode  Bet type code
+     * @param float $buyRate  Buy rate (xác)
+     * @param float $payout  Payout multiplier
+     * @param int|null $digits  For bao_lo: 2, 3, or 4
+     * @param int|null $xienSize  For xien: 2, 3, or 4
+     * @param int|null $daiCount  For multi-station bets
+     */
+    public function setRate(
+        string $region,
+        string $typeCode,
+        float $buyRate,
+        float $payout,
+        ?int $digits = null,
+        ?int $xienSize = null,
+        ?int $daiCount = null
+    ): void {
+        $rates = $this->betting_rates ?? [];
+
+        // Build composite key
+        $key = $this->buildRateKey($region, $typeCode, $digits, $xienSize, $daiCount);
+
+        $rates[$key] = [
+            'buy_rate' => $buyRate,
+            'payout' => $payout,
+        ];
+
+        $this->betting_rates = $rates;
+        $this->save();
+    }
+
+    /**
+     * Get a betting rate for specific type and region
+     */
+    public function getRate(
+        string $region,
+        string $typeCode,
+        ?int $digits = null,
+        ?int $xienSize = null,
+        ?int $daiCount = null
+    ): ?array {
+        $rates = $this->betting_rates ?? [];
+        $key = $this->buildRateKey($region, $typeCode, $digits, $xienSize, $daiCount);
+
+        return $rates[$key] ?? null;
+    }
+
+    /**
+     * Build composite key for rate storage
+     */
+    protected function buildRateKey(
+        string $region,
+        string $typeCode,
+        ?int $digits,
+        ?int $xienSize,
+        ?int $daiCount
+    ): string {
+        $parts = [$region, $typeCode];
+
+        if ($digits !== null) $parts[] = "d{$digits}";
+        if ($xienSize !== null) $parts[] = "x{$xienSize}";
+        if ($daiCount !== null) $parts[] = "c{$daiCount}";
+
+        return implode(':', $parts);
     }
 
     /**

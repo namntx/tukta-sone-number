@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use App\Models\BettingRate;
+use App\Models\Customer;
 
-class BettingRateResolver 
+class BettingRateResolver
 {
     /** @var array<string,array{buy_rate:float,payout:float}> */
     protected array $map = [];
@@ -49,20 +50,69 @@ class BettingRateResolver
             $this->map[$k] = ['buy_rate'=>(float)$r->buy_rate, 'payout'=>(float)$r->payout];
         }
 
-        // CUSTOMER OVERRIDE
+        // CUSTOMER OVERRIDE - Check JSON column first, fallback to table
         if ($customerId) {
-            $byCustomer = BettingRate::query()
-                ->where('customer_id', $customerId)
-                ->where('region', $region)
-                ->get();
+            $customer = Customer::find($customerId);
 
-            foreach ($byCustomer as $r) {
-                $k = self::key($r->type_code, $r->digits, $r->xien_size, $r->dai_count);
-                $this->map[$k] = ['buy_rate'=>(float)$r->buy_rate, 'payout'=>(float)$r->payout];
+            if ($customer && !empty($customer->betting_rates)) {
+                // NEW: Load from JSON column
+                $this->loadFromJson($customer->betting_rates, $region);
+            } else {
+                // FALLBACK: Load from betting_rates table (backward compatibility)
+                $byCustomer = BettingRate::query()
+                    ->where('customer_id', $customerId)
+                    ->where('region', $region)
+                    ->get();
+
+                foreach ($byCustomer as $r) {
+                    $k = self::key($r->type_code, $r->digits, $r->xien_size, $r->dai_count);
+                    $this->map[$k] = ['buy_rate'=>(float)$r->buy_rate, 'payout'=>(float)$r->payout];
+                }
             }
         }
 
         return $this;
+    }
+
+    /**
+     * Load rates from JSON structure
+     * JSON format: "region:type_code:d2:x3:c4" => {buy_rate: 0.95, payout: 80}
+     */
+    protected function loadFromJson(array $ratesJson, string $region): void
+    {
+        foreach ($ratesJson as $compositeKey => $data) {
+            // Parse composite key: "region:type_code:d2:x3:c4"
+            $parts = explode(':', $compositeKey);
+            $rateRegion = $parts[0] ?? 'nam';
+
+            // Only load rates for current region
+            if ($rateRegion !== $region) continue;
+
+            $typeCode = $parts[1] ?? null;
+            if (!$typeCode) continue;
+
+            $digits = null;
+            $xienSize = null;
+            $daiCount = null;
+
+            // Parse modifiers
+            for ($i = 2; $i < count($parts); $i++) {
+                $part = $parts[$i];
+                if (str_starts_with($part, 'd')) {
+                    $digits = (int)substr($part, 1);
+                } elseif (str_starts_with($part, 'x')) {
+                    $xienSize = (int)substr($part, 1);
+                } elseif (str_starts_with($part, 'c')) {
+                    $daiCount = (int)substr($part, 1);
+                }
+            }
+
+            $k = self::key($typeCode, $digits, $xienSize, $daiCount);
+            $this->map[$k] = [
+                'buy_rate' => (float)($data['buy_rate'] ?? 1.0),
+                'payout' => (float)($data['payout'] ?? 0.0),
+            ];
+        }
     }
 
     public function resolve(string $typeCode, ?int $digits=null, ?int $xienSize=null, ?int $daiCount=null): array
