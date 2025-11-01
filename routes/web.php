@@ -53,14 +53,14 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/global-filters/update', function (Illuminate\Http\Request $request) {
         $request->validate([
             'global_date' => 'required|date',
-            'global_region' => 'required|in:Bắc,Trung,Nam',
+            'global_region' => 'required|in:bac,trung,nam',
         ]);
-        
+
         session([
             'global_date' => $request->global_date,
             'global_region' => $request->global_region,
         ]);
-        
+
         return back();
     })->name('global-filters.update');
     
