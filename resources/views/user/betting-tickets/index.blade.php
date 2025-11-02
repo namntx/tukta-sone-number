@@ -14,13 +14,22 @@
                         {{ \App\Support\Region::label($filterRegion ?? $globalRegion) }} · {{ \Carbon\Carbon::parse($filterDate ?? $globalDate)->format('d/m/Y') }}
                     </p>
                 </div>
-                <a href="{{ route('user.betting-tickets.create') }}" 
-                   class="inline-flex items-center justify-center px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition ml-2">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    Thêm
-                </a>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="settle-tickets-btn" 
+                            class="inline-flex items-center justify-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-5m-3 5h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                        </svg>
+                        Tính tiền
+                    </button>
+                    <a href="{{ route('user.betting-tickets.create') }}" 
+                       class="inline-flex items-center justify-center px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Thêm
+                    </a>
+                </div>
             </div>
             
             <!-- Quick Filters - Compact -->
@@ -171,4 +180,150 @@
         @endif
     </div>
 </div>
+
+<!-- Settlement Result Modal -->
+<div id="settlement-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Kết quả tính tiền</h3>
+            <button type="button" id="close-modal" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="px-4 py-4">
+            <div id="settlement-result-content"></div>
+        </div>
+        <div class="px-4 py-3 border-t border-gray-200 flex justify-end gap-2">
+            <button type="button" id="close-modal-btn" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
+                Đóng
+            </button>
+            <button type="button" id="reload-page-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition">
+                Tải lại trang
+            </button>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const settleBtn = document.getElementById('settle-tickets-btn');
+    const modal = document.getElementById('settlement-modal');
+    const closeModal = document.getElementById('close-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const reloadBtn = document.getElementById('reload-page-btn');
+    const resultContent = document.getElementById('settlement-result-content');
+
+    if (settleBtn) {
+        settleBtn.addEventListener('click', function() {
+            if (settleBtn.disabled) return;
+            
+            settleBtn.disabled = true;
+            settleBtn.innerHTML = '<svg class="w-4 h-4 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Đang tính...';
+            
+            fetch('{{ route("user.betting-tickets.settle-by-global") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                settleBtn.disabled = false;
+                settleBtn.innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-5m-3 5h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> Tính tiền';
+                
+                if (data.success) {
+                    let html = '<div class="space-y-3">';
+                    
+                    if (data.message) {
+                        html += `<div class="p-3 bg-green-50 border border-green-200 rounded-lg"><p class="text-sm text-green-800">${data.message}</p></div>`;
+                    }
+                    
+                    if (data.result) {
+                        html += '<div class="space-y-2">';
+                        html += `<div class="flex justify-between text-sm"><span class="text-gray-600">Tổng phiếu:</span><span class="font-semibold">${data.result.total}</span></div>`;
+                        html += `<div class="flex justify-between text-sm"><span class="text-gray-600">Đã quyết toán:</span><span class="font-semibold text-green-600">${data.result.settled}</span></div>`;
+                        
+                        if (data.result.failed > 0) {
+                            html += `<div class="flex justify-between text-sm"><span class="text-gray-600">Thất bại:</span><span class="font-semibold text-red-600">${data.result.failed}</span></div>`;
+                        }
+                        
+                        if (data.result.total_win !== undefined) {
+                            html += `<div class="pt-2 border-t border-gray-200 flex justify-between text-sm"><span class="text-gray-600">Tổng tiền thắng:</span><span class="font-bold text-green-600">${formatCurrency(data.result.total_win)}</span></div>`;
+                        }
+                        
+                        if (data.result.total_payout !== undefined) {
+                            html += `<div class="flex justify-between text-sm"><span class="text-gray-600">Tổng tiền trả:</span><span class="font-bold text-red-600">${formatCurrency(data.result.total_payout)}</span></div>`;
+                        }
+                        
+                        html += '</div>';
+                    }
+                    
+                    html += '</div>';
+                    resultContent.innerHTML = html;
+                } else {
+                    let html = '<div class="space-y-3">';
+                    html += `<div class="p-3 bg-red-50 border border-red-200 rounded-lg"><p class="text-sm text-red-800">${data.message || 'Có lỗi xảy ra'}</p></div>`;
+                    
+                    if (data.errors && data.errors.length > 0) {
+                        html += '<ul class="list-disc list-inside text-sm text-red-700 space-y-1">';
+                        data.errors.forEach(error => {
+                            html += `<li>${error}</li>`;
+                        });
+                        html += '</ul>';
+                    }
+                    
+                    html += '</div>';
+                    resultContent.innerHTML = html;
+                }
+                
+                modal.classList.remove('hidden');
+            })
+            .catch(error => {
+                settleBtn.disabled = false;
+                settleBtn.innerHTML = '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-5m-3 5h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> Tính tiền';
+                
+                resultContent.innerHTML = `<div class="p-3 bg-red-50 border border-red-200 rounded-lg"><p class="text-sm text-red-800">Lỗi: ${error.message}</p></div>`;
+                modal.classList.remove('hidden');
+            });
+        });
+    }
+    
+    function closeModalHandler() {
+        modal.classList.add('hidden');
+    }
+    
+    if (closeModal) closeModal.addEventListener('click', closeModalHandler);
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModalHandler);
+    
+    if (reloadBtn) {
+        reloadBtn.addEventListener('click', function() {
+            window.location.reload();
+        });
+    }
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModalHandler();
+        }
+    });
+    
+    function formatCurrency(amount) {
+        if (typeof amount !== 'number') {
+            amount = parseFloat(amount) || 0;
+        }
+        if (amount >= 1000000) {
+            return (amount / 1000000).toFixed(1) + 'M';
+        } else if (amount >= 1000) {
+            return (amount / 1000).toFixed(1) + 'k';
+        }
+        return Math.round(amount).toLocaleString('vi-VN');
+    }
+});
+</script>
+@endpush
 @endsection

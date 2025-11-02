@@ -95,6 +95,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/betting-tickets/parse-message', [UserBettingTicketController::class, 'parseMessage'])->name('betting-tickets.parse-message');
         Route::post('/betting-tickets/{bettingTicket}/settle', [UserBettingTicketController::class, 'settle'])->name('betting-tickets.settle');
         Route::post('/betting-tickets/settle-batch', [UserBettingTicketController::class, 'settleBatch'])->name('betting-tickets.settle-batch');
+        Route::post('/betting-tickets/settle-by-global', [UserBettingTicketController::class, 'settleByGlobalFilters'])->name('betting-tickets.settle-by-global');
     });
     
     // Protected routes (cần subscription active)

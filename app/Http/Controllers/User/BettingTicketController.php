@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\BettingTicket;
 use App\Models\Customer;
 use App\Models\BettingType;
+use App\Models\LotteryResult;
 use App\Services\BettingMessageParser;
 use App\Services\BetPricingService;
 use App\Services\BettingSettlementService;
 use App\Support\Region;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -602,6 +604,97 @@ class BettingTicketController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', "Lỗi khi quyết toán hàng loạt: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Settle tất cả phiếu cược pending theo global_date và global_region từ session
+     */
+    public function settleByGlobalFilters(BettingSettlementService $settlementService)
+    {
+        try {
+            $user = Auth::user();
+            
+            // Lấy global_date và global_region từ session
+            $date = session('global_date', today());
+            $region = session('global_region', 'nam');
+            
+            // Kiểm tra xem có kết quả xổ số cho ngày và miền này chưa
+            $hasLotteryResult = LotteryResult::whereDate('draw_date', $date)
+                ->where('region', $region)
+                ->exists();
+            
+            if (!$hasLotteryResult) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Chưa có kết quả xổ số',
+                    'errors' => ["Chưa có kết quả xổ số cho ngày " . Carbon::parse($date)->format('d/m/Y') . " - miền " . Region::label($region)],
+                ], 400);
+            }
+            
+            // Lấy các tickets pending của user cho ngày và miền này
+            $tickets = $user->bettingTickets()
+                ->whereDate('betting_date', $date)
+                ->where('region', $region)
+                ->where('result', 'pending')
+                ->get();
+            
+            if ($tickets->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Không có phiếu cược nào cần quyết toán',
+                    'result' => [
+                        'total' => 0,
+                        'settled' => 0,
+                        'failed' => 0,
+                        'total_win' => 0,
+                        'total_payout' => 0,
+                    ],
+                ]);
+            }
+            
+            $settled = 0;
+            $failed = 0;
+            $totalWin = 0;
+            $totalPayout = 0;
+            $errors = [];
+            
+            foreach ($tickets as $ticket) {
+                try {
+                    $result = $settlementService->settleTicket($ticket);
+                    if ($result['settled']) {
+                        $settled++;
+                        $totalWin += $result['win_amount'];
+                        $totalPayout += $result['payout_amount'];
+                    } else {
+                        $failed++;
+                        $errors[] = "Phiếu #{$ticket->id}: " . ($result['details']['error'] ?? 'Không thể quyết toán');
+                    }
+                } catch (\Exception $e) {
+                    $failed++;
+                    $errors[] = "Phiếu #{$ticket->id}: " . $e->getMessage();
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Đã quyết toán thành công {$settled} phiếu cược" . ($failed > 0 ? ", {$failed} phiếu thất bại" : ''),
+                'result' => [
+                    'total' => $tickets->count(),
+                    'settled' => $settled,
+                    'failed' => $failed,
+                    'total_win' => $totalWin,
+                    'total_payout' => $totalPayout,
+                ],
+                'errors' => $errors,
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi quyết toán: ' . $e->getMessage(),
+                'errors' => [$e->getMessage()],
+            ], 500);
         }
     }
 }

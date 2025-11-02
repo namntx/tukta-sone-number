@@ -389,9 +389,13 @@ class BettingMessageParser
                     }
                 }
 
+                // Join stations thành string "station1 + station2"
+                $stationString = count($stations) === 1 ? $stations[0] : implode(' + ', $stations);
+
                 // Emit mỗi cặp số là 1 vé
+                // Đá xiên: KHÔNG nhân bản theo đài, chỉ 1 vé với tất cả cặp số
                 foreach ($numberPairs as $pair) {
-                    $emitBet($outBets, $ctx, [
+                    $outBets[] = [
                         'numbers' => $pair,
                         'type'    => 'da_xien',
                         'amount'  => $amount,
@@ -400,8 +404,8 @@ class BettingMessageParser
                             'station_pairs' => $stationPairs,
                             'dai_count' => $stationCount,
                         ],
-                        'station' => null, // Multi-station
-                    ]);
+                        'station' => $stationString,
+                    ];
                 }
 
                 $addEvent($events, 'emit_da_xien', [

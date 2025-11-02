@@ -708,27 +708,47 @@ class BettingSettlementService
         foreach ($pairs as $pair) {
             $num1 = str_pad((string)$pair[0], 2, '0', STR_PAD_LEFT);
             $num2 = str_pad((string)$pair[1], 2, '0', STR_PAD_LEFT);
+            
+            // Đá xiên CHỈ thắng khi: 2 đài KHÁC NHAU, mỗi đài 1 số
+            // LƯU Ý: KHÔNG tính cùng đài (1 đài có cả 2 số = THUA)
+            
+            $numStations = count($results);
+            for ($i = 0; $i < $numStations; $i++) {
+                for ($j = $i + 1; $j < $numStations; $j++) {
+                    $result1 = $results[$i];
+                    $result2 = $results[$j];
 
-            // Cần check cả 2 số ở 2 đài khác nhau
-            foreach ($results as $result1) {
-                foreach ($results as $result2) {
-                    if ($result1->station === $result2->station) continue;
+                    $hit1_in_1 = $result1->countLo2($num1) > 0;
+                    $hit2_in_2 = $result2->countLo2($num2) > 0;
+                    $hit2_in_1 = $result1->countLo2($num2) > 0;
+                    $hit1_in_2 = $result2->countLo2($num1) > 0;
 
-                    $hit1 = $result1->countLo2($num1) > 0;
-                    $hit2 = $result2->countLo2($num2) > 0;
-
-                    if ($hit1 && $hit2) {
+                    // Cross: Station i có num1 và Station j có num2
+                    if ($hit1_in_1 && $hit2_in_2) {
                         $isWin = true;
                         $winDetails[] = [
                             'pair' => [$num1, $num2],
                             'stations' => [$result1->station, $result2->station],
+                            'type' => 'cross_station',
                         ];
+                        break 2; // Cặp đã thắng, thoát khỏi 2 vòng lặp
+                    }
+                    
+                    // Cross: Station i có num2 và Station j có num1 (đảo ngược)
+                    if ($hit2_in_1 && $hit1_in_2) {
+                        $isWin = true;
+                        $winDetails[] = [
+                            'pair' => [$num1, $num2],
+                            'stations' => [$result1->station, $result2->station],
+                            'type' => 'cross_station',
+                        ];
+                        break 2; // Cặp đã thắng, thoát khỏi 2 vòng lặp
                     }
                 }
             }
         }
 
-        $rate = $this->rateResolver->resolve('da_xien', 2);
+        $rate = $this->rateResolver->resolve('da_xien', null, null, 2);
 
         $buyRate = $rate[0] ?? 0.75;
         $payout = $rate[1] ?? 70;
@@ -748,6 +768,7 @@ class BettingSettlementService
         $payoutAmount = 0;
 
         if ($isWin) {
+            // Mỗi cặp thắng = amount × 1
             $winAmount = $amount * count($winDetails);
             $payoutAmount = $winAmount * $payout;
         }
