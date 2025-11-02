@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\BettingType;
 use App\Models\BettingRate;
+use App\Http\Requests\CustomerRequest;
 use Illuminate\Http\Request;
 use App\Services\BettingRateResolver;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\RedirectResponse;
 
 class CustomerController extends Controller
 {
@@ -22,12 +24,13 @@ class CustomerController extends Controller
      */
     protected function betKeyToResolverArgs(string $betKey): array
     {
-        // type_code phải trùng seed/DB của bạn
+        // type_code phải trùng với BettingMessageParser và BettingSettlementService
+        // Parser và Settlement dùng: 'dau', 'duoi', 'dau_duoi', 'bao_lo', 'xien', etc.
         return match ($betKey) {
-            // MB – Đề
-            'de_dau'        => ['type_code' => 'de_dau',      'meta' => []],
-            'de_duoi'       => ['type_code' => 'de_duoi',     'meta' => []],
-            'de_duoi_4so'   => ['type_code' => 'de_duoi_4',   'meta' => []], // hoặc 'de_duoi' + ['digits'=>4] nếu DB bạn đang dùng vậy
+            // MB – Đề (phải match với parser: 'dau', 'duoi')
+            'de_dau'        => ['type_code' => 'dau',         'meta' => []],
+            'de_duoi'       => ['type_code' => 'duoi',        'meta' => []],
+            'de_duoi_4so'   => ['type_code' => 'duoi',        'meta' => ['digits' => 4]],
 
             // Bao lô
             'bao_lo_2'      => ['type_code' => 'bao_lo',      'meta' => ['digits'=>2]],
@@ -152,6 +155,38 @@ class CustomerController extends Controller
         $globalDate = session('global_date', today());
         $globalRegion = session('global_region', 'bac');
         
+        // Calculate daily stats for each customer based on global_date and global_region
+        $customerIds = $customers->pluck('id');
+        $dailyStatsByCustomer = [];
+        
+        if ($customerIds->isNotEmpty()) {
+            $dailyStatsByCustomer = \App\Models\BettingTicket::query()
+                ->whereIn('customer_id', $customerIds)
+                ->whereDate('betting_date', $globalDate)
+                ->where('region', $globalRegion)
+                ->selectRaw('customer_id, 
+                    COALESCE(SUM(CASE WHEN result = ? THEN win_amount ELSE 0 END), 0) as daily_win,
+                    COALESCE(SUM(CASE WHEN result = ? THEN bet_amount ELSE 0 END), 0) as daily_lose',
+                    ['win', 'lose'])
+                ->groupBy('customer_id')
+                ->get()
+                ->keyBy('customer_id')
+                ->map(function ($item) {
+                    return [
+                        'daily_win' => (float)$item->daily_win,
+                        'daily_lose' => (float)$item->daily_lose,
+                    ];
+                })
+                ->toArray();
+        }
+        
+        // Attach daily stats to each customer
+        $customers->each(function ($customer) use ($dailyStatsByCustomer) {
+            $stats = $dailyStatsByCustomer[$customer->id] ?? ['daily_win' => 0, 'daily_lose' => 0];
+            $customer->daily_win_for_date = $stats['daily_win'];
+            $customer->daily_lose_for_date = $stats['daily_lose'];
+        });
+        
         $todayStats = [
             'total_win' => $user->bettingTickets()->whereDate('betting_date', $globalDate)->where('region', $globalRegion)->where('result', 'win')->sum('win_amount'),
             'total_lose' => $user->bettingTickets()->whereDate('betting_date', $globalDate)->where('region', $globalRegion)->where('result', 'lose')->sum('bet_amount'),
@@ -167,7 +202,7 @@ class CustomerController extends Controller
             'total_lose' => $user->bettingTickets()->whereYear('betting_date', now()->year)->where('result', 'lose')->sum('bet_amount'),
         ];
 
-        return view('user.customers.index', compact('customers', 'todayStats', 'monthlyStats', 'yearlyStats'));
+        return view('user.customers.index', compact('customers', 'todayStats', 'monthlyStats', 'yearlyStats', 'globalDate'));
     }
 
     // ====== CREATE (đã sửa) ======
@@ -180,6 +215,9 @@ class CustomerController extends Controller
         // Prefill từ DEFAULT (customer_id=null)
         $initialRates = [];
         foreach ($regions as $regionKey => $label) {
+            // Build resolver cho region này với customer_id = null (default)
+            $resolver->build(null, $regionKey);
+            
             $initialRates[$regionKey] = [];
             foreach ($rateGroups as $groupTitle => $pairs) {
                 $isBayLoGroup = str_contains($groupTitle, 'Bảy lô');
@@ -189,11 +227,18 @@ class CustomerController extends Controller
                     $map = $this->betKeyToResolverArgs($betKey);
                     if (!$map['type_code']) continue;
 
-                    $rate = $resolver->get(null, $regionKey, $map['type_code'], $map['meta']);
-                    // Resolver trả ['buy_rate'=>..., 'payout'=>...] → map về commission/payout_times cho form
+                    // Resolve rate - trả về [buy_rate, payout]
+                    $rate = $resolver->resolve(
+                        $map['type_code'],
+                        $map['meta']['digits'] ?? null,
+                        $map['meta']['xien_size'] ?? null,
+                        $map['meta']['dai_count'] ?? null
+                    );
+                    
+                    // Map từ [buy_rate, payout] sang ['buy_rate' => ..., 'payout' => ...]
                     $initialRates[$regionKey][$betKey] = [
-                        'commission'   => $rate['buy_rate'] ?? null,
-                        'payout_times' => $rate['payout']   ?? null,
+                        'commission'   => $rate[0] ?? null,
+                        'payout_times' => $rate[1] ?? null,
                     ];
                 }
             }
@@ -204,12 +249,117 @@ class CustomerController extends Controller
 
     public function store(CustomerRequest $request): RedirectResponse
     {
-        $customer = Customer::create($request->validated());
+        // Lấy validated data (không bao gồm rates)
+        $validated = $request->validated();
+        $rates = $validated['rates'] ?? [];
+        unset($validated['rates']);
 
-        // Không xử lý bảng giá ở đây. Chuyển sang màn riêng để cấu hình.
+        // Tạo customer
+        $customer = Customer::create([
+            ...$validated,
+            'user_id' => Auth::id(),
+        ]);
+
+        // Xử lý rates nếu có
+        $ratesJson = [];
+        $regions = ['bac', 'trung', 'nam'];
+
+        foreach ($regions as $region) {
+            if (!isset($rates[$region]) || !is_array($rates[$region])) {
+                continue;
+            }
+
+            foreach ($rates[$region] as $betKey => $rateData) {
+                // Map betKey -> type_code + meta
+                $map = $this->betKeyToResolverArgs($betKey);
+                if (!$map['type_code']) {
+                    continue;
+                }
+
+                $typeCode = $map['type_code'];
+                $meta = $map['meta'];
+
+                // Lấy giá trị từ form (có thể là string)
+                $commission = $rateData['commission'] ?? null;
+                $payoutTimes = $rateData['payout_times'] ?? null;
+                
+                // Convert empty string hoặc string "0" thành null
+                if ($commission === '' || $commission === '0' || $commission === 0) {
+                    $commission = null;
+                }
+                if ($payoutTimes === '' || $payoutTimes === '0' || $payoutTimes === 0) {
+                    $payoutTimes = null;
+                }
+                
+                // Convert sang float nếu có giá trị
+                if ($commission !== null) {
+                    $commission = is_numeric($commission) ? (float)$commission : null;
+                }
+                if ($payoutTimes !== null) {
+                    $payoutTimes = is_numeric($payoutTimes) ? (float)$payoutTimes : null;
+                }
+                
+                // Skip nếu cả hai đều null (dùng default)
+                if ($commission === null && $payoutTimes === null) {
+                    continue;
+                }
+
+                // Build composite key: "region:type_code" hoặc "region:type_code:d2:x3:c4"
+                $keyParts = [$region, $typeCode];
+                if (isset($meta['digits']) && $meta['digits'] !== null) {
+                    $keyParts[] = "d{$meta['digits']}";
+                }
+                if (isset($meta['xien_size']) && $meta['xien_size'] !== null) {
+                    $keyParts[] = "x{$meta['xien_size']}";
+                }
+                if (isset($meta['dai_count']) && $meta['dai_count'] !== null) {
+                    $keyParts[] = "c{$meta['dai_count']}";
+                }
+                $compositeKey = implode(':', $keyParts);
+
+                // Nếu một trong hai null, lấy từ default
+                if ($commission === null || $payoutTimes === null) {
+                    $resolver = app(\App\Services\BettingRateResolver::class);
+                    $resolver->build(null, $region); // Load defaults
+                    $defaultRate = $resolver->resolve(
+                        $typeCode,
+                        $meta['digits'] ?? null,
+                        $meta['xien_size'] ?? null,
+                        $meta['dai_count'] ?? null
+                    );
+                    
+                    $commission = $commission ?? $defaultRate[0];
+                    $payoutTimes = $payoutTimes ?? $defaultRate[1];
+                }
+
+                // Lưu vào JSON
+                $ratesJson[$compositeKey] = [
+                    'buy_rate' => (float)$commission,
+                    'payout' => (float)$payoutTimes,
+                ];
+            }
+        }
+
+        // Lưu rates vào JSON column
+        if (!empty($ratesJson)) {
+            $customer->betting_rates = $ratesJson;
+            $customer->save();
+            
+            \Log::info('Customer Store - Rates saved', [
+                'customer_id' => $customer->id,
+                'rates_count' => count($ratesJson),
+                'sample_keys' => array_slice(array_keys($ratesJson), 0, 5)
+            ]);
+        } else {
+            \Log::warning('Customer Store - No rates to save', [
+                'customer_id' => $customer->id,
+                'rates_received' => $rates
+            ]);
+        }
+
         return redirect()
-            ->route('user.customers.rates.edit', $customer->id)
-            ->with('success', 'Tạo khách hàng thành công. Hãy cấu hình bảng giá.');
+            ->route('user.customers.index')
+            ->with('success', 'Tạo khách hàng và bảng giá thành công.');
     }
 
     /**
@@ -240,6 +390,9 @@ class CustomerController extends Controller
         // Prefill từ GIÁ HIỆU LỰC (override KH if any → else default)
         $initialRates = [];
         foreach ($regions as $regionKey => $label) {
+            // Build resolver cho customer này và region này
+            $resolver->build($customer->id, $regionKey);
+            
             $initialRates[$regionKey] = [];
             foreach ($rateGroups as $groupTitle => $pairs) {
                 $isBayLoGroup = str_contains($groupTitle, 'Bảy lô');
@@ -249,10 +402,18 @@ class CustomerController extends Controller
                     $map = $this->betKeyToResolverArgs($betKey);
                     if (!$map['type_code']) continue;
 
-                    $rate = $resolver->get($customer->id, $regionKey, $map['type_code'], $map['meta']);
+                    // Resolve rate - trả về [buy_rate, payout]
+                    $rate = $resolver->resolve(
+                        $map['type_code'],
+                        $map['meta']['digits'] ?? null,
+                        $map['meta']['xien_size'] ?? null,
+                        $map['meta']['dai_count'] ?? null
+                    );
+                    
+                    // Map từ [buy_rate, payout] sang ['buy_rate' => ..., 'payout' => ...]
                     $initialRates[$regionKey][$betKey] = [
-                        'commission'   => $rate['buy_rate'] ?? null,
-                        'payout_times' => $rate['payout']   ?? null,
+                        'commission'   => $rate[0] ?? null,
+                        'payout_times' => $rate[1] ?? null,
                     ];
                 }
             }

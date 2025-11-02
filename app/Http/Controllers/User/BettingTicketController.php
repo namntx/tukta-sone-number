@@ -9,6 +9,7 @@ use App\Models\BettingType;
 use App\Services\BettingMessageParser;
 use App\Services\BetPricingService;
 use App\Services\BettingSettlementService;
+use App\Support\Region;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -89,7 +90,7 @@ class BettingTicketController extends Controller
             'total_lose' => $user->bettingTickets()->whereYear('betting_date', now()->year)->where('result', 'lose')->sum('bet_amount'),
         ];
 
-        return view('user.betting-tickets.index', compact('tickets', 'customers', 'todayStats', 'monthlyStats', 'yearlyStats'));
+        return view('user.betting-tickets.index', compact('tickets', 'customers', 'todayStats', 'monthlyStats', 'yearlyStats', 'globalDate', 'globalRegion', 'filterDate', 'filterRegion'));
     }
 
     /**
@@ -111,7 +112,7 @@ class BettingTicketController extends Controller
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'betting_date' => 'required|date|before_or_equal:today',
-            'region' => 'required|string|max:50|in:Bắc,Trung,Nam',
+            'region' => 'required|string|max:50|in:Bắc,Trung,Nam,bac,trung,nam',
             'station' => 'required|string|max:100',
             'original_message' => 'required|string|max:1000',
         ], [
@@ -135,8 +136,16 @@ class BettingTicketController extends Controller
                         ->withInput();
         }
 
-        // Parse the betting message
-        $parseResult = $this->messageParser->parseMessage($request->original_message, $request->customer_id);
+        // Normalize region to lowercase
+        $region = strtolower($request->region);
+        $regionMap = ['bắc' => 'bac', 'trung' => 'trung', 'nam' => 'nam'];
+        $normalizedRegion = $regionMap[$region] ?? $region;
+
+        // Parse the betting message with proper options
+        $parseResult = $this->messageParser->parseMessage($request->original_message, [
+            'region' => $normalizedRegion,
+            'date' => $request->betting_date,
+        ]);
 
         if (!$parseResult['is_valid']) {
             return back()->withErrors(['original_message' => implode(', ', $parseResult['errors'])])
@@ -145,7 +154,7 @@ class BettingTicketController extends Controller
 
         // Handle new parser format with multiple bets
         if (isset($parseResult['multiple_bets']) && count($parseResult['multiple_bets']) > 0) {
-            return $this->createMultipleTickets($parseResult, $request);
+            return $this->createMultipleTickets($parseResult, $request, $normalizedRegion);
         }
 
         // Handle legacy single bet format
@@ -172,7 +181,7 @@ class BettingTicketController extends Controller
                 'customer_id' => $request->customer_id,
                 'betting_type_id' => $bettingType->id,
                 'betting_date' => $request->betting_date,
-                'region' => $request->region,
+                'region' => $normalizedRegion,
                 'station' => $stationName,
                 'original_message' => $request->original_message,
                 'parsed_message' => $parseResult['parsed_message'],
@@ -234,7 +243,7 @@ class BettingTicketController extends Controller
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'betting_date' => 'required|date|before_or_equal:today',
-            'region' => 'required|string|max:50|in:Bắc,Trung,Nam',
+            'region' => 'required|string|max:50|in:Bắc,Trung,Nam,bac,trung,nam',
             'station' => 'required|string|max:100',
             'result' => 'required|in:win,lose,pending',
             'payout_amount' => 'nullable|numeric|min:0',
@@ -261,6 +270,11 @@ class BettingTicketController extends Controller
                         ->withInput();
         }
 
+        // Normalize region to lowercase
+        $region = strtolower($request->region);
+        $regionMap = ['bắc' => 'bac', 'trung' => 'trung', 'nam' => 'nam'];
+        $normalizedRegion = $regionMap[$region] ?? $region;
+
         DB::beginTransaction();
         try {
             $oldResult = $bettingTicket->result;
@@ -268,7 +282,7 @@ class BettingTicketController extends Controller
             $bettingTicket->update([
                 'customer_id' => $request->customer_id,
                 'betting_date' => $request->betting_date,
-                'region' => $request->region,
+                'region' => $normalizedRegion,
                 'station' => $request->station,
                 'result' => $request->result,
                 'payout_amount' => $request->payout_amount ?? 0,
@@ -413,7 +427,7 @@ class BettingTicketController extends Controller
     /**
      * Create multiple tickets from parsed bets
      */
-    private function createMultipleTickets($parseResult, $request)
+    private function createMultipleTickets($parseResult, $request, $region)
     {
         DB::beginTransaction();
         try {
@@ -437,7 +451,7 @@ class BettingTicketController extends Controller
                     'customer_id' => $request->customer_id,
                     'betting_type_id' => $bettingType->id,
                     'betting_date' => $request->betting_date,
-                    'region' => $request->region,
+                    'region' => $region,
                     'station' => $stationName,
                     'original_message' => $request->original_message,
                     'parsed_message' => $parseResult['parsed_message'],

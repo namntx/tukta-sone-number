@@ -21,10 +21,12 @@ class BettingMessageParser
     private array $stationAliasMap = [];
 
     protected BetPricingService $pricing;
+    protected LotteryScheduleService $scheduleService;
 
-    public function __construct(BetPricingService $pricing)
+    public function __construct(BetPricingService $pricing, LotteryScheduleService $scheduleService)
     {
         $this->pricing = $pricing;
+        $this->scheduleService = $scheduleService;
         
         // Fallback luôn có; DB override/thêm vào
         $this->typeAliasMap = $this->defaultTypeAliases();
@@ -143,11 +145,15 @@ class BettingMessageParser
             foreach ($numbers as $n) {
                 $digits = strlen($n);
                 if ($digits < 2 || $digits > 4) continue;
+                
+                // Tạo meta với digits, sẽ merge với dai_count trong emitBet nếu cần
+                $betMeta = ['digits' => $digits];
+                
                 $emitBet($outBets, $ctx, [
                     'numbers' => [$n],
                     'type'    => 'bao_lo',
                     'amount'  => (int)$ctx['amount'],
-                    'meta'    => ['digits' => $digits],
+                    'meta'    => $betMeta,
                 ]);
             }
         };
@@ -463,12 +469,20 @@ class BettingMessageParser
     
         // ---------- 3) dicts ----------
         $stationAliases = [
-            // Nam
-            'hcm'=>'tp.hcm','sg'=>'tp.hcm',
-            'tn'=>'tay ninh','ag'=>'an giang','tg'=>'tien giang','bt'=>'ben tre',
-            'vl'=>'vinh long','tv'=>'tra vinh','kg'=>'kien giang','dl'=>'da lat',
-            // MB
-            'hn'=>'mien bac','mb'=>'mien bac',
+            // Miền Nam
+            'hcm'=>'tp.hcm', 'sg'=>'tp.hcm', 'tp'=>'tp.hcm',
+            'tn'=>'tay ninh', 'ag'=>'an giang', 'tg'=>'tien giang', 'bt'=>'ben tre',
+            'vl'=>'vinh long', 'tv'=>'tra vinh', 'kg'=>'kien giang', 'dl'=>'da lat',
+            'cm'=>'ca mau', 'ct'=>'can tho', 'dn'=>'dong nai',
+            'dthap'=>'dong thap', // không dùng 'dt' vì conflict với đá thẳng
+            'st'=>'soc trang', 'vt'=>'vung tau', 'la'=>'long an', 'bp'=>'binh phuoc',
+            'hg'=>'hau giang', 'bd'=>'binh duong', 'db'=>'binh duong', 'sb'=>'binh duong',
+            'bl'=>'bac lieu', 'bth'=>'binh thuan',
+            // Miền Bắc
+            'hn'=>'mien bac', 'mb'=>'mien bac',
+            // Miền Trung
+            'dna'=>'da nang', 'kh'=>'khanh hoa', 'py'=>'phu yen', 'qna'=>'quang nam',
+            'qng'=>'quang ngai', 'bdi'=>'binh dinh', 'tth'=>'thua thien hue',
         ];
         $typeAliases = [
             'lo'=>'bao_lo','dau'=>'dau','duoi'=>'duoi','dd'=>'dau_duoi',
@@ -616,18 +630,34 @@ class BettingMessageParser
             // type rời (kéo/lo/dau/duoi/xc…)
             if (isset($typeAliases[$tok])) {
                 $newType = $typeAliases[$tok];
+                
+                // Special handling for 'keo': pop số cuối TRƯỚC KHI flush
+                if ($newType === 'keo_hang_don_vi') {
+                    $start = null;
+                    if (!empty($ctx['numbers_group'])) {
+                        // POP số cuối ra khỏi numbers_group TRƯỚC
+                        $start = array_pop($ctx['numbers_group']);
+                        $addEvent($events, 'keo_pop_start', ['start' => $start, 'remaining' => $ctx['numbers_group']]);
+                    } elseif (!empty($ctx['last_numbers'])) {
+                        $start = end($ctx['last_numbers']);
+                    }
+                    
+                    // BÂY GIỜ mới flush group (không có số keo_start nữa)
+                    if (($ctx['current_type'] ?? null) !== null && $newType !== $ctx['current_type'] && $isGroupPending($ctx)) {
+                        $flushGroup($outBets, $ctx, $events, 'type_switch_flush');
+                    }
+                    
+                    $ctx['current_type'] = 'keo_hang_don_vi';
+                    $ctx['meta']['keo_start'] = $start;
+                    // KHÔNG reset stations - kéo kế thừa station từ group trước
+                    $ctx['just_saw_station'] = false;
+                    $addEvent($events, 'type_loose', ['token' => $tok, 'type' => 'keo_hang_don_vi', 'keo_start' => $start]);
+                    continue;
+                }
+                
+                // Normal type switch
                 if (($ctx['current_type'] ?? null) !== null && $newType !== $ctx['current_type'] && $isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'type_switch_flush');
-                }
-                if ($newType === 'keo_hang_don_vi') {
-                    $start=null;
-                    if (!empty($ctx['numbers_group'])) $start=end($ctx['numbers_group']);
-                    elseif (!empty($ctx['last_numbers'])) { $start=end($ctx['last_numbers']); $ctx['numbers_group']=[$start]; }
-                    $ctx['current_type']='keo_hang_don_vi';
-                    $ctx['meta']['keo_start']=$start;
-                    $ctx['just_saw_station']=false;
-                    $addEvent($events,'type_loose',['token'=>$tok,'type'=>'keo_hang_don_vi','keo_start'=>$start]);
-                    continue;
                 }
                 if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers'])) {
                     $ctx['numbers_group']=$ctx['last_numbers'];
@@ -643,8 +673,26 @@ class BettingMessageParser
             if (isset($stationAliases[$tok])) {
                 $name = $stationAliases[$tok];
             
-                // 1) Đang ở chế độ "bắt N đài" (Ndai) → thu thập cho đủ, KHÔNG flush
+                // 1) Đang ở chế độ "bắt N đài" (Ndai)
                 if ($ctx['dai_capture_remaining'] > 0) {
+                    // Nếu đã có group pending (số, loại, tiền) → flush group đó trước
+                    if ($isGroupPending($ctx)) {
+                        // LƯU dai_count trước khi flush để bets có thể dùng
+                        $savedDaiCount = $ctx['dai_count'];
+                        $flushGroup($outBets, $ctx, $events, 'ndai_group_complete_flush');
+                        // Khôi phục dai_count để các bets vừa emit có thể tìm thấy nó
+                        // Không, bets đã có dai_count trong meta rồi trong emitBet
+                        // Reset chế độ Ndai
+                        $ctx['dai_count'] = null;
+                        $ctx['dai_capture_remaining'] = 0;
+                        $ctx['stations'] = []; // Clear stations list
+                        // Bắt đầu group mới với station này
+                        $ctx['stations'] = [$name];
+                        $addEvent($events, 'ndai_reset_new_station', ['new_station' => $name]);
+                        continue;
+                    }
+                    
+                    // Chưa có group pending → thu thập đài cho đủ
                     if (!in_array($name, $ctx['stations'], true)) {
                         $ctx['stations'][] = $name;
                         $ctx['dai_capture_remaining']--;
@@ -693,27 +741,146 @@ class BettingMessageParser
         $flushGroup($outBets, $ctx, $events, 'final_flush');
     
         // Áp station cuối:
-        // - Nếu đã chỉ rõ stations → join
-        // - Nếu CÓ Ndai nhưng KHÔNG chỉ rõ stations → GIỮ station=null + meta.dai_count (layer sau expand)
+        // - Nếu đã chỉ rõ stations → lưu tạm vào meta
+        // - Nếu CÓ Ndai nhưng KHÔNG chỉ rõ stations → Auto resolve theo lịch
         // - Nếu KHÔNG có cả hai → fallback defaultStations
+        
+        // Lấy date từ context để resolve đài
+        $bettingDate = $context['date'] ?? session('global_date', now()->format('Y-m-d'));
+        
         foreach ($outBets as &$b) {
             $hasStation = !empty($b['station']);
             $hasNdaiMeta = !empty($b['meta']['dai_count']);
     
             if (!$hasStation) {
-                if (!empty($ctx['stations'])) {
-                    $b['station'] = $joinStations($ctx['stations']);
-                } elseif (!$hasNdaiMeta) {
-                    // chỉ khi hoàn toàn không ràng buộc Ndai
-                    $b['station'] = $joinStations($defaultStations);
+                if ($hasNdaiMeta) {
+                    // Case 2: Có Ndai → Auto resolve theo lịch (ưu tiên trước ctx['stations'])
+                    // Vì ctx['stations'] có thể bị contaminate từ group sau
+                    $daiCount = (int)$b['meta']['dai_count'];
+                    
+                    // Chỉ auto resolve cho miền Nam và Trung (theo yêu cầu DOC_FUNC.md)
+                    if (in_array($region, ['nam', 'trung'], true) && $daiCount >= 2 && $daiCount <= 4) {
+                        try {
+                            $autoStations = $this->scheduleService->getNStations($daiCount, $bettingDate, $region);
+                            
+                            if (!empty($autoStations)) {
+                                // Lưu list stations để expand sau
+                                $b['meta']['_stations_to_expand'] = $autoStations;
+                                $addEvent($events, 'station_auto_resolved', [
+                                    'dai_count' => $daiCount,
+                                    'region' => $region,
+                                    'date' => $bettingDate,
+                                    'resolved_stations' => $autoStations,
+                                    'will_expand' => true
+                                ]);
+                            } else {
+                                // Không có đài trong lịch → fallback single station
+                                $b['station'] = $joinStations($defaultStations);
+                                $addEvent($events, 'station_auto_resolve_failed_fallback', [
+                                    'dai_count' => $daiCount,
+                                    'fallback' => $defaultStations
+                                ]);
+                            }
+                        } catch (\Exception $e) {
+                            // Có lỗi → fallback single station
+                            $b['station'] = $joinStations($defaultStations);
+                            $addEvent($events, 'station_auto_resolve_error', [
+                                'error' => $e->getMessage(),
+                                'fallback' => $defaultStations
+                            ]);
+                        }
+                    } else {
+                        // Miền Bắc hoặc số đài không hợp lệ → giữ null
+                        $b['station'] = null;
+                        $addEvent($events, 'station_ndai_keep_null', [
+                            'region' => $region,
+                            'dai_count' => $daiCount,
+                            'reason' => 'Miền Bắc hoặc dai_count không hợp lệ'
+                        ]);
+                    }
+                } elseif (!empty($ctx['stations'])) {
+                    // Case 1: User đã chỉ định đài cụ thể (vd: 2dai tn ag)
+                    // Lưu list stations vào meta để expand sau
+                    $b['meta']['_stations_to_expand'] = $ctx['stations'];
+                    $addEvent($events, 'station_from_explicit', [
+                        'stations' => $ctx['stations'],
+                        'will_expand' => true
+                    ]);
                 } else {
-                    // giữ null để service expand theo lịch 2/3/4 đài trong ngày
-                    $b['station'] = null;
+                    // Case 3: Không có gì → Auto resolve đài chính từ lịch (theo date + region)
+                    // Theo DOC_FUNC.md: cần check thứ và miền để lấy đài chính cho đúng
+                    if (in_array($region, ['nam', 'trung'], true)) {
+                        try {
+                            // Resolve đài chính (1 station)
+                            $mainStation = $this->scheduleService->getNStations(1, $bettingDate, $region);
+                            
+                            if (!empty($mainStation)) {
+                                $b['station'] = $mainStation[0];
+                                $addEvent($events, 'station_auto_resolved_main', [
+                                    'region' => $region,
+                                    'date' => $bettingDate,
+                                    'resolved_station' => $mainStation[0],
+                                ]);
+                            } else {
+                                // Không có đài trong lịch → fallback defaultStations
+                                $b['station'] = $joinStations($defaultStations);
+                                $addEvent($events, 'station_auto_resolve_failed_fallback_default', [
+                                    'region' => $region,
+                                    'date' => $bettingDate,
+                                    'fallback' => $defaultStations
+                                ]);
+                            }
+                        } catch (\Exception $e) {
+                            // Có lỗi → fallback defaultStations
+                            $b['station'] = $joinStations($defaultStations);
+                            $addEvent($events, 'station_auto_resolve_error_fallback', [
+                                'error' => $e->getMessage(),
+                                'region' => $region,
+                                'date' => $bettingDate,
+                                'fallback' => $defaultStations
+                            ]);
+                        }
+                    } else {
+                        // Miền Bắc hoặc region không hợp lệ → dùng defaultStations
+                        $b['station'] = $joinStations($defaultStations);
+                        $addEvent($events, 'station_from_default', [
+                            'region' => $region,
+                            'stations' => $defaultStations
+                        ]);
+                    }
                 }
             }
             $b['meta'] = $b['meta'] ?? [];
         }
         unset($b);
+        
+        // === EXPAND BETS với nhiều đài ===
+        // Nếu bet có _stations_to_expand → tạo nhiều bets riêng (1 cho mỗi đài)
+        $expandedBets = [];
+        foreach ($outBets as $bet) {
+            if (!empty($bet['meta']['_stations_to_expand'])) {
+                $stations = $bet['meta']['_stations_to_expand'];
+                unset($bet['meta']['_stations_to_expand']);
+                unset($bet['meta']['dai_count']); // Không cần dai_count nữa sau khi expand
+                
+                foreach ($stations as $station) {
+                    $clone = $bet;
+                    $clone['station'] = $station;
+                    $expandedBets[] = $clone;
+                }
+                
+                $addEvent($events, 'bet_expanded_to_multiple_stations', [
+                    'original_bet_type' => $bet['type'],
+                    'stations' => $stations,
+                    'expanded_count' => count($stations)
+                ]);
+            } else {
+                // Bet không cần expand
+                $expandedBets[] = $bet;
+            }
+        }
+        
+        $outBets = $expandedBets;
     
         if (empty($outBets)) {
             return [

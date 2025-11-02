@@ -19,6 +19,11 @@
             <div>
                 <form id="betting-form" action="{{ route('user.betting-tickets.store') }}" method="POST">
                     @csrf
+                    <!-- Hidden fields for global date and region -->
+                    <input type="hidden" name="betting_date" id="betting_date" value="{{ $globalDate }}">
+                    <input type="hidden" name="region" id="region" value="{{ $globalRegion }}">
+                    <input type="hidden" name="station" id="station" value="">
+                    
                     <div class="space-y-3 md:space-y-4">
                         <div>
                             <label for="customer_id" class="block text-xs md:text-sm font-medium text-gray-700 mb-1 flex items-center">
@@ -33,41 +38,6 @@
                                     <option value="{{ $customer->id }}">{{ $customer->name }} ({{ $customer->phone }})</option>
                                 @endforeach
                             </select>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-2 md:gap-4">
-                            <div>
-                                <label for="betting_date" class="block text-xs md:text-sm font-medium text-gray-700 mb-1 flex items-center">
-                                    <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                    </svg>
-                                    Ngày cược
-                                </label>
-                                <input type="date" name="betting_date" id="betting_date" value="{{ $global_date }}" class="w-full text-sm md:text-base border border-gray-300 rounded-md px-2 md:px-3 py-2.5 md:py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                            </div>
-                            <div>
-                                <label for="region" class="block text-xs md:text-sm font-medium text-gray-700 mb-1 flex items-center">
-                                    <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                    </svg>
-                                    Miền
-                                </label>
-                                <select name="region" id="region" class="w-full text-sm md:text-base border border-gray-300 rounded-md px-2 md:px-3 py-2.5 md:py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
-                                    <option value="">Chọn miền</option>
-                                    <option value="bac"  {{ $global_region=='bac'  ? 'selected' : '' }}>Miền Bắc</option>
-                                    <option value="trung"{{ $global_region=='trung'? 'selected' : '' }}>Miền Trung</option>
-                                    <option value="nam"  {{ $global_region=='nam'  ? 'selected' : '' }}>Miền Nam</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label for="station" class="block text-sm font-medium text-gray-700 mb-1">
-                                <i class="fas fa-broadcast-tower mr-1"></i>Đài cược
-                            </label>
-                            <input type="text" name="station" id="station" placeholder="Tự động phát hiện từ tin nhắn" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                            <p class="text-xs text-gray-500 mt-1">Để trống để tự động phát hiện từ tin nhắn</p>
                         </div>
                         
                         <div>
@@ -320,9 +290,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('submit-btn');
     const originalMessage = document.getElementById('original_message');
     const customerId = document.getElementById('customer_id');
-    const bettingDate = document.getElementById('betting_date');
-    const region = document.getElementById('region');
-    const station = document.getElementById('station');
+    const bettingDate = document.getElementById('betting_date'); // Hidden input
+    const region = document.getElementById('region'); // Hidden input
+    const station = document.getElementById('station'); // Hidden input
     
     // Preview elements
     const previewPanel = document.getElementById('preview-panel');
@@ -362,7 +332,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({
                     message: message,
                     customer_id: customer,
-                    region: region.value
+                    region: region.value,
+                    date: bettingDate.value
                 })
             })
             .then(response => response.json())
@@ -397,7 +368,7 @@ document.addEventListener('DOMContentLoaded', function() {
         clearBtn.addEventListener('click', function() {
             // Clear form
             originalMessage.value = '';
-            station.value = '';
+            station.value = ''; // Clear station (it's auto-detected)
             
             // Reset preview
             currentParseData = null;
@@ -440,10 +411,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const customerText = customerSelect.options[customerSelect.selectedIndex].text;
         const dateValue = bettingDate.value;
         const regionValue = region.value;
+        const regionLabels = {'bac': 'Miền Bắc', 'trung': 'Miền Trung', 'nam': 'Miền Nam'};
+        const regionLabel = regionLabels[regionValue] || regionValue;
+        
+        // Format date for display
+        const dateFormatted = new Date(dateValue).toLocaleDateString('vi-VN');
         
         // Update basic info
         document.getElementById('preview-customer').textContent = customerText;
-        document.getElementById('preview-date-region').textContent = `${dateValue} - ${regionValue}`;
+        document.getElementById('preview-date-region').textContent = `${dateFormatted} - ${regionLabel}`;
         
         // Check if we have multiple bets from new parser
         if (data.multiple_bets && data.multiple_bets.length > 0) {

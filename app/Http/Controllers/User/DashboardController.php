@@ -54,7 +54,9 @@ class DashboardController extends Controller
             'recentSubscriptions',
             'customers',
             'todayTickets',
-            'todayStats'
+            'todayStats',
+            'globalDate',
+            'globalRegion'
         ));
     }
 

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Customer;
 use App\Models\BettingRate;
 use App\Services\BettingRateResolver;
+use Illuminate\Validation\Rule;
 
 class CustomerRateController extends Controller
 {
@@ -17,19 +18,8 @@ class CustomerRateController extends Controller
 
         $data = [];
         foreach (array_keys($regions) as $region) {
-            $data[$region] = $resolver->getAllForCustomerRegion($customer->id, $region)
-                ->map(function(BettingRate $r){
-                    return [
-                        'id'        => $r->id,
-                        'type_code' => $r->type_code,
-                        'digits'    => $r->digits,
-                        'xien_size' => $r->xien_size,
-                        'dai_count' => $r->dai_count,
-                        'buy_rate'  => (float)$r->buy_rate,
-                        'payout'    => (float)$r->payout,
-                        'is_default'=> $r->customer_id === null,
-                    ];
-                })->toArray();
+            // getAllForCustomerRegion now returns array directly
+            $data[$region] = $resolver->getAllForCustomerRegion($customer->id, $region);
         }
 
         return view('user.customers.rates-edit', compact('customer','regions','data'));
@@ -50,23 +40,34 @@ class CustomerRateController extends Controller
             'items.*.dai'      => ['nullable','integer','between:1,4'],
         ]);
 
+        // Load existing rates or initialize empty array
+        $ratesJson = $customer->betting_rates ?? [];
+
+        // Update rates in JSON structure
         foreach ($payload['items'] as $row) {
-            BettingRate::updateOrCreate(
-                [
-                    'customer_id' => $customer->id,
-                    'region'      => $row['region'],
-                    'type_code'   => $row['type'],
-                    'digits'      => $row['digits'] ?? null,
-                    'xien_size'   => $row['xien'] ?? null,
-                    'dai_count'   => $row['dai'] ?? null,
-                ],
-                [
-                    'buy_rate'    => $row['buy'],
-                    'payout'      => $row['payout'],
-                    'is_active'   => true,
-                ]
-            );
+            $region = $row['region'];
+            $typeCode = $row['type'];
+            $digits = $row['digits'] ?? null;
+            $xienSize = $row['xien'] ?? null;
+            $daiCount = $row['dai'] ?? null;
+
+            // Build composite key: "region:type_code:d2:x3:c4"
+            $keyParts = [$region, $typeCode];
+            if ($digits !== null) $keyParts[] = "d{$digits}";
+            if ($xienSize !== null) $keyParts[] = "x{$xienSize}";
+            if ($daiCount !== null) $keyParts[] = "c{$daiCount}";
+            $compositeKey = implode(':', $keyParts);
+
+            // Update rate in JSON
+            $ratesJson[$compositeKey] = [
+                'buy_rate' => (float)$row['buy'],
+                'payout' => (float)$row['payout'],
+            ];
         }
+
+        // Save to customer's betting_rates JSON column
+        $customer->betting_rates = $ratesJson;
+        $customer->save();
 
         return back()->with('status','Đã lưu giá cho khách.');
     }

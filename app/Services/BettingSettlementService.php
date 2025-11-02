@@ -31,6 +31,9 @@ class BettingSettlementService
      */
     public function settleTicket(BettingTicket $ticket): array
     {
+        // Build rate resolver với customer_id và region của ticket
+        $this->rateResolver->build($ticket->customer_id, $ticket->region);
+
         // Lấy kết quả xổ số tương ứng
         $results = $this->getLotteryResults($ticket);
 
@@ -55,13 +58,18 @@ class BettingSettlementService
             ];
         }
 
+        // Normalize betting_data format
+        // Legacy format: {betting_type_code, numbers, meta, ...}
+        // New format: [{type, numbers, amount, station, meta}, ...]
+        $normalizedBets = $this->normalizeBettingData($bettingData, $ticket);
+
         // Tính toán thắng thua cho từng bet trong ticket
         $settlementDetails = [];
         $totalWinAmount = 0;
         $totalPayoutAmount = 0;
         $hasWin = false;
 
-        foreach ($bettingData as $betIndex => $bet) {
+        foreach ($normalizedBets as $bet) {
             $betResult = $this->settleSingleBet($bet, $results, $ticket);
 
             if ($betResult['is_win']) {
@@ -156,15 +164,9 @@ class BettingSettlementService
         $isWin = $winCount > 0;
 
         // Lấy tỷ lệ từ customer rates
-        $rate = $this->rateResolver->resolve(
-            $ticket->customer_id,
-            'bao_lo',
-            $ticket->region,
-            $digits
-        );
-
-        $buyRate = $rate['buy_rate'] ?? 0.75; // Tỷ lệ thu
-        $payout = $rate['win_rate'] ?? 80; // Tỷ lệ trả
+        $rate = $this->rateResolver->resolve('bao_lo', $digits);
+        $buyRate = $rate[0] ?? 0.75; // Tỷ lệ thu
+        $payout = $rate[1] ?? 80; // Tỷ lệ trả
 
         // Tính tiền xác theo công thức mới
         $isBac = $ticket->region === 'bac';
@@ -232,15 +234,10 @@ class BettingSettlementService
             }
         }
 
-        $rate = $this->rateResolver->resolve(
-            $ticket->customer_id,
-            'dau',
-            $ticket->region,
-            2
-        );
+        $rate = $this->rateResolver->resolve('dau', 2);
 
-        $buyRate = $rate['buy_rate'] ?? 0.75;
-        $payout = $rate['win_rate'] ?? 85;
+        $buyRate = $rate[0] ?? 0.75;
+        $payout = $rate[1] ?? 85;
 
         // Tính tiền xác
         $isBac = $ticket->region === 'bac';
@@ -295,15 +292,10 @@ class BettingSettlementService
             }
         }
 
-        $rate = $this->rateResolver->resolve(
-            $ticket->customer_id,
-            'duoi',
-            $ticket->region,
-            2
-        );
+        $rate = $this->rateResolver->resolve('duoi', 2);
 
-        $buyRate = $rate['buy_rate'] ?? 0.75;
-        $payout = $rate['win_rate'] ?? 85;
+        $buyRate = $rate[0] ?? 0.75;
+        $payout = $rate[1] ?? 85;
 
         // Tính tiền xác - Đuôi không nhân thêm
         $costXac = $amount * $buyRate;
@@ -342,13 +334,8 @@ class BettingSettlementService
         $payoutAmount = $dauResult['payout_amount'] + $duoiResult['payout_amount'];
 
         // Tính tiền xác theo công thức: (đầu + đuôi) * buy_rate
-        $rate = $this->rateResolver->resolve(
-            $ticket->customer_id,
-            'dau_duoi',
-            $ticket->region,
-            2
-        );
-        $buyRate = $rate['buy_rate'] ?? 0.75;
+        $rate = $this->rateResolver->resolve('dau_duoi', 2);
+        $buyRate = $rate[0] ?? 0.75;
 
         $isBac = $ticket->region === 'bac';
         if ($isBac) {
@@ -401,15 +388,10 @@ class BettingSettlementService
             }
         }
 
-        $rate = $this->rateResolver->resolve(
-            $ticket->customer_id,
-            'xiu_chu',
-            $ticket->region,
-            3
-        );
+        $rate = $this->rateResolver->resolve('xiu_chu', 3);
 
-        $buyRate = $rate['buy_rate'] ?? 0.75;
-        $payout = $rate['win_rate'] ?? 500;
+        $buyRate = $rate[0] ?? 0.75;
+        $payout = $rate[1] ?? 500;
 
         // Tính tiền xác
         if ($isBac) {
@@ -470,15 +452,10 @@ class BettingSettlementService
             }
         }
 
-        $rate = $this->rateResolver->resolve(
-            $ticket->customer_id,
-            'xiu_chu_dau',
-            $ticket->region,
-            2
-        );
+        $rate = $this->rateResolver->resolve('xiu_chu_dau', 2);
 
-        $buyRate = $rate['buy_rate'] ?? 0.75;
-        $payout = $rate['win_rate'] ?? 90;
+        $buyRate = $rate[0] ?? 0.75;
+        $payout = $rate[1] ?? 90;
 
         // Tính tiền xác
         if ($isBac) {
@@ -537,15 +514,10 @@ class BettingSettlementService
             }
         }
 
-        $rate = $this->rateResolver->resolve(
-            $ticket->customer_id,
-            'xiu_chu_duoi',
-            $ticket->region,
-            2
-        );
+        $rate = $this->rateResolver->resolve('xiu_chu_duoi', 2);
 
-        $buyRate = $rate['buy_rate'] ?? 0.75;
-        $payout = $rate['win_rate'] ?? 90;
+        $buyRate = $rate[0] ?? 0.75;
+        $payout = $rate[1] ?? 90;
 
         // Tính tiền xác - Đuôi không nhân thêm
         $costXac = $amount * $buyRate;
@@ -607,18 +579,13 @@ class BettingSettlementService
         // Phải trúng đủ số lượng số theo xien_size
         $isWin = count($matchedNumbers) >= $xienSize;
 
-        $rate = $this->rateResolver->resolve(
-            $ticket->customer_id,
-            'xien',
-            $ticket->region,
-            $xienSize
-        );
+        $rate = $this->rateResolver->resolve('xien', null, $xienSize);
 
-        $buyRate = $rate['buy_rate'] ?? 0.75;
-        $payout = match($xienSize) {
-            2 => $rate['win_rate'] ?? 15,
-            3 => $rate['win_rate'] ?? 550,
-            4 => $rate['win_rate'] ?? 3500,
+        $buyRate = $rate[0] ?? 0.75;
+        $payout = $rate[1] ?? match($xienSize) {
+            2 => 15,
+            3 => 550,
+            4 => 3500,
             default => 15,
         };
 
@@ -683,15 +650,10 @@ class BettingSettlementService
             }
         }
 
-        $rate = $this->rateResolver->resolve(
-            $ticket->customer_id,
-            'da_thang',
-            $ticket->region,
-            2
-        );
+        $rate = $this->rateResolver->resolve('da_thang', 2);
 
-        $buyRate = $rate['buy_rate'] ?? 0.75;
-        $payout = $rate['win_rate'] ?? 70;
+        $buyRate = $rate[0] ?? 0.75;
+        $payout = $rate[1] ?? 70;
 
         // Tính tiền xác
         $pairCount = count($pairs);
@@ -766,15 +728,10 @@ class BettingSettlementService
             }
         }
 
-        $rate = $this->rateResolver->resolve(
-            $ticket->customer_id,
-            'da_xien',
-            $ticket->region,
-            2
-        );
+        $rate = $this->rateResolver->resolve('da_xien', 2);
 
-        $buyRate = $rate['buy_rate'] ?? 0.75;
-        $payout = $rate['win_rate'] ?? 70;
+        $buyRate = $rate[0] ?? 0.75;
+        $payout = $rate[1] ?? 70;
 
         // Tính tiền xác theo số đài
         // 2 đài: 4 * 18, 3 đài: 4 * 3 * 18, 4 đài: 4 * 6 * 18
@@ -857,13 +814,51 @@ class BettingSettlementService
 
         // Cập nhật theo ngày
         if ($result === 'win') {
-            $customer->increment('daily_win', $payoutAmount);
+            $customer->increment('daily_win_amount', $payoutAmount);
+            $customer->increment('total_win_amount', $payoutAmount);
         } else {
-            $customer->increment('daily_loss', $winAmount);
+            $customer->increment('daily_lose_amount', $winAmount);
+            $customer->increment('total_lose_amount', $winAmount);
         }
 
         // Cập nhật theo tháng
         // TODO: Cần logic phức tạp hơn để track theo tháng/năm
+    }
+
+    /**
+     * Normalize betting_data từ legacy format sang new format
+     * 
+     * Legacy format: {betting_type_code, numbers, meta, ...}
+     * New format: [{type, numbers, amount, station, meta}, ...]
+     * 
+     * @param array $bettingData
+     * @param BettingTicket $ticket
+     * @return array
+     */
+    protected function normalizeBettingData(array $bettingData, BettingTicket $ticket): array
+    {
+        // Check if already new format (array of bets)
+        if (!empty($bettingData) && isset($bettingData[0]) && is_array($bettingData[0]) && isset($bettingData[0]['type'])) {
+            // Already new format
+            return $bettingData;
+        }
+
+        // Legacy format: single bet object
+        $type = $bettingData['betting_type_code'] ?? '';
+        $numbers = $bettingData['numbers'] ?? [];
+        $amount = (float)($ticket->bet_amount ?? 0);
+        $meta = $bettingData['meta'] ?? [];
+
+        // Use station from ticket
+        $station = $ticket->station;
+
+        return [[
+            'type' => $type,
+            'numbers' => $numbers,
+            'amount' => $amount,
+            'station' => $station,
+            'meta' => $meta,
+        ]];
     }
 
     /**

@@ -175,27 +175,23 @@
                         @auth
                         @if(!auth()->user()->isAdmin())
                             <!-- Global Date and Region Selectors -->
-                            <div class="lg:flex items-center space-x-3 mr-4">
-                                <form method="POST" action="{{ route('global-filters.update') }}" class="flex items-center space-x-2" id="global-filters-form">
+                            <div class="flex items-center gap-1.5 flex-1 min-w-0 ml-2">
+                                <form method="POST" action="{{ route('global-filters.update') }}" class="flex items-center gap-1.5 flex-1 min-w-0" id="global-filters-form">
                                     @csrf
-                                    <div class="flex items-center space-x-1">
-                                        <input type="date" 
-                                                id="global_date" 
-                                                name="global_date" 
-                                                value="{{ $global_date }}"
-                                                class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                                                onchange="updateGlobalFilters()">
-                                    </div>
-                                    <div class="flex items-center space-x-1">
-                                        <select id="global_region" 
-                                                name="global_region" 
-                                                class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                                                onchange="updateGlobalFilters()">
-                                            <option value="bac" {{ $global_region == 'bac' ? 'selected' : '' }}>Bắc</option>
-                                            <option value="trung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
-                                            <option value="nam" {{ $global_region == 'nam' ? 'selected' : '' }}>Nam</option>
-                                        </select>
-                                    </div>
+                                    <input type="date" 
+                                            id="global_date" 
+                                            name="global_date" 
+                                            value="{{ $global_date }}"
+                                            class="flex-1 text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                            onchange="updateGlobalFilters()">
+                                    <select id="global_region" 
+                                            name="global_region" 
+                                            class="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 flex-shrink-0"
+                                            onchange="updateGlobalFilters()">
+                                        <option value="bac" {{ $global_region == 'bac' ? 'selected' : '' }}>Bắc</option>
+                                        <option value="trung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
+                                        <option value="nam" {{ $global_region == 'nam' ? 'selected' : '' }}>Nam</option>
+                                    </select>
                                 </form>
                             </div>
                         @endif
@@ -491,7 +487,7 @@
         <!-- Main content -->
         <main class="max-w-7xl mx-auto py-3 md:py-6 px-3 md:px-4 sm:px-6 lg:px-8 pb-20 md:pb-6">
             <!-- Flash Messages -->
-            @if(session('success'))
+            <!-- @if(session('success'))
                 <div class="mb-4 rounded-md bg-green-50 p-4">
                     <div class="flex">
                         <div class="flex-shrink-0">
@@ -504,7 +500,7 @@
                         </div>
                     </div>
                 </div>
-            @endif
+            @endif -->
             
             
             <!-- Flash Messages -->

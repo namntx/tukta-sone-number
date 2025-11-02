@@ -3,238 +3,170 @@
 @section('title', 'Quản lý phiếu cược - Keki SaaS')
 
 @section('content')
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">
-                    Quản lý phiếu cược
-                </h1>
-                <p class="text-gray-600 mt-1">
-                    Quản lý và theo dõi các phiếu cược - {{ $global_region }} - {{ \Carbon\Carbon::parse($global_date)->format('d/m/Y') }}
-                </p>
-            </div>
-            <div class="mt-4 sm:mt-0">
+<div class="pb-4">
+    <!-- Sticky Header -->
+    <div class="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-200 mb-3">
+        <div class="px-3 py-2.5">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex-1 min-w-0">
+                    <h1 class="text-lg font-bold text-gray-900">Phiếu cược</h1>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        {{ \App\Support\Region::label($filterRegion ?? $globalRegion) }} · {{ \Carbon\Carbon::parse($filterDate ?? $globalDate)->format('d/m/Y') }}
+                    </p>
+                </div>
                 <a href="{{ route('user.betting-tickets.create') }}" 
-                   class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                   class="inline-flex items-center justify-center px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition ml-2">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Thêm
+                </a>
+            </div>
+            
+            <!-- Quick Filters - Compact -->
+            <form method="GET" action="{{ route('user.betting-tickets.index') }}" class="space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="date" name="date" value="{{ request('date', $filterDate ?? $globalDate) }}" 
+                           class="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    <select name="region" class="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <option value="bac" {{ ($filterRegion ?? $globalRegion) == 'bac' ? 'selected' : '' }}>Bắc</option>
+                        <option value="trung" {{ ($filterRegion ?? $globalRegion) == 'trung' ? 'selected' : '' }}>Trung</option>
+                        <option value="nam" {{ ($filterRegion ?? $globalRegion) == 'nam' ? 'selected' : '' }}>Nam</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <select name="customer_id" class="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <option value="">Tất cả KH</option>
+                        @foreach($customers as $customer)
+                            <option value="{{ $customer->id }}" {{ request('customer_id') == $customer->id ? 'selected' : '' }}>
+                                {{ $customer->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <select name="result" class="px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <option value="">Tất cả KQ</option>
+                        <option value="pending" {{ request('result') == 'pending' ? 'selected' : '' }}>Chờ</option>
+                        <option value="win" {{ request('result') == 'win' ? 'selected' : '' }}>Ăn</option>
+                        <option value="lose" {{ request('result') == 'lose' ? 'selected' : '' }}>Thua</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-200 transition">
+                    Áp dụng bộ lọc
+                </button>
+            </form>
+        </div>
+        
+        <!-- Quick Stats Bar -->
+        <div class="px-3 pb-2 grid grid-cols-4 gap-2 text-center border-t border-gray-100 pt-2">
+            <div>
+                <div class="text-xs text-gray-500 mb-0.5">Hôm nay</div>
+                <div class="text-sm font-bold text-gray-900">{{ $todayStats['total_tickets'] }}</div>
+                <div class="text-xs {{ ($todayStats['total_win'] - $todayStats['total_lose']) >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                    {{ number_format(abs($todayStats['total_win'] - $todayStats['total_lose']) / 1000, 0) }}k
+                </div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500 mb-0.5">Tháng</div>
+                <div class="text-sm font-bold text-gray-900">{{ $monthlyStats['total_tickets'] }}</div>
+                <div class="text-xs {{ ($monthlyStats['total_win'] - $monthlyStats['total_lose']) >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                    {{ number_format(abs($monthlyStats['total_win'] - $monthlyStats['total_lose']) / 1000, 0) }}k
+                </div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500 mb-0.5">Năm</div>
+                <div class="text-sm font-bold text-gray-900">{{ $yearlyStats['total_tickets'] }}</div>
+                <div class="text-xs {{ ($yearlyStats['total_win'] - $yearlyStats['total_lose']) >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                    {{ number_format(abs($yearlyStats['total_win'] - $yearlyStats['total_lose']) / 1000, 0) }}k
+                </div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500 mb-0.5">Tổng cược</div>
+                <div class="text-sm font-bold text-gray-900">{{ number_format($todayStats['total_bet'] / 1000, 0) }}k</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tickets List -->
+    <div class="space-y-1.5 px-3">
+        @if($tickets->count() > 0)
+            @foreach($tickets as $ticket)
+            <a href="{{ route('user.betting-tickets.show', $ticket) }}" 
+               class="block bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all active:bg-gray-50">
+                <div class="px-3 py-2.5">
+                    <!-- Header: Customer & Result -->
+                    <div class="flex items-center justify-between mb-1.5">
+                        <div class="flex items-center gap-2 flex-1 min-w-0">
+                            <h3 class="text-sm font-semibold text-gray-900 truncate">{{ $ticket->customer->name }}</h3>
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium {{ $ticket->result_badge_class }}">
+                                {{ ucfirst($ticket->result) }}
+                            </span>
+                        </div>
+                        <div class="flex-shrink-0 text-xs text-gray-500">
+                            {{ $ticket->betting_date->format('d/m') }}
+                        </div>
+                    </div>
+                    
+                    <!-- Bet Info -->
+                    <div class="mb-1.5">
+                        <div class="text-xs text-gray-600 mb-0.5">
+                            <span class="font-medium">{{ $ticket->bettingType->name }}</span>
+                            <span class="mx-1">·</span>
+                            <span>{{ $ticket->region }}</span>
+                            <span class="mx-1">·</span>
+                            <span class="truncate">{{ $ticket->station }}</span>
+                        </div>
+                        @if($ticket->parsed_message)
+                        <div class="text-xs text-gray-500 truncate mt-0.5">{{ $ticket->parsed_message }}</div>
+                        @endif
+                    </div>
+                    
+                    <!-- Financial Info -->
+                    <div class="flex items-center gap-3 text-xs pt-1.5 border-t border-gray-100">
+                        <div class="flex items-center gap-1">
+                            <span class="text-gray-500">Cược:</span>
+                            <span class="font-semibold text-gray-900">{{ number_format($ticket->bet_amount / 1000, 1) }}k</span>
+                        </div>
+                        @if($ticket->result === 'win' && $ticket->win_amount > 0)
+                        <div class="w-px h-3 bg-gray-300"></div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-gray-500">Trúng:</span>
+                            <span class="font-bold text-green-600">{{ number_format($ticket->win_amount / 1000, 1) }}k</span>
+                        </div>
+                        @endif
+                        @if($ticket->payout_amount > 0)
+                        <div class="w-px h-3 bg-gray-300"></div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-gray-500">Trả:</span>
+                            <span class="font-semibold text-red-600">{{ number_format($ticket->payout_amount / 1000, 1) }}k</span>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            </a>
+            @endforeach
+            
+            <!-- Pagination -->
+            @if($tickets->hasPages())
+            <div class="py-4 flex justify-center">
+                {{ $tickets->links() }}
+            </div>
+            @endif
+        @else
+            <div class="py-16 text-center">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 mb-4">
+                    <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-base font-medium text-gray-900 mb-1">Chưa có phiếu cược</h3>
+                <p class="text-sm text-gray-500 mb-4">Bắt đầu bằng cách thêm phiếu cược đầu tiên</p>
+                <a href="{{ route('user.betting-tickets.create') }}" 
+                   class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
                     Thêm phiếu cược
                 </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Phiếu hôm nay</p>
-                    <p class="text-2xl font-semibold text-gray-900">{{ $todayStats['total_tickets'] }}</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Lãi hôm nay</p>
-                    <p class="text-2xl font-semibold {{ ($todayStats['total_win'] - $todayStats['total_lose']) >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                        {{ number_format($todayStats['total_win'] - $todayStats['total_lose'], 0, ',', '.') }} VNĐ
-                    </p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                        <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Lãi tháng này</p>
-                    <p class="text-2xl font-semibold {{ ($monthlyStats['total_win'] - $monthlyStats['total_lose']) >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                        {{ number_format($monthlyStats['total_win'] - $monthlyStats['total_lose'], 0, ',', '.') }} VNĐ
-                    </p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-white shadow rounded-lg p-6">
-            <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                        </svg>
-                    </div>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm font-medium text-gray-500">Lãi năm nay</p>
-                    <p class="text-2xl font-semibold {{ ($yearlyStats['total_win'] - $yearlyStats['total_lose']) >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                        {{ number_format($yearlyStats['total_win'] - $yearlyStats['total_lose'], 0, ',', '.') }} VNĐ
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="bg-white shadow rounded-lg p-6">
-        <form method="GET" action="{{ route('user.betting-tickets.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-                <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Ngày</label>
-                <input type="date" name="date" id="date" value="{{ request('date', $global_date) }}" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-            <div>
-                <label for="region" class="block text-sm font-medium text-gray-700 mb-1">Miền</label>
-                <select name="region" id="region" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="">Tất cả miền</option>
-                    <option value="bac" {{ request('region', $global_region) == 'Bắc' ? 'selected' : '' }}>Bắc</option>
-                    <option value="trung" {{ request('region', $global_region) == 'Trung' ? 'selected' : '' }}>Trung</option>
-                    <option value="nam" {{ request('region', $global_region) == 'Nam' ? 'selected' : '' }}>Nam</option>
-                </select>
-            </div>
-            <div>
-                <label for="customer_id" class="block text-sm font-medium text-gray-700 mb-1">Khách hàng</label>
-                <select name="customer_id" id="customer_id" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="">Tất cả khách hàng</option>
-                    @foreach($customers as $customer)
-                        <option value="{{ $customer->id }}" {{ request('customer_id') == $customer->id ? 'selected' : '' }}>
-                            {{ $customer->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div>
-                <label for="result" class="block text-sm font-medium text-gray-700 mb-1">Kết quả</label>
-                <select name="result" id="result" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="">Tất cả</option>
-                    <option value="pending" {{ request('result') == 'pending' ? 'selected' : '' }}>Chờ</option>
-                    <option value="win" {{ request('result') == 'win' ? 'selected' : '' }}>Ăn</option>
-                    <option value="lose" {{ request('result') == 'lose' ? 'selected' : '' }}>Thua</option>
-                </select>
-            </div>
-            <div class="flex items-end">
-                <button type="submit" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    Lọc
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Tickets List -->
-    <div class="bg-white shadow rounded-lg">
-        @if($tickets->count() > 0)
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-900">
-                    Danh sách phiếu cược ({{ $tickets->total() }})
-                </h2>
-            </div>
-            <div class="divide-y divide-gray-200">
-                @foreach($tickets as $ticket)
-                <div class="px-6 py-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1">
-                            <div class="flex items-center">
-                                <h3 class="text-sm font-medium text-gray-900">
-                                    {{ $ticket->customer->name }}
-                                </h3>
-                                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $ticket->result_badge_class }}">
-                                    {{ ucfirst($ticket->result) }}
-                                </span>
-                                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $ticket->status_badge_class }}">
-                                    {{ ucfirst($ticket->status) }}
-                                </span>
-                            </div>
-                            <p class="text-sm text-gray-500 mt-1">
-                                {{ $ticket->bettingType->name }} • {{ $ticket->region }} • {{ $ticket->station }}
-                            </p>
-                            <p class="text-sm text-gray-500">
-                                {{ $ticket->parsed_message }}
-                            </p>
-                            <div class="mt-2 grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                <div>
-                                    <span class="text-gray-500">Tiền cược:</span>
-                                    <span class="font-medium">{{ $ticket->formatted_bet_amount }}</span>
-                                </div>
-                                @if($ticket->result === 'win')
-                                <div>
-                                    <span class="text-gray-500">Tiền trúng:</span>
-                                    <span class="font-medium text-green-600">{{ $ticket->formatted_win_amount }}</span>
-                                </div>
-                                @endif
-                                @if($ticket->payout_amount > 0)
-                                <div>
-                                    <span class="text-gray-500">Tiền trả:</span>
-                                    <span class="font-medium text-red-600">{{ $ticket->formatted_payout_amount }}</span>
-                                </div>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-sm text-gray-500">
-                                {{ $ticket->betting_date->format('d/m/Y') }}
-                            </span>
-                            <a href="{{ route('user.betting-tickets.show', $ticket) }}" 
-                               class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">
-                                Xem
-                            </a>
-                            <a href="{{ route('user.betting-tickets.edit', $ticket) }}" 
-                               class="text-gray-600 hover:text-gray-900 text-sm font-medium">
-                                Sửa
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                @endforeach
-            </div>
-            
-            <!-- Pagination -->
-            @if($tickets->hasPages())
-            <div class="px-6 py-4 border-t border-gray-200">
-                {{ $tickets->links() }}
-            </div>
-            @endif
-        @else
-            <div class="px-6 py-12 text-center">
-                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100">
-                    <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                </div>
-                <h3 class="mt-2 text-sm font-medium text-gray-900">Chưa có phiếu cược</h3>
-                <p class="mt-1 text-sm text-gray-500">Bắt đầu bằng cách thêm phiếu cược đầu tiên.</p>
-                <div class="mt-6">
-                    <a href="{{ route('user.betting-tickets.create') }}" 
-                       class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Thêm phiếu cược
-                    </a>
-                </div>
             </div>
         @endif
     </div>
