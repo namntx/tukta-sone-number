@@ -29,13 +29,6 @@
                         </svg>
                         Tính tiền
                     </button>
-                    <a href="{{ route('user.betting-tickets.create') }}" 
-                       class="inline-flex items-center justify-center px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Thêm
-                    </a>
                 </div>
             </div>
             
@@ -138,7 +131,8 @@
                     </button>
                     
                     <!-- Customer Tickets Grid -->
-                    <div id="customer-{{ $customerId }}" class="hidden mt-2 grid grid-cols-3 gap-2">
+                    <div id="customer-{{ $customerId }}" class="hidden mt-2">
+                        <div class="space-y-1">
                         @foreach($customerTickets as $ticket)
                         @php
                             $bettingData = $ticket->betting_data ?? [];
@@ -161,79 +155,55 @@
                                 }
                             }
                             
-                            // Determine card color based on result
-                            $cardClass = match($ticket->result) {
-                                'win' => 'border-green-500 bg-green-50',
-                                'lose' => 'border-red-500 bg-red-50',
-                                'pending' => 'border-gray-300 bg-white',
-                                default => 'border-gray-300 bg-white'
-                            };
+                            // Calculate profit
+                            if ($ticket->result === 'win') {
+                                $ticketProfit = $ticket->payout_amount;
+                            } elseif ($ticket->result === 'lose') {
+                                $costXac = $ticket->betting_data['total_cost_xac'] ?? 0;
+                                $ticketProfit = -$costXac;
+                            } else {
+                                $ticketProfit = null;
+                            }
+                            
+                            // Determine text color
+                            $profitColor = $ticket->result === 'pending' ? 'text-gray-400' : ($ticketProfit >= 0 ? 'text-green-700' : 'text-red-700');
                         @endphp
                         <a href="{{ route('user.betting-tickets.show', $ticket) }}" 
-                           class="block rounded-lg border-2 {{ $cardClass }} shadow-sm hover:shadow-md transition-all">
-                            <!-- Header: Betting Type -->
-                            <div class="px-2 py-1.5 border-b {{ $ticket->result === 'win' ? 'border-green-200' : ($ticket->result === 'lose' ? 'border-red-200' : 'border-gray-200') }}">
-                                <div class="flex flex justify-between items-center">
-                                    <h3 class="text-xs font-bold {{ $ticket->result === 'win' ? 'text-green-900' : ($ticket->result === 'lose' ? 'text-red-900' : 'text-gray-900') }}">
-                                        {{ $ticket->bettingType->name }}
-                                    </h3>
-                                    <span class="text-[10px] {{ $ticket->result === 'win' ? 'text-green-600' : ($ticket->result === 'lose' ? 'text-red-600' : 'text-gray-500') }}">
-                                        {{ $ticket->betting_date->format('d/m') }}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <!-- Body: Numbers -->
-                            <div class="px-2 py-2 min-h-[30px] flex items-center justify-center">
-                                @if(!empty($displayNumbers))
-                                <div class="text-xs font-medium {{ $ticket->result === 'win' ? 'text-green-800' : ($ticket->result === 'lose' ? 'text-red-800' : 'text-gray-800') }}">
-                                    {{ implode(' ', array_unique($displayNumbers)) }}
-                                </div>
-                                @else
-                                <div class="text-[10px] text-gray-400 italic">N/A</div>
-                                @endif
-                            </div>
-                            
-                            <!-- Footer: Financial Info -->
-                            <div class="px-2 py-1.5 border-t {{ $ticket->result === 'win' ? 'border-green-200' : ($ticket->result === 'lose' ? 'border-red-200' : 'border-gray-200') }}">
-                                <div class="flex flex-col text-[10px]">
-                                    <div>
-                                        <span class="text-gray-600">Cược:</span>
-                                        <span class="font-bold {{ $ticket->result === 'win' ? 'text-green-700' : ($ticket->result === 'lose' ? 'text-red-700' : 'text-gray-900') }}">
-                                            {{ number_format($ticket->bet_amount / 1000, 1) }}k
+                           class="block border-l-2 border {{ $ticket->result === 'win' ? 'border-l-green-500 border-gray-200' : ($ticket->result === 'lose' ? 'border-l-red-500 border-gray-200' : 'border-gray-300') }} hover:bg-gray-50 transition">
+                            <div class="px-2 py-1.5 flex items-center justify-between gap-2">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-0.5">
+                                        <span class="text-xs font-semibold {{ $ticket->result === 'win' ? 'text-green-900' : ($ticket->result === 'lose' ? 'text-red-900' : 'text-gray-900') }}">
+                                            {{ Str::limit($ticket->bettingType->name, 12) }}
                                         </span>
+                                        <span class="text-[10px] text-gray-500">·</span>
+                                        <span class="text-[10px] text-gray-600">{{ Str::limit($ticket->station, 100) }}</span>
                                     </div>
-                                    @if($ticket->result !== 'pending')
-                                    @php
-                                        // Win: Customer lời = payout_amount, Lose: Customer lỗ = -cost_xac
-                                        if ($ticket->result === 'win') {
-                                            $ticketProfit = $ticket->payout_amount;
-                                        } else {
-                                            $costXac = $ticket->betting_data['total_cost_xac'] ?? 0;
-                                            $ticketProfit = -$costXac;
-                                        }
-                                    @endphp
-                                    <div>
-                                        <span class="text-gray-600">Lời/Lỗ:</span>
-                                        <span class="font-bold {{ $ticketProfit >= 0 ? 'text-green-700' : 'text-red-700' }}">
-                                            {{ $ticketProfit >= 0 ? '+' : '' }}{{ number_format($ticketProfit / 1000, 1) }}k
-                                        </span>
+                                    @if(!empty($displayNumbers))
+                                    <div class="text-xs font-semibold {{ $ticket->result === 'win' ? 'text-green-700' : ($ticket->result === 'lose' ? 'text-red-700' : 'text-gray-600') }} truncate">
+                                        {{ Str::limit(implode(' ', array_unique($displayNumbers)), 20) }}
                                     </div>
                                     @endif
+                                </div>
+                                <div class="flex-shrink-0 text-right">
+                                    <div class="text-xs font-bold {{ $profitColor }}">
+                                        @if($ticketProfit !== null)
+                                        {{ $ticketProfit >= 0 ? '+' : '' }}{{ number_format($ticketProfit / 1000, 1) }}k
+                                        @else
+                                        -
+                                        @endif
+                                    </div>
+                                    <div class="text-[10px] text-gray-500">
+                                        Cược {{ number_format($ticket->bet_amount / 1000, 1) }}k
+                                    </div>
                                 </div>
                             </div>
                         </a>
                         @endforeach
+                        </div>
                     </div>
                 </div>
             @endforeach
-            
-            <!-- Pagination -->
-            @if($tickets->hasPages())
-            <div class="py-4 flex justify-center">
-                {{ $tickets->links() }}
-            </div>
-            @endif
         @else
             <div class="py-16 text-center">
                 <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 mb-4">

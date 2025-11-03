@@ -30,36 +30,10 @@
                 </button>
             </form>
         </div>
-        
-        <!-- Quick Stats Bar -->
-        <div class="px-3 pb-2 grid grid-cols-4 gap-2 text-center border-t border-gray-100 pt-2">
-            <div>
-                <div class="text-xs text-gray-500 mb-0.5">Tổng</div>
-                <div class="text-sm font-bold text-gray-900">{{ $customers->total() }}</div>
-            </div>
-            <div>
-                <div class="text-xs text-gray-500 mb-0.5">Hôm nay</div>
-                <div class="text-sm font-bold {{ ($todayStats['total_win'] - $todayStats['total_lose']) >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                    {{ number_format(abs($todayStats['total_win'] - $todayStats['total_lose']) / 1000, 0) }}k
-                </div>
-            </div>
-            <div>
-                <div class="text-xs text-gray-500 mb-0.5">Tháng</div>
-                <div class="text-sm font-bold {{ ($monthlyStats['total_win'] - $monthlyStats['total_lose']) >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                    {{ number_format(abs($monthlyStats['total_win'] - $monthlyStats['total_lose']) / 1000, 0) }}k
-                </div>
-            </div>
-            <div>
-                <div class="text-xs text-gray-500 mb-0.5">Năm</div>
-                <div class="text-sm font-bold {{ ($yearlyStats['total_win'] - $yearlyStats['total_lose']) >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                    {{ number_format(abs($yearlyStats['total_win'] - $yearlyStats['total_lose']) / 1000, 0) }}k
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Compact Customer List -->
-    <div class="space-y-1.5 px-3">
+    <div class="space-y-1.5">
         @if($customers->count() > 0)
             @foreach($customers as $customer)
             <a href="{{ route('user.customers.show', $customer) }}" 

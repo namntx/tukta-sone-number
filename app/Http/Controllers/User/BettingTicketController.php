@@ -64,7 +64,7 @@ class BettingTicketController extends Controller
             $query->where('status', $request->status);
         }
 
-        $tickets = $query->paginate(20);
+        $tickets = $query->get();
         $customers = $user->customers()->active()->get();
 
         // Calculate statistics using global date

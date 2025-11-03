@@ -225,7 +225,7 @@
                                 </a>
                                 <a href="{{ route('user.betting-tickets.index') }}" 
                                    class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('user.betting-tickets*') ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} text-sm font-medium transition-colors duration-200">
-                                    Phiếu cược
+                                   Thống kê
                                 </a>
                                 <a href="{{ route('user.kqxs') }}" 
                                    class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('user.kqxs*') ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} text-sm font-medium transition-colors duration-200">
@@ -241,36 +241,6 @@
                     <!-- Right side -->
                     <div class="flex items-center space-x-1 md:space-x-2">
                         @auth
-                            <!-- Global Filters (for users only) -->
-                            @if(!auth()->user()->isAdmin())
-                                <!-- Global Date and Region Selectors -->
-                                <div class="hidden lg:flex items-center space-x-3 mr-4">
-                                    <form method="POST" action="{{ route('global-filters.update') }}" class="flex items-center space-x-2" id="global-filters-form">
-                                        @csrf
-                                        <div class="flex items-center space-x-1">
-                                            <label for="global_date" class="text-xs font-medium text-gray-600">Ngày:</label>
-                                            <input type="date" 
-                                                   id="global_date" 
-                                                   name="global_date" 
-                                                   value="{{ $global_date }}"
-                                                   class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                                                   onchange="updateGlobalFilters()">
-                                        </div>
-                                        <div class="flex items-center space-x-1">
-                                            <label for="global_region" class="text-xs font-medium text-gray-600">Miền:</label>
-                                            <select id="global_region" 
-                                                    name="global_region" 
-                                                    class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                                                    onchange="updateGlobalFilters()">
-                                                <option value="bac" {{ $global_region == 'bac' ? 'selected' : '' }}>Bắc</option>
-                                                <option value="trung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
-                                                <option value="nam" {{ $global_region == 'nam' ? 'selected' : '' }}>Nam</option>
-                                            </select>
-                                        </div>
-                                    </form>
-                                </div>
-                            @endif
-                            
                             <!-- Subscription Timer (for users only) -->
                             @if(!auth()->user()->isAdmin())
                                 @php
@@ -457,7 +427,7 @@
                         </a>
                         <a href="{{ route('user.betting-tickets.index') }}" 
                            class="block pl-3 pr-4 py-2 border-l-4 {{ request()->routeIs('user.betting-tickets*') ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300' }} text-base font-medium transition-colors duration-200">
-                            Phiếu cược
+                            Thống kê
                         </a>
                         <a href="{{ route('user.subscription') }}" 
                            class="block pl-3 pr-4 py-2 border-l-4 {{ request()->routeIs('user.subscription*') ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300' }} text-base font-medium transition-colors duration-200">
@@ -596,7 +566,7 @@
                     <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <span class="text-xs font-medium">Phiếu cược</span>
+                    <span class="text-xs font-medium">Thống kê</span>
                 </a>
                 
                 <!-- KQXS -->
@@ -609,13 +579,13 @@
                 </a>
                 
                 <!-- More/Menu -->
-                <button type="button" onclick="toggleMobileMenu()" 
+                <!-- <button type="button" onclick="toggleMobileMenu()" 
                         class="bottom-nav-item flex flex-col items-center justify-center flex-1 py-2 text-gray-600">
                     <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
                     <span class="text-xs font-medium">Menu</span>
-                </button>
+                </button> -->
             </div>
         </nav>
         @endif
