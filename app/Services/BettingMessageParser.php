@@ -211,9 +211,10 @@ class BettingMessageParser
             $amount  = (int)($ctx['amount'] ?? 0);
             $region  = $ctx['region'] ?? 'nam';
 
-            // LƯU last_numbers = numbers của group này TRƯỚC KHI flush
-            // Để Rule 1 hoạt động: cược sau không có số thì kế thừa số từ group vừa flush
-            if (!empty($numbers)) {
+            // LƯU last_numbers CHỈ KHI flush vì hoàn chỉnh (combo token, amount complete)
+            // KHÔNG lưu khi flush vì chuyển type (type_switch_flush)
+            // → Tránh kế thừa số của type cũ cho type mới
+            if (!empty($numbers) && $reason !== 'type_switch_flush') {
                 $ctx['last_numbers'] = $numbers;
             }
 
@@ -519,7 +520,13 @@ class BettingMessageParser
     
             // số 2-4 chữ số (giữ leading zero)
             if (preg_match('/^\d{2,4}$/', $tok)) {
-                // QUAN TRỌNG: Nếu token trước là 'd' và đang có group pending với pair_d_dau
+                // QUAN TRỌNG: Nếu đã có AMOUNT, group đã hoàn chỉnh (type + amount)
+                // → flush trước khi thêm số mới (số mới thuộc group tiếp theo)
+                if (!empty($ctx['amount']) && $isGroupPending($ctx)) {
+                    $flushGroup($outBets, $ctx, $events, 'amount_complete_auto_flush');
+                }
+
+                // Nếu token trước là 'd' và đang có group pending với pair_d_dau
                 // → flush group cũ trước khi bắt đầu nhóm số mới
                 if ($ctx['last_token_type'] === 'd' && !empty($ctx['pair_d_dau']) && $isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'd_then_number_flush');
