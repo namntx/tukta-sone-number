@@ -205,12 +205,18 @@ class BettingMessageParser
     
         $flushGroup = function(array &$outBets, array &$ctx, array &$events, ?string $reason=null) use ($emitBet, $emitBaoLoOneByOne, $addEvent) {
             if ($reason) $addEvent($events, $reason);
-    
+
             $numbers = array_values(array_unique($ctx['numbers_group'] ?? []));
             $type    = $ctx['current_type'] ?? null;
             $amount  = (int)($ctx['amount'] ?? 0);
             $region  = $ctx['region'] ?? 'nam';
-    
+
+            // LƯU last_numbers = numbers của group này TRƯỚC KHI flush
+            // Để Rule 1 hoạt động: cược sau không có số thì kế thừa số từ group vừa flush
+            if (!empty($numbers)) {
+                $ctx['last_numbers'] = $numbers;
+            }
+
             if (!$type) { $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; return; }
             if (!count($numbers) && !in_array($type, ['xiu_chu'], true)) {
                 $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
@@ -563,7 +569,7 @@ class BettingMessageParser
     
             if (preg_match('/^(d|dd|lo)(\d+)(n|k)$/', $tok, $m)) {
                 $code = $m[1]; $amt = (int)$m[2]*1000;
-    
+
                 if (($ctx['current_type'] ?? null) === 'xiu_chu') {
                     if ($code === 'dd') { $ctx['xc_dd_amount'] = $amt; $addEvent($events,'xc_pair_dd',['token'=>$tok,'amount'=>$amt]); }
                     elseif ($code === 'd') { $ctx['xc_d_list'][] = $amt; $addEvent($events,'xc_pair_d',['token'=>$tok,'amount'=>$amt,'index'=>count($ctx['xc_d_list'])]); }
@@ -571,17 +577,17 @@ class BettingMessageParser
                     $ctx['just_saw_station'] = false;
                     continue;
                 }
-    
+
                 $targetType = ($code==='lo') ? 'bao_lo' : (($code==='dd') ? 'dau_duoi' : 'dau');
                 if (($ctx['current_type'] ?? null) !== null && $targetType !== $ctx['current_type'] && $isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'type_switch_flush');
                 }
-    
+
                 if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers'])) {
                     $ctx['numbers_group'] = $ctx['last_numbers'];
                     $addEvent($events,'inherit_numbers_for_amount',['numbers'=>$ctx['numbers_group']]);
                 }
-    
+
                 if ($targetType==='bao_lo') {
                     $ctx['current_type']='bao_lo';
                     $ctx['amount']=$amt;
@@ -599,6 +605,11 @@ class BettingMessageParser
                     $ctx['pair_d_dau'][]=$amt;
                     $ctx['last_token_type'] = 'd';
                     $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'dau','amount'=>$amt]);
+                }
+
+                // QUAN TRỌNG: Flush ngay sau combo token để không kéo số tiếp theo vào cùng group
+                if ($isGroupPending($ctx)) {
+                    $flushGroup($outBets, $ctx, $events, 'combo_token_auto_flush');
                 }
 
                 $ctx['just_saw_station'] = false;
