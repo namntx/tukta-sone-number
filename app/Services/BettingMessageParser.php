@@ -323,7 +323,26 @@ class BettingMessageParser
             if ($type === 'da_thang') {
                 $stationCount = count($ctx['stations'] ?? []);
 
-                // Validate: bắt buộc 1 đài
+                // Auto-resolve station nếu chưa có (Rule 2, Rule 5)
+                if ($stationCount === 0) {
+                    // Lấy đài chính từ lịch (theo date + region)
+                    try {
+                        $mainStation = $this->scheduleService->getNStations(1, $ctx['betting_date'] ?? date('Y-m-d'), $region);
+                        if (!empty($mainStation)) {
+                            $ctx['stations'] = [$mainStation[0]];
+                            $stationCount = 1;
+                            $addEvent($events, 'da_thang_auto_resolve_station', [
+                                'region' => $region,
+                                'date' => $ctx['betting_date'] ?? date('Y-m-d'),
+                                'resolved_station' => $mainStation[0],
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        // Ignore error, validation sẽ reject
+                    }
+                }
+
+                // Validate: bắt buộc 1 đài (sau khi đã auto-resolve)
                 if ($stationCount !== 1) {
                     $addEvent($events, 'error_da_thang_wrong_station_count', [
                         'expected' => 1,
