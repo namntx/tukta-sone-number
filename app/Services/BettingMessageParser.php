@@ -327,13 +327,13 @@ class BettingMessageParser
                 if ($stationCount === 0) {
                     // Lấy đài chính từ lịch (theo date + region)
                     try {
-                        $mainStation = $this->scheduleService->getNStations(1, $ctx['betting_date'] ?? date('Y-m-d'), $region);
+                        $mainStation = $this->scheduleService->getNStations(1, $ctx['betting_date'], $region);
                         if (!empty($mainStation)) {
                             $ctx['stations'] = [$mainStation[0]];
                             $stationCount = 1;
                             $addEvent($events, 'da_thang_auto_resolve_station', [
                                 'region' => $region,
-                                'date' => $ctx['betting_date'] ?? date('Y-m-d'),
+                                'date' => $ctx['betting_date'],
                                 'resolved_station' => $mainStation[0],
                             ]);
                         }
@@ -385,10 +385,37 @@ class BettingMessageParser
 
             // Đá xiên: ≥2 đài, sinh C(n,2) combinations
             if ($type === 'da_xien') {
+                $stationCount = count($ctx['stations'] ?? []);
+                $daiCount = $ctx['meta']['dai_count'] ?? null;
+
+                // Auto-resolve stations nếu có dai_count nhưng chưa có đủ đài
+                if ($daiCount >= 2 && $stationCount === 0) {
+                    // Lấy N đài từ lịch (theo date + region)
+                    try {
+                        $autoStations = $this->scheduleService->getNStations(
+                            $daiCount,
+                            $ctx['betting_date'],
+                            $region
+                        );
+                        if (!empty($autoStations)) {
+                            $ctx['stations'] = $autoStations;
+                            $stationCount = count($autoStations);
+                            $addEvent($events, 'da_xien_auto_resolve_stations', [
+                                'region' => $region,
+                                'date' => $ctx['betting_date'],
+                                'dai_count' => $daiCount,
+                                'resolved_stations' => $autoStations,
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        // Ignore error, validation sẽ reject
+                    }
+                }
+
                 $stations = $ctx['stations'] ?? [];
                 $stationCount = count($stations);
 
-                // Validate: tối thiểu 2 đài
+                // Validate: tối thiểu 2 đài (sau khi đã auto-resolve)
                 if ($stationCount < 2) {
                     $addEvent($events, 'error_da_xien_min_stations', [
                         'expected' => '>=2',
@@ -464,20 +491,44 @@ class BettingMessageParser
             'trung','mt' => 'trung',
             default      => 'nam',
         };
-    
-        // defaultStations: KHÔNG dùng để ép khi có Ndai mà thiếu đài
-        $defaultStations = match ($region) {
-            'bac'  => ['mien bac'],
-            'trung'=> ['da nang','khanh hoa','phu yen','quang nam','quang ngai','binh dinh','thua thien hue'],
-            default=> ['tp.hcm'],
-        };
-    
+
+        // Lấy date để resolve đài chính
+        $bettingDate = $context['date'] ?? session('global_date', now()->format('Y-m-d'));
+
+        // defaultStations: Auto-resolve đài chính theo lịch (date + region)
+        $defaultStations = [];
+        try {
+            $mainStation = $this->scheduleService->getNStations(1, $bettingDate, $region);
+            if (!empty($mainStation)) {
+                $defaultStations = $mainStation;
+            } else {
+                // Fallback nếu không có đài trong lịch
+                $defaultStations = match ($region) {
+                    'bac'  => ['mien bac'],
+                    'trung'=> ['da nang'],
+                    default=> ['tp.hcm'],
+                };
+            }
+        } catch (\Exception $e) {
+            // Fallback nếu có lỗi
+            $defaultStations = match ($region) {
+                'bac'  => ['mien bac'],
+                'trung'=> ['da nang'],
+                default=> ['tp.hcm'],
+            };
+        }
+
         $events = [];
-        $addEvent($events, 'stations_default', ['list'=>$defaultStations]);
+        $addEvent($events, 'stations_default', [
+            'list' => $defaultStations,
+            'date' => $bettingDate,
+            'region' => $region
+        ]);
     
         // ---------- 2) state ----------
         $ctx = [
             'region'              => $region,
+            'betting_date'        => $bettingDate,
             'stations'            => [],
             'numbers_group'       => [],
             'current_type'        => null,
