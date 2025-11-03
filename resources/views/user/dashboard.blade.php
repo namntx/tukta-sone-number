@@ -73,12 +73,6 @@
                                     <h4 class="font-medium text-gray-900" id="preview-customer">-</h4>
                                     <p class="text-sm text-gray-500" id="preview-date-region">-</p>
                                 </div>
-                                <div class="flex items-center space-x-2">
-                                    <button type="button" id="copy-json-btn" class="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 disabled:opacity-50" disabled>
-                                        <i class="fas fa-copy mr-1"></i>Copy JSON
-                                    </button>
-                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full" id="preview-status">Chờ xử lý</span>
-                                </div>
                             </div>
                             
                             <!-- Single Bet Preview (Legacy) -->
@@ -132,13 +126,11 @@
                                         <thead class="bg-gray-50">
                                             <tr>
                                                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
-                                                <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Miền</th>
                                                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đài</th>
                                                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Số</th>
                                                 <th class="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại</th>
                                                 <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cược</th>
                                                 <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Xác</th>
-                                                <th class="px-2 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Thắng</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200" id="bets-table-body">
@@ -146,10 +138,9 @@
                                         </tbody>
                                         <tfoot class="bg-gray-50">
                                             <tr class="font-bold">
-                                                <td colspan="5" class="px-2 py-2 text-sm text-gray-900 text-right">Tổng:</td>
+                                                <td colspan="4" class="px-2 py-2 text-sm text-gray-900 text-right">Tổng:</td>
                                                 <td class="px-2 py-2 text-sm text-red-600 text-right" id="total-amount">0</td>
                                                 <td class="px-2 py-2 text-sm text-orange-600 text-right" id="total-cost-xac">0</td>
-                                                <td class="px-2 py-2 text-sm text-green-600 text-right" id="total-potential-win">0</td>
                                             </tr>
                                         </tfoot>
                                     </table>
@@ -168,29 +159,7 @@
                                                 <div class="text-sm font-bold text-orange-600" id="total-cost-xac-mobile">0</div>
                                                 <div class="text-xs text-gray-600">Xác</div>
                                             </div>
-                                            <div class="text-right">
-                                                <div class="text-sm font-bold text-green-600" id="total-potential-win-mobile">0</div>
-                                                <div class="text-xs text-gray-600">Thắng</div>
-                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="border-t pt-3">
-                                <span class="text-gray-500 text-sm">Tin nhắn đã phân tích:</span>
-                                <p class="text-sm bg-gray-50 p-2 rounded mt-1" id="preview-parsed">-</p>
-                            </div>
-                            
-                            <div class="border-t pt-3">
-                                <div class="grid grid-cols-2 gap-3 text-sm">
-                                    <div>
-                                        <span class="text-gray-500">Tiền thắng dự kiến:</span>
-                                        <p class="font-medium text-green-600" id="preview-win-amount">-</p>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-500">Tiền xác:</span>
-                                        <p class="font-medium" id="preview-rate">-</p>
                                     </div>
                                 </div>
                             </div>
@@ -374,8 +343,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('multiple-bets-preview').classList.add('hidden');
         }
         
-        document.getElementById('preview-parsed').textContent = data.parsed_message || 'Tin nhắn phức tạp';
-        
         // Update rates and win amount
         updatePreviewRates();
         
@@ -402,10 +369,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const remainingCountEl = document.getElementById('remaining-count');
         const totalAmountEl = document.getElementById('total-amount');
         const totalCostXacEl = document.getElementById('total-cost-xac');
-        const totalPotentialWinEl = document.getElementById('total-potential-win');
         const totalAmountMobileEl = document.getElementById('total-amount-mobile');
         const totalCostXacMobileEl = document.getElementById('total-cost-xac-mobile');
-        const totalPotentialWinMobileEl = document.getElementById('total-potential-win-mobile');
         
         // Update count
         betsCountEl.textContent = bets.length;
@@ -416,7 +381,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         let totalAmount = 0;
         let totalCostXac = 0;
-        let totalPotentialWin = 0;
         
         // Format numbers
         const formatNumber = (num) => {
@@ -445,11 +409,9 @@ document.addEventListener('DOMContentLoaded', function() {
         bets.forEach((bet, index) => {
             const amount = bet.amount || 0;
             const costXac = bet.cost_xac || 0;
-            const potentialWin = bet.potential_win || 0;
             
             totalAmount += amount;
             totalCostXac += costXac;
-            totalPotentialWin += potentialWin;
             
             // Create desktop table row (all rows)
             const stationName = bet.station || '-';
@@ -464,7 +426,6 @@ document.addEventListener('DOMContentLoaded', function() {
             row.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
             row.innerHTML = `
                 <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">${index + 1}</td>
-                <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">${region}</td>
                 <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">${stationName}</td>
                 <td class="px-2 py-2 text-xs text-gray-900">
                     <div class="max-w-xs truncate" title="${bet.numbers ? bet.numbers.join(', ') : ''}">
@@ -474,7 +435,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-900">${bettingTypeName}</td>
                 <td class="px-2 py-2 whitespace-nowrap text-xs text-red-600 text-right font-medium">${formatNumber(amount)}</td>
                 <td class="px-2 py-2 whitespace-nowrap text-xs text-orange-600 text-right">${formatNumber(costXac)}</td>
-                <td class="px-2 py-2 whitespace-nowrap text-xs text-green-600 text-right">${formatNumber(potentialWin)}</td>
             `;
             tableBody.appendChild(row);
         });
@@ -490,12 +450,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update totals (desktop)
         totalAmountEl.textContent = formatTotal(totalAmount);
         totalCostXacEl.textContent = formatTotal(totalCostXac);
-        totalPotentialWinEl.textContent = formatTotal(totalPotentialWin);
         
         // Update totals (mobile)
         totalAmountMobileEl.textContent = formatTotal(totalAmount);
         totalCostXacMobileEl.textContent = formatTotal(totalCostXac);
-        totalPotentialWinMobileEl.textContent = formatTotal(totalPotentialWin);
     }
     
     // Render list of bets (normal view)
@@ -658,51 +616,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function updatePreviewRates() {
-        if (!currentParseData || !customerId.value) return;
-        
-        // Handle multiple bets case (new parser format)
-        if (currentParseData.multiple_bets && currentParseData.multiple_bets.length > 0) {
-            // Calculate total amount from all bets
-            const totalAmount = currentParseData.multiple_bets.reduce((sum, bet) => sum + (bet.amount || 0), 0);
-            document.getElementById('preview-win-amount').textContent = currentParseData.summary.total_potential_win.toLocaleString() + ' VNĐ';
-            document.getElementById('preview-rate').textContent = currentParseData.summary.total_cost_xac.toLocaleString() + ' VNĐ';
-            return;
-        }
-        
-        // Handle single bet case (legacy format)
-        if (!currentParseData.betting_type || !currentParseData.betting_type.id) {
-            document.getElementById('preview-win-amount').textContent = 'Không xác định';
-            document.getElementById('preview-rate').textContent = 'Không xác định';
-            return;
-        }
-        
-        // Fetch customer rates
-        fetch(`{{ url('/user/customers') }}/${customerId.value}/rates`)
-            .then(response => response.json())
-            .then(rates => {
-                const bettingTypeId = currentParseData.betting_type.id;
-                const rate = rates.find(r => r.betting_type_id == bettingTypeId);
-                
-                if (rate) {
-                    const winRate = parseFloat(rate.win_rate);
-                    const loseRate = parseFloat(rate.lose_rate);
-                    const amount = currentParseData.amount;
-                    
-                    // Calculate estimated win amount (simplified)
-                    const estimatedWin = amount * winRate * 70; // Basic multiplier
-                    
-                    document.getElementById('preview-win-amount').textContent = estimatedWin.toLocaleString() + ' VNĐ';
-                    document.getElementById('preview-rate').textContent = `${(winRate * 100).toFixed(1)}% / ${(loseRate * 100).toFixed(1)}%`;
-                } else {
-                    document.getElementById('preview-win-amount').textContent = 'Chưa có tỷ lệ';
-                    document.getElementById('preview-rate').textContent = 'Chưa thiết lập';
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching rates:', error);
-                document.getElementById('preview-win-amount').textContent = 'Lỗi tính toán';
-                document.getElementById('preview-rate').textContent = 'Lỗi';
-            });
+        // This function is now empty as we removed the preview rate display
+        // Keeping it to avoid breaking references
     }
 
     function showError(message) {
