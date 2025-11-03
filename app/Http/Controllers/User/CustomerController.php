@@ -160,24 +160,22 @@ class CustomerController extends Controller
         $dailyStatsByCustomer = [];
         
         if ($customerIds->isNotEmpty()) {
-            $dailyStatsByCustomer = \App\Models\BettingTicket::query()
+            // Get all tickets for these customers on this date/region
+            $tickets = \App\Models\BettingTicket::query()
                 ->whereIn('customer_id', $customerIds)
                 ->whereDate('betting_date', $globalDate)
                 ->where('region', $globalRegion)
-                ->selectRaw('customer_id, 
-                    COALESCE(SUM(CASE WHEN result = ? THEN win_amount ELSE 0 END), 0) as daily_win,
-                    COALESCE(SUM(CASE WHEN result = ? THEN bet_amount ELSE 0 END), 0) as daily_lose',
-                    ['win', 'lose'])
-                ->groupBy('customer_id')
-                ->get()
-                ->keyBy('customer_id')
-                ->map(function ($item) {
-                    return [
-                        'daily_win' => (float)$item->daily_win,
-                        'daily_lose' => (float)$item->daily_lose,
-                    ];
-                })
-                ->toArray();
+                ->get(['customer_id', 'result', 'win_amount', 'payout_amount', 'betting_data']);
+            
+            // Calculate stats per customer
+            foreach ($tickets->groupBy('customer_id') as $customerId => $customerTickets) {
+                $dailyStatsByCustomer[$customerId] = [
+                    'daily_win' => $customerTickets->where('result', 'win')->sum('payout_amount'), // Tiền thắng customer nhận
+                    'daily_lose' => $customerTickets->sum(function($ticket) {
+                        return $ticket->betting_data['total_cost_xac'] ?? 0; // Tiền xác customer trả
+                    }),
+                ];
+            }
         }
         
         // Attach daily stats to each customer
@@ -369,15 +367,7 @@ class CustomerController extends Controller
     {
         $this->authorize('view', $customer);
 
-        $customer->load(['bettingRates.bettingType', 'bettingTickets.bettingType']);
-        
-        $recentTickets = $customer->bettingTickets()
-            ->with('bettingType')
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
-
-        return view('user.customers.show', compact('customer', 'recentTickets'));
+        return view('user.customers.show', compact('customer'));
     }
 
     // ====== EDIT (đã sửa) ======

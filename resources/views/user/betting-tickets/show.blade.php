@@ -45,8 +45,17 @@
 
     <!-- Financial Highlight -->
     @php
-        $profit = $bettingTicket->result === 'win' ? $bettingTicket->win_amount - $bettingTicket->bet_amount : 
-                  ($bettingTicket->result === 'lose' ? -$bettingTicket->bet_amount : 0);
+        // Lời/Lỗ của Customer:
+        // Win: Customer lời = payout_amount (nhận tiền thắng)
+        // Lose: Customer lỗ = -cost_xac (mất tiền xác)
+        $costXac = $bettingTicket->betting_data['total_cost_xac'] ?? 0;
+        if ($bettingTicket->result === 'win') {
+            $profit = $bettingTicket->payout_amount;
+        } elseif ($bettingTicket->result === 'lose') {
+            $profit = -$costXac;
+        } else {
+            $profit = 0;
+        }
     @endphp
     <div class="px-3 mb-3">
         <div class="bg-gradient-to-r {{ $profit >= 0 ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600' }} rounded-xl p-4 text-white shadow-lg">
@@ -67,7 +76,7 @@
                 @endif
                 @if($bettingTicket->payout_amount > 0)
                 <div>
-                    <div class="text-xs opacity-80 mb-0.5">Trả</div>
+                    <div class="text-xs opacity-80 mb-0.5">{{ $bettingTicket->result === 'win' ? 'Trả' : 'Xác' }}</div>
                     <div class="font-semibold">{{ number_format($bettingTicket->payout_amount / 1000, 1) }}k</div>
                 </div>
                 @endif
@@ -180,8 +189,8 @@
                 @endif
                 @if($bettingTicket->payout_amount > 0)
                 <div class="flex justify-between items-center py-1.5 border-b border-gray-100">
-                    <span class="text-gray-500">Tiền trả</span>
-                    <span class="font-semibold text-red-600">{{ number_format($bettingTicket->payout_amount / 1000, 1) }}k</span>
+                    <span class="text-gray-500">{{ $bettingTicket->result === 'win' ? 'Tiền trả' : 'Tiền xác' }}</span>
+                    <span class="font-semibold {{ $bettingTicket->result === 'win' ? 'text-red-600' : 'text-blue-600' }}">{{ number_format($bettingTicket->payout_amount / 1000, 1) }}k</span>
                 </div>
                 @endif
                 <div class="flex justify-between items-center py-1.5">

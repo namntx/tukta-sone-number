@@ -216,69 +216,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Today's Statistics -->
-    <!-- <div class="bg-white shadow rounded-lg p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">
-            Thống kê hôm nay
-        </h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-blue-50 rounded-lg p-4">
-                <div class="text-sm font-medium text-blue-600">Tổng phiếu</div>
-                <div class="text-2xl font-bold text-blue-900">{{ $todayStats['total_tickets'] }}</div>
-            </div>
-            <div class="bg-green-50 rounded-lg p-4">
-                <div class="text-sm font-medium text-green-600">Tổng cược</div>
-                <div class="text-2xl font-bold text-green-900">{{ number_format($todayStats['total_bet_amount'], 0, ',', '.') }} VNĐ</div>
-            </div>
-            <div class="bg-yellow-50 rounded-lg p-4">
-                <div class="text-sm font-medium text-yellow-600">Tổng ăn</div>
-                <div class="text-2xl font-bold text-yellow-900">{{ number_format($todayStats['total_win_amount'], 0, ',', '.') }} VNĐ</div>
-            </div>
-            <div class="bg-red-50 rounded-lg p-4">
-                <div class="text-sm font-medium text-red-600">Tổng thua</div>
-                <div class="text-2xl font-bold text-red-900">{{ number_format($todayStats['total_lose_amount'], 0, ',', '.') }} VNĐ</div>
-            </div>
-        </div>
-    </div> -->
-
-    <!-- Today's Tickets -->
-    @if($todayTickets->count() > 0)
-    <div class="bg-white shadow rounded-lg">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">
-                Phiếu cược hôm nay
-            </h2>
-        </div>
-        <div class="divide-y divide-gray-200">
-            @foreach($todayTickets as $ticket)
-            <div class="px-6 py-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center">
-                            <h3 class="text-sm font-medium text-gray-900">
-                                {{ $ticket->customer->name }}
-                            </h3>
-                            <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $ticket->result_badge_class }}">
-                                {{ ucfirst($ticket->result) }}
-                            </span>
-                        </div>
-                        <p class="text-sm text-gray-500">
-                            {{ $ticket->bettingType->name }} • {{ $ticket->formatted_bet_amount }}
-                        </p>
-                        <p class="text-xs text-gray-400">
-                            {{ $ticket->parsed_message }}
-                        </p>
-                    </div>
-                    <div class="text-sm text-gray-500">
-                        {{ $ticket->created_at->format('H:i') }}
-                    </div>
-                </div>
-            </div>
-            @endforeach
-        </div>
-    </div>
-    @endif
     @endif
 </div>
 
@@ -818,6 +755,138 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 1500);
             }
         });
+    }
+
+    // Submit form via AJAX
+    const form = document.getElementById('betting-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Đang tạo...';
+            
+            // Get form data
+            const formData = new FormData(form);
+            
+            // Submit via AJAX
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    // Get the redirected URL and parse message
+                    return fetch(response.url)
+                        .then(res => res.text())
+                        .then(html => {
+                            // Try to extract success message from session flash
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const successMsg = doc.querySelector('.alert-success, [class*="success"]');
+                            const message = successMsg ? successMsg.textContent : 'Phiếu cược đã được tạo thành công!';
+                            
+                            return { success: true, message: message };
+                        });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Show success alert
+                    showSuccessAlert(data.message || 'Phiếu cược đã được tạo thành công!');
+                    
+                    // Clear form
+                    originalMessage.value = '';
+                    customerId.value = '';
+                    hidePreview();
+                } else {
+                    // Show error
+                    showErrorAlert(data.message || 'Có lỗi xảy ra khi tạo phiếu cược');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorAlert('Có lỗi xảy ra khi tạo phiếu cược');
+            })
+            .finally(() => {
+                // Re-enable button after delay
+                setTimeout(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Tạo phiếu cược';
+                }, 3000);
+            });
+        });
+    }
+    
+    // Show success alert
+    function showSuccessAlert(message) {
+        // Create or get alert container
+        let alertContainer = document.getElementById('success-alert-container');
+        if (!alertContainer) {
+            alertContainer = document.createElement('div');
+            alertContainer.id = 'success-alert-container';
+            alertContainer.className = 'fixed top-4 right-4 z-50';
+            document.body.appendChild(alertContainer);
+        }
+        
+        // Create alert element
+        const alert = document.createElement('div');
+        alert.className = 'bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3';
+        alert.innerHTML = `
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span class="font-medium">${message}</span>
+        `;
+        
+        alertContainer.appendChild(alert);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            alert.style.opacity = '0';
+            alert.style.transition = 'opacity 0.5s';
+            setTimeout(() => {
+                alert.remove();
+            }, 500);
+        }, 3000);
+    }
+    
+    // Show error alert
+    function showErrorAlert(message) {
+        // Create or get alert container
+        let alertContainer = document.getElementById('error-alert-container');
+        if (!alertContainer) {
+            alertContainer = document.createElement('div');
+            alertContainer.id = 'error-alert-container';
+            alertContainer.className = 'fixed top-4 right-4 z-50';
+            document.body.appendChild(alertContainer);
+        }
+        
+        // Create alert element
+        const alert = document.createElement('div');
+        alert.className = 'bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3';
+        alert.innerHTML = `
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            <span class="font-medium">${message}</span>
+        `;
+        
+        alertContainer.appendChild(alert);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            alert.style.opacity = '0';
+            alert.style.transition = 'opacity 0.5s';
+            setTimeout(() => {
+                alert.remove();
+            }, 500);
+        }, 3000);
     }
 
 });

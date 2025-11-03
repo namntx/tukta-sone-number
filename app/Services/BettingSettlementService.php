@@ -67,10 +67,14 @@ class BettingSettlementService
         $settlementDetails = [];
         $totalWinAmount = 0;
         $totalPayoutAmount = 0;
+        $totalCostXac = 0;
         $hasWin = false;
 
         foreach ($normalizedBets as $bet) {
             $betResult = $this->settleSingleBet($bet, $results, $ticket);
+
+            // Luôn cộng cost_xac vào tổng (customer trả tiền xác cho user)
+            $totalCostXac += $betResult['cost_xac'] ?? 0;
 
             if ($betResult['is_win']) {
                 $hasWin = true;
@@ -87,12 +91,17 @@ class BettingSettlementService
         $ticket->update([
             'result' => $finalResult,
             'win_amount' => $totalWinAmount,
-            'payout_amount' => $totalPayoutAmount,
+            'payout_amount' => $totalPayoutAmount, // Chỉ lưu tiền trả thắng
             'status' => 'completed',
         ]);
+        
+        // Lưu cost_xac vào betting_data để truy vấn sau
+        $bettingData = $ticket->betting_data ?? [];
+        $bettingData['total_cost_xac'] = $totalCostXac;
+        $ticket->update(['betting_data' => $bettingData]);
 
         // Cập nhật thống kê khách hàng
-        $this->updateCustomerStats($ticket->customer, $ticket->betting_date, $finalResult, $totalWinAmount, $totalPayoutAmount);
+        $this->updateCustomerStats($ticket->customer, $ticket->betting_date, $finalResult, $totalWinAmount, $totalPayoutAmount, $totalCostXac);
 
         return [
             'settled' => true,
@@ -829,18 +838,19 @@ class BettingSettlementService
     /**
      * Cập nhật thống kê cho khách hàng
      */
-    protected function updateCustomerStats(Customer $customer, $date, string $result, float $winAmount, float $payoutAmount): void
+    protected function updateCustomerStats(Customer $customer, $date, string $result, float $winAmount, float $payoutAmount, float $totalCostXac): void
     {
         $carbon = Carbon::parse($date);
 
         // Cập nhật theo ngày
         if ($result === 'win') {
+            // Thắng: khách trả payout cho user, nên cộng vào win_amount
             $customer->increment('daily_win_amount', $payoutAmount);
             $customer->increment('total_win_amount', $payoutAmount);
-        } else {
-            $customer->increment('daily_lose_amount', $winAmount);
-            $customer->increment('total_lose_amount', $winAmount);
         }
+        // Thua hoặc thắng: customer luôn trả cost_xac
+        $customer->increment('daily_lose_amount', $totalCostXac);
+        $customer->increment('total_lose_amount', $totalCostXac);
 
         // Cập nhật theo tháng
         // TODO: Cần logic phức tạp hơn để track theo tháng/năm

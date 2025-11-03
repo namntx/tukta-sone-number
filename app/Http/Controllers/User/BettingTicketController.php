@@ -71,25 +71,30 @@ class BettingTicketController extends Controller
         $globalDate = session('global_date', today());
         $globalRegion = session('global_region', 'nam');
         
+        // Get all tickets for stats calculation
+        $allTodayTickets = $user->bettingTickets()->whereDate('betting_date', $globalDate)->where('region', $globalRegion)->get();
+        $allMonthTickets = $user->bettingTickets()->whereMonth('betting_date', now()->month)->whereYear('betting_date', now()->year)->get();
+        $allYearTickets = $user->bettingTickets()->whereYear('betting_date', now()->year)->get();
+        
         $todayStats = [
-            'total_tickets' => $user->bettingTickets()->whereDate('betting_date', $globalDate)->where('region', $globalRegion)->count(),
-            'total_bet' => $user->bettingTickets()->whereDate('betting_date', $globalDate)->where('region', $globalRegion)->sum('bet_amount'),
-            'total_win' => $user->bettingTickets()->whereDate('betting_date', $globalDate)->where('region', $globalRegion)->where('result', 'win')->sum('win_amount'),
-            'total_lose' => $user->bettingTickets()->whereDate('betting_date', $globalDate)->where('region', $globalRegion)->where('result', 'lose')->sum('bet_amount'),
+            'total_tickets' => $allTodayTickets->count(),
+            'total_bet' => $allTodayTickets->sum('bet_amount'),
+            'total_xac' => $allTodayTickets->sum(function($t) { return $t->betting_data['total_cost_xac'] ?? 0; }),
+            'total_win' => $allTodayTickets->where('result', 'win')->sum('payout_amount'),
         ];
 
         $monthlyStats = [
-            'total_tickets' => $user->bettingTickets()->whereMonth('betting_date', now()->month)->whereYear('betting_date', now()->year)->count(),
-            'total_bet' => $user->bettingTickets()->whereMonth('betting_date', now()->month)->whereYear('betting_date', now()->year)->sum('bet_amount'),
-            'total_win' => $user->bettingTickets()->whereMonth('betting_date', now()->month)->whereYear('betting_date', now()->year)->where('result', 'win')->sum('win_amount'),
-            'total_lose' => $user->bettingTickets()->whereMonth('betting_date', now()->month)->whereYear('betting_date', now()->year)->where('result', 'lose')->sum('bet_amount'),
+            'total_tickets' => $allMonthTickets->count(),
+            'total_bet' => $allMonthTickets->sum('bet_amount'),
+            'total_xac' => $allMonthTickets->sum(function($t) { return $t->betting_data['total_cost_xac'] ?? 0; }),
+            'total_win' => $allMonthTickets->where('result', 'win')->sum('payout_amount'),
         ];
 
         $yearlyStats = [
-            'total_tickets' => $user->bettingTickets()->whereYear('betting_date', now()->year)->count(),
-            'total_bet' => $user->bettingTickets()->whereYear('betting_date', now()->year)->sum('bet_amount'),
-            'total_win' => $user->bettingTickets()->whereYear('betting_date', now()->year)->where('result', 'win')->sum('win_amount'),
-            'total_lose' => $user->bettingTickets()->whereYear('betting_date', now()->year)->where('result', 'lose')->sum('bet_amount'),
+            'total_tickets' => $allYearTickets->count(),
+            'total_bet' => $allYearTickets->sum('bet_amount'),
+            'total_xac' => $allYearTickets->sum(function($t) { return $t->betting_data['total_cost_xac'] ?? 0; }),
+            'total_win' => $allYearTickets->where('result', 'win')->sum('payout_amount'),
         ];
 
         return view('user.betting-tickets.index', compact('tickets', 'customers', 'todayStats', 'monthlyStats', 'yearlyStats', 'globalDate', 'globalRegion', 'filterDate', 'filterRegion'));
@@ -134,6 +139,9 @@ class BettingTicketController extends Controller
         // Check if customer belongs to user
         $customer = Auth::user()->customers()->find($request->customer_id);
         if (!$customer) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Khách hàng không thuộc về bạn.'], 400);
+            }
             return back()->withErrors(['customer_id' => 'Khách hàng không thuộc về bạn.'])
                         ->withInput();
         }
@@ -150,6 +158,9 @@ class BettingTicketController extends Controller
         ]);
 
         if (!$parseResult['is_valid']) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => implode(', ', $parseResult['errors'])], 400);
+            }
             return back()->withErrors(['original_message' => implode(', ', $parseResult['errors'])])
                         ->withInput();
         }
@@ -160,6 +171,7 @@ class BettingTicketController extends Controller
         }
 
         // Handle legacy single bet format
+        // Convert legacy format to new format for cost calculation
         $bettingType = $parseResult['betting_type'];
         $numbers = $parseResult['numbers'];
         $amount = $parseResult['amount'];
@@ -169,13 +181,16 @@ class BettingTicketController extends Controller
         // Use station from parser if found, otherwise use manual input
         $stationName = $station ? $station->name : $request->station;
 
-        // Calculate win amount
-        $winAmount = $this->messageParser->calculateWinAmount(
-            $bettingType, 
-            $numbers, 
-            $amount, 
-            $request->customer_id
-        );
+        // Build bet array for calculateCostXac
+        $bet = [
+            'type' => $bettingType->code ?? $bettingType,
+            'amount' => $amount,
+            'numbers' => $numbers,
+            'meta' => [],
+        ];
+
+        // Calculate cost_xac using BetPricingService
+        $costXac = $this->calculateCostXac($bet, $normalizedRegion, $request->customer_id);
 
         DB::beginTransaction();
         try {
@@ -192,19 +207,33 @@ class BettingTicketController extends Controller
                     'betting_type' => $bettingType->name,
                     'betting_type_code' => $bettingType->code,
                     'stations' => $stations,
+                    'total_cost_xac' => $costXac,
                 ],
                 'bet_amount' => $amount,
-                'win_amount' => $winAmount,
-                'payout_amount' => 0, // Will be calculated when result is determined
+                'win_amount' => 0, // Will be calculated on settlement
+                'payout_amount' => 0, // Will be calculated on settlement
             ]);
 
             DB::commit();
 
+            $successMessage = 'Phiếu cược đã được tạo thành công với tiền xác ' . number_format($costXac, 0, ',', '.') . ' VNĐ.';
+
+            // Return JSON if AJAX request
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $successMessage]);
+            }
+
             return redirect()->route('user.betting-tickets.index')
-                ->with('success', 'Phiếu cược đã được tạo thành công.');
+                ->with('success', $successMessage);
 
         } catch (\Exception $e) {
             DB::rollback();
+            
+            // Return JSON if AJAX request
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra khi tạo phiếu cược: ' . $e->getMessage()], 500);
+            }
+            
             return back()->withErrors(['error' => 'Có lỗi xảy ra khi tạo phiếu cược: ' . $e->getMessage()])
                         ->withInput();
         }
@@ -434,7 +463,7 @@ class BettingTicketController extends Controller
         DB::beginTransaction();
         try {
             $createdTickets = [];
-            $totalAmount = 0;
+            $totalCostXac = 0;
             
             foreach ($parseResult['multiple_bets'] as $bet) {
                 // Find betting type by code
@@ -446,8 +475,9 @@ class BettingTicketController extends Controller
                 // Use station from bet or manual input
                 $stationName = $bet['station'] ?: $request->station;
                 
-                // Calculate win amount (simplified for now)
-                $winAmount = $bet['amount'] * 70; // Basic multiplier
+                // Calculate cost_xac using BetPricingService
+                $costXac = $this->calculateCostXac($bet, $region, $request->customer_id);
+                $totalCostXac += $costXac;
                 
                 $ticket = Auth::user()->bettingTickets()->create([
                     'customer_id' => $request->customer_id,
@@ -462,23 +492,36 @@ class BettingTicketController extends Controller
                         'betting_type' => $bettingType->name,
                         'betting_type_code' => $bettingType->code,
                         'meta' => $bet['meta'] ?? [],
+                        'total_cost_xac' => $costXac,
                     ],
                     'bet_amount' => $bet['amount'],
-                    'win_amount' => $winAmount,
-                    'payout_amount' => 0,
+                    'win_amount' => 0, // Will be calculated on settlement
+                    'payout_amount' => 0, // Will be calculated on settlement
                 ]);
                 
                 $createdTickets[] = $ticket;
-                $totalAmount += $bet['amount'];
             }
             
             DB::commit();
             
+            $successMessage = "Đã tạo thành công " . count($createdTickets) . " phiếu cược với tổng tiền xác " . number_format($totalCostXac, 0, ',', '.') . " VNĐ";
+            
+            // Return JSON if AJAX request
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $successMessage]);
+            }
+            
             return redirect()->route('user.betting-tickets.index')
-                ->with('success', "Đã tạo thành công " . count($createdTickets) . " phiếu cược với tổng tiền " . number_format($totalAmount, 0, ',', '.') . " VNĐ");
+                ->with('success', $successMessage);
                 
         } catch (\Exception $e) {
             DB::rollback();
+            
+            // Return JSON if AJAX request
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Có lỗi xảy ra khi tạo phiếu cược: ' . $e->getMessage()], 500);
+            }
+            
             return back()->withErrors(['error' => 'Có lỗi xảy ra khi tạo phiếu cược: ' . $e->getMessage()])
                         ->withInput();
         }
@@ -696,5 +739,84 @@ class BettingTicketController extends Controller
                 'errors' => [$e->getMessage()],
             ], 500);
         }
+    }
+
+    /**
+     * Hiển thị báo cáo theo ngày
+     */
+    public function report(Request $request)
+    {
+        $user = Auth::user();
+        
+        // Lấy ngày từ request, fallback về global_date
+        $reportDate = $request->filled('date') 
+            ? $request->date 
+            : session('global_date', today());
+        
+        $region = $request->filled('region')
+            ? Region::normalizeKey($request->region)
+            : session('global_region', 'nam');
+        
+        // Lấy tất cả tickets của user cho ngày và miền này
+        $tickets = $user->bettingTickets()
+            ->whereDate('betting_date', $reportDate)
+            ->where('region', $region)
+            ->where('result', '!=', 'pending')
+            ->with(['customer', 'bettingType'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        // Tính tổng tiền xác user thu (tất cả tickets)
+        $totalXac = $tickets->sum(function($ticket) {
+            return $ticket->betting_data['total_cost_xac'] ?? 0;
+        });
+        
+        // Tính tổng tiền user trả (từ win tickets)
+        $totalThang = $tickets->where('result', 'win')->sum('payout_amount');
+        
+        // Profit của user = thu xác - trả thắng
+        $userProfit = $totalXac - $totalThang;
+        
+        // Nhóm tickets theo customer để báo cáo chi tiết
+        $customerReport = [];
+        foreach ($tickets->groupBy('customer_id') as $customerId => $customerTickets) {
+            $customer = $customerTickets->first()->customer;
+            $customerXac = $customerTickets->sum(function($ticket) {
+                return $ticket->betting_data['total_cost_xac'] ?? 0;
+            });
+            $customerThang = $customerTickets->where('result', 'win')->sum('payout_amount');
+            $customerProfit = $customerThang - $customerXac; // Profit của customer
+            
+            $customerReport[] = [
+                'customer' => $customer,
+                'tickets' => $customerTickets,
+                'total_xac' => $customerXac,
+                'total_thang' => $customerThang,
+                'profit' => $customerProfit,
+            ];
+        }
+        
+        return view('user.betting-tickets.report', compact(
+            'reportDate',
+            'region',
+            'totalXac',
+            'totalThang',
+            'userProfit',
+            'customerReport',
+            'tickets'
+        ));
+    }
+
+    /**
+     * Calculate cost_xac for a bet using BetPricingService
+     */
+    private function calculateCostXac($bet, $region, $customerId): float
+    {
+        $pricingService = new BetPricingService();
+        $pricingService->begin($customerId, $region);
+        
+        $pricing = $pricingService->previewForBet($bet);
+        
+        return $pricing['cost_xac'] ?? 0;
     }
 }
