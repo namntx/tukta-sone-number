@@ -95,35 +95,42 @@
                 <div class="mb-3">
                     <!-- Customer Header -->
                     <button type="button" onclick="toggleCustomer('{{ $customerId }}')" 
-                            class="w-full flex items-center justify-between px-3 py-2 bg-gray-100 rounded-lg border border-gray-200 hover:bg-gray-200 transition">
-                        <div class="flex items-center gap-2">
-                            <svg id="icon-{{ $customerId }}" class="w-4 h-4 text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="w-full grid grid-cols-12 gap-2 items-center px-3 py-2 bg-gray-100 rounded-lg border border-gray-200 hover:bg-gray-200 transition">
+                        <!-- Icon + Tên -->
+                        <div class="col-span-4 flex items-center gap-2 min-w-0">
+                            <svg id="icon-{{ $customerId }}" class="w-4 h-4 text-gray-600 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
-                            <span class="font-semibold text-gray-900">{{ $customer->name }}</span>
-                            <span class="text-xs text-gray-500">({{ $customerTickets->count() }} phiếu)</span>
+                            <span class="text-xs font-semibold text-gray-900 truncate">{{ $customer->name }}</span>
+                        </div>
+                        
+                        <!-- Status + Số phiếu -->
+                        <div class="col-span-3 flex flex-col gap-1 items-center">
                             @if($pendingCount > 0)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 whitespace-nowrap">
                                 {{ $pendingCount }} chưa tính
                             </span>
                             @else
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                ✓ Đã tính xong
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
+                                ✓ Tính xong
                             </span>
                             @endif
+                            <span class="text-xs text-gray-500 whitespace-nowrap">({{ $customerTickets->count() }} phiếu)</span>
                         </div>
-                        <div class="flex flex-col items-end gap-0.5">
-                            <div class="flex items-center gap-2">
+                        
+                        <!-- Thông tin tài chính -->
+                        <div class="col-span-5 flex flex-col items-end gap-0.5">
+                            <div class="flex items-center gap-2 w-full justify-end">
                                 <span class="text-[10px] text-gray-500">Xác:</span>
-                                <span class="text-xs font-semibold text-blue-600">{{ number_format($customerXac / 1000, 1) }}k</span>
+                                <span class="text-xs font-semibold text-blue-600 whitespace-nowrap">{{ number_format($customerXac / 1000, 1) }}k</span>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2 w-full justify-end">
                                 <span class="text-[10px] text-gray-500">Thắng:</span>
-                                <span class="text-xs font-semibold text-green-600">{{ number_format($customerThang / 1000, 1) }}k</span>
+                                <span class="text-xs font-semibold text-green-600 whitespace-nowrap">{{ number_format($customerThang / 1000, 1) }}k</span>
                             </div>
-                            <div class="flex items-center gap-2 border-t border-gray-300 pt-0.5 mt-0.5">
+                            <div class="flex items-center gap-2 w-full justify-end pt-0.5 mt-0.5">
                                 <span class="text-[10px] {{ $customerProfit >= 0 ? 'text-green-600' : 'text-red-600' }}">Lời:</span>
-                                <span class="text-xs font-bold {{ $customerProfit >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                <span class="text-xs font-bold {{ $customerProfit >= 0 ? 'text-green-600' : 'text-red-600' }} whitespace-nowrap">
                                     {{ $customerProfit >= 0 ? '+' : '' }}{{ number_format($customerProfit / 1000, 1) }}k
                                 </span>
                             </div>

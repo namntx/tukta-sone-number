@@ -276,11 +276,8 @@
                                     <!-- Mobile Timer (Compact) -->
                                     <div class="md:hidden">
                                         <div class="flex items-center space-x-1 bg-gradient-to-r from-indigo-50 to-blue-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                                            <svg class="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
                                             <span class="text-xs font-semibold text-indigo-800">
-                                                {{ $daysRemaining }}
+                                                {{ $daysRemaining }} ngày
                                             </span>
                                         </div>
                                     </div>
