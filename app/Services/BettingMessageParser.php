@@ -386,7 +386,7 @@ class BettingMessageParser
             // Đá xiên: ≥2 đài, sinh C(n,2) combinations
             if ($type === 'da_xien') {
                 $stationCount = count($ctx['stations'] ?? []);
-                $daiCount = $ctx['meta']['dai_count'] ?? null;
+                $daiCount = $ctx['dai_count'] ?? null;  // Lấy từ $ctx, không phải $ctx['meta']
 
                 // Auto-resolve stations nếu có dai_count nhưng chưa có đủ đài
                 if ($daiCount >= 2 && $stationCount === 0) {
