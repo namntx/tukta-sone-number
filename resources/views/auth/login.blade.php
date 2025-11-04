@@ -1,92 +1,142 @@
-@extends('layouts.app')
-
-@section('title', 'Đăng nhập - Keki SaaS')
-
-@section('content')
-<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-        <div>
-            <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-indigo-100">
-                <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                </svg>
+<!DOCTYPE html>
+<html lang="vi" class="h-full">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Đăng nhập - Keki SaaS</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
+    
+    <!-- Scripts -->
+    @php
+        try {
+            $manifestPath = base_path('public/build/manifest.json');
+            $useBuildAssets = false;
+            $cssFile = null;
+            $jsFile = null;
+            
+            if (@file_exists($manifestPath) && @is_readable($manifestPath)) {
+                $manifestContent = @file_get_contents($manifestPath);
+                if ($manifestContent !== false) {
+                    $manifest = @json_decode($manifestContent, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($manifest)) {
+                        $cssEntry = $manifest['resources/css/app.css'] ?? null;
+                        $jsEntry = $manifest['resources/js/app.js'] ?? null;
+                        
+                        if ($cssEntry && isset($cssEntry['file']) && !empty($cssEntry['file'])) {
+                            $cssFile = $cssEntry['file'];
+                            $useBuildAssets = true;
+                        }
+                        if ($jsEntry && isset($jsEntry['file']) && !empty($jsEntry['file'])) {
+                            $jsFile = $jsEntry['file'];
+                            $useBuildAssets = true;
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $useBuildAssets = false;
+            $cssFile = null;
+            $jsFile = null;
+        }
+    @endphp
+    @if($useBuildAssets && ($cssFile || $jsFile))
+        @if($cssFile)
+            <link rel="stylesheet" href="{{ asset('build/' . $cssFile) }}">
+        @endif
+        @if($jsFile)
+            <script type="module" src="{{ asset('build/' . $jsFile) }}"></script>
+        @endif
+    @else
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
+</head>
+<body class="h-full bg-gray-50">
+    <div class="min-h-screen flex items-center justify-center px-4 py-8">
+        <div class="w-full max-w-md">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-900 mb-1">Đăng nhập</h1>
+                <p class="text-sm text-gray-600">Nhập thông tin để tiếp tục</p>
             </div>
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                Đăng nhập tài khoản
-            </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
-                Hoặc
-                <a href="/" class="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200">
-                    quay lại trang chủ
-                </a>
-            </p>
-        </div>
-        
-        <form class="mt-8 space-y-6" method="POST" action="{{ route('login.post') }}">
-            @csrf
-            <div class="rounded-md shadow-sm -space-y-px">
-                <div>
-                    <label for="email" class="sr-only">Email</label>
+
+            <!-- Login Card -->
+            <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+                <form method="POST" action="{{ route('login.post') }}" class="space-y-4">
+                    @csrf
+
+                    <!-- Error Messages -->
+                    @if ($errors->any())
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div class="text-sm font-medium text-red-800 mb-1">Đăng nhập thất bại</div>
+                        <ul class="text-xs text-red-700 space-y-0.5">
+                            @foreach ($errors->all() as $error)
+                                <li>• {{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
+
+                    <!-- Email Input -->
+                    <div>
+                        <label for="email" class="block text-xs font-medium text-gray-700 mb-1">Email</label>
                         <input id="email" 
                                name="email" 
                                type="email" 
                                autocomplete="email" 
                                required 
-                               class="form-input rounded-none rounded-t-md @error('email') error @enderror" 
-                               placeholder="Địa chỉ email"
-                               value="{{ old('email') }}">
-                    @error('email')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-                <div>
-                    <label for="password" class="sr-only">Mật khẩu</label>
+                               value="{{ old('email') }}"
+                               class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition @error('email') border-red-300 @enderror" 
+                               placeholder="email@example.com">
+                        @error('email')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Password Input -->
+                    <div>
+                        <label for="password" class="block text-xs font-medium text-gray-700 mb-1">Mật khẩu</label>
                         <input id="password" 
                                name="password" 
                                type="password" 
                                autocomplete="current-password" 
                                required 
-                               class="form-input rounded-none rounded-b-md @error('password') error @enderror" 
-                               placeholder="Mật khẩu">
-                    @error('password')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                               class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500 transition @error('password') border-red-300 @enderror" 
+                               placeholder="••••••••">
+                        @error('password')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Remember Me -->
+                    <div class="flex items-center">
+                        <input id="remember-me" 
+                               name="remember" 
+                               type="checkbox" 
+                               class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                        <label for="remember-me" class="ml-2 block text-xs text-gray-700">
+                            Ghi nhớ đăng nhập
+                        </label>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" 
+                            class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition shadow-sm">
+                        Đăng nhập
+                    </button>
+                </form>
             </div>
 
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <input id="remember-me" 
-                           name="remember" 
-                           type="checkbox" 
-                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                    <label for="remember-me" class="ml-2 block text-sm text-gray-900">
-                        Ghi nhớ đăng nhập
-                    </label>
-                </div>
+            <!-- Footer -->
+            <div class="mt-6 text-center">
+                <a href="/" class="text-xs text-gray-600 hover:text-purple-600 transition">
+                    ← Quay lại trang chủ
+                </a>
             </div>
-
-            <div>
-                <button type="submit" 
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                        <svg class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-                        </svg>
-                    </span>
-                    Đăng nhập
-                </button>
-            </div>
-            
-            <!-- Demo Accounts -->
-            <div class="mt-6 p-4 bg-gray-100 rounded-lg">
-                <h3 class="text-sm font-medium text-gray-900 mb-2">Tài khoản demo:</h3>
-                <div class="text-xs text-gray-600 space-y-1">
-                    <p><strong>Admin:</strong> admin@keki.com / password</p>
-                    <p><strong>User:</strong> user@keki.com / password</p>
-                </div>
-            </div>
-        </form>
+        </div>
     </div>
-</div>
-@endsection
+</body>
+</html>

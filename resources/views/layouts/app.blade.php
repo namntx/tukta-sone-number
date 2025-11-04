@@ -22,7 +22,48 @@
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
     
     <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @php
+        try {
+            $manifestPath = base_path('public/build/manifest.json');
+            $useBuildAssets = false;
+            $cssFile = null;
+            $jsFile = null;
+            
+            if (@file_exists($manifestPath) && @is_readable($manifestPath)) {
+                $manifestContent = @file_get_contents($manifestPath);
+                if ($manifestContent !== false) {
+                    $manifest = @json_decode($manifestContent, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($manifest)) {
+                        $cssEntry = $manifest['resources/css/app.css'] ?? null;
+                        $jsEntry = $manifest['resources/js/app.js'] ?? null;
+                        
+                        if ($cssEntry && isset($cssEntry['file']) && !empty($cssEntry['file'])) {
+                            $cssFile = $cssEntry['file'];
+                            $useBuildAssets = true;
+                        }
+                        if ($jsEntry && isset($jsEntry['file']) && !empty($jsEntry['file'])) {
+                            $jsFile = $jsEntry['file'];
+                            $useBuildAssets = true;
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $useBuildAssets = false;
+            $cssFile = null;
+            $jsFile = null;
+        }
+    @endphp
+    @if($useBuildAssets && ($cssFile || $jsFile))
+        @if($cssFile)
+            <link rel="stylesheet" href="{{ asset('build/' . $cssFile) }}">
+        @endif
+        @if($jsFile)
+            <script type="module" src="{{ asset('build/' . $jsFile) }}"></script>
+        @endif
+    @else
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
     
     <!-- Custom Scrollbar Styles -->
     <style>
