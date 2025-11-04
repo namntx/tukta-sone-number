@@ -414,12 +414,122 @@ class CustomerController extends Controller
 
     public function update(CustomerRequest $request, Customer $customer): RedirectResponse
     {
-        $customer->update($request->validated());
+        // Lấy validated data (không bao gồm rates)
+        $validated = $request->validated();
+        $rates = $validated['rates'] ?? [];
+        unset($validated['rates']);
 
-        // Không đụng vào bảng giá ở đây.
+        // Update customer info
+        $customer->update($validated);
+
+        // Xử lý rates nếu có
+        $ratesJson = [];
+        $regions = ['bac', 'trung', 'nam'];
+
+        foreach ($regions as $region) {
+            if (!isset($rates[$region]) || !is_array($rates[$region])) {
+                continue;
+            }
+
+            foreach ($rates[$region] as $betKey => $rateData) {
+                // Map betKey -> type_code + meta
+                $map = $this->betKeyToResolverArgs($betKey);
+                if (!$map['type_code']) {
+                    continue;
+                }
+
+                $typeCode = $map['type_code'];
+                $meta = $map['meta'];
+
+                // Lấy giá trị từ form (có thể là string)
+                $commission = $rateData['commission'] ?? null;
+                $payoutTimes = $rateData['payout_times'] ?? null;
+                
+                // Convert empty string hoặc string "0" thành null
+                if ($commission === '' || $commission === '0' || $commission === 0) {
+                    $commission = null;
+                }
+                if ($payoutTimes === '' || $payoutTimes === '0' || $payoutTimes === 0) {
+                    $payoutTimes = null;
+                }
+                
+                // Convert sang float nếu có giá trị
+                if ($commission !== null) {
+                    $commission = is_numeric($commission) ? (float)$commission : null;
+                }
+                if ($payoutTimes !== null) {
+                    $payoutTimes = is_numeric($payoutTimes) ? (float)$payoutTimes : null;
+                }
+                
+                // Skip nếu cả hai đều null (dùng default)
+                if ($commission === null && $payoutTimes === null) {
+                    continue;
+                }
+
+                // Build composite key: "region:type_code" hoặc "region:type_code:d2:x3:c4"
+                $keyParts = [$region, $typeCode];
+                if (isset($meta['digits']) && $meta['digits'] !== null) {
+                    $keyParts[] = "d{$meta['digits']}";
+                }
+                if (isset($meta['xien_size']) && $meta['xien_size'] !== null) {
+                    $keyParts[] = "x{$meta['xien_size']}";
+                }
+                if (isset($meta['dai_count']) && $meta['dai_count'] !== null) {
+                    $keyParts[] = "c{$meta['dai_count']}";
+                }
+                $compositeKey = implode(':', $keyParts);
+
+                // Nếu một trong hai null, lấy từ default
+                if ($commission === null || $payoutTimes === null) {
+                    $resolver = app(\App\Services\BettingRateResolver::class);
+                    $resolver->build(null, $region); // Load defaults
+                    $defaultRate = $resolver->resolve(
+                        $typeCode,
+                        $meta['digits'] ?? null,
+                        $meta['xien_size'] ?? null,
+                        $meta['dai_count'] ?? null
+                    );
+                    
+                    $commission = $commission ?? $defaultRate[0];
+                    $payoutTimes = $payoutTimes ?? $defaultRate[1];
+                }
+
+                // Lưu vào JSON
+                $ratesJson[$compositeKey] = [
+                    'buy_rate' => (float)$commission,
+                    'payout' => (float)$payoutTimes,
+                ];
+            }
+        }
+
+        // Lưu rates vào JSON column
+        // Lấy rates hiện có
+        $existingRates = $customer->betting_rates ?? [];
+        
+        // Nếu có rates mới, merge vào (overwrite các key trùng)
+        if (!empty($ratesJson)) {
+            $existingRates = array_merge($existingRates, $ratesJson);
+            
+            \Log::info('Customer Update - Rates saved', [
+                'customer_id' => $customer->id,
+                'rates_count' => count($ratesJson),
+                'total_rates' => count($existingRates),
+                'sample_keys' => array_slice(array_keys($ratesJson), 0, 5)
+            ]);
+        } else {
+            \Log::warning('Customer Update - No rates to save', [
+                'customer_id' => $customer->id,
+                'rates_received' => $rates
+            ]);
+        }
+        
+        // Luôn lưu (có thể là empty array hoặc merged rates)
+        $customer->betting_rates = $existingRates;
+        $customer->save();
+
         return redirect()
-            ->route('user.customers.rates.edit', $customer->id)
-            ->with('success', 'Cập nhật khách hàng thành công.');
+            ->route('user.customers.edit', $customer)
+            ->with('success', 'Cập nhật khách hàng và bảng giá thành công.');
     }
 
     /**
