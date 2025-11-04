@@ -132,9 +132,13 @@ class BettingMessageParser
                     if (!empty($ctx['dai_count'])) {
                         $bet['meta']['dai_count'] = (int)$ctx['dai_count'];
                     }
+
+                    // QUAN TRỌNG: Snapshot ctx['stations'] tại thời điểm emit
+                    // Tránh contamination từ các group sau
+                    $bet['meta']['_ctx_stations_snapshot'] = $ctx['stations'] ?? [];
                 }
             }
-        
+
             $bet['meta'] = $bet['meta'] ?? [];
             $outBets[] = $bet;
         };
@@ -890,14 +894,21 @@ class BettingMessageParser
                             'reason' => 'Miền Bắc hoặc dai_count không hợp lệ'
                         ]);
                     }
-                } elseif (!empty($ctx['stations'])) {
+                } elseif (!empty($b['meta']['_ctx_stations_snapshot'])) {
                     // Case 1: User đã chỉ định đài cụ thể (vd: 2dai tn ag)
                     // Lưu list stations vào meta để expand sau
-                    $b['meta']['_stations_to_expand'] = $ctx['stations'];
-                    $addEvent($events, 'station_from_explicit', [
-                        'stations' => $ctx['stations'],
-                        'will_expand' => true
-                    ]);
+                    // Dùng snapshot tại thời điểm emit, KHÔNG dùng ctx['stations'] global
+                    // để tránh contamination từ các group sau
+                    $stations = $b['meta']['_ctx_stations_snapshot'];
+                    unset($b['meta']['_ctx_stations_snapshot']); // Clean up
+
+                    if (!empty($stations)) {
+                        $b['meta']['_stations_to_expand'] = $stations;
+                        $addEvent($events, 'station_from_explicit', [
+                            'stations' => $stations,
+                            'will_expand' => true
+                        ]);
+                    }
                 } else {
                     // Case 3: Không có gì → Auto resolve đài chính từ lịch (theo date + region)
                     // Theo DOC_FUNC.md: cần check thứ và miền để lấy đài chính cho đúng
