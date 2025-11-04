@@ -73,7 +73,8 @@ Route::middleware(['auth'])->group(function () {
         // Get lottery results
         Route::get('/kqxs', [UserLotteryResultController::class, 'index'])->name('kqxs');
         Route::get('/kqxs/session', [UserLotteryResultController::class, 'bySession'])->name('kqxs.bySession');
-        Route::get('/kqxs/{id}', [UserLotteryResultController::class, 'show'])->name('kqxs.show');
+        Route::post('/kqxs/scrape', [UserLotteryResultController::class, 'scrape'])->name('kqxs.scrape');
+        Route::get('/kqxs/show/{id}', [UserLotteryResultController::class, 'show'])->name('kqxs.show');
         
         // Subscription routes
         Route::get('/subscription', [UserSubscriptionController::class, 'index'])->name('subscription');

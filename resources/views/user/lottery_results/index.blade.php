@@ -69,24 +69,29 @@
     <div class="px-3 py-2.5">
       <div class="flex items-center justify-between mb-2">
         <h1 class="text-lg font-bold text-gray-900">Kết quả xổ số</h1>
-        <a href="{{ route('user.kqxs') }}" 
-           class="inline-flex items-center justify-center px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-lg transition">
-          Hôm nay
-        </a>
+        <div class="flex items-center gap-2">
+          <button type="button" id="scrape-btn" onclick="scrapeResults()"
+                  class="inline-flex items-center justify-center px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition shadow-sm">
+            <svg id="scrape-icon" class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            <span id="scrape-text">Lấy kết quả</span>
+          </button>
+          <a href="{{ route('user.kqxs') }}" 
+             class="inline-flex items-center justify-center px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-lg transition">
+            Hôm nay
+          </a>
+        </div>
       </div>
       
-      <!-- Date Filter -->
-      <form method="get" class="flex gap-2">
-        <input
-          type="date"
-          name="date"
-          value="{{ $filters['date'] ?? '' }}"
-          class="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500"
-        >
-        <button type="submit" class="inline-flex items-center justify-center px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition">
-          Xem
-        </button>
-      </form>
+      <!-- Date Display -->
+      <div class="flex items-center gap-2 text-xs text-gray-600">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+        <span>Ngày: {{ \Carbon\Carbon::parse($date)->format('d/m/Y') }}</span>
+        <span class="text-gray-400">(Thay đổi ngày ở header)</span>
+      </div>
     </div>
   </div>
 
@@ -186,4 +191,69 @@
     @endforeach
   </div>
 </div>
+
+<script>
+async function scrapeResults() {
+  const btn = document.getElementById('scrape-btn');
+  const icon = document.getElementById('scrape-icon');
+  const text = document.getElementById('scrape-text');
+  
+  // Disable button and show loading
+  btn.disabled = true;
+  btn.classList.add('opacity-50', 'cursor-not-allowed');
+  text.textContent = 'Đang lấy...';
+  icon.classList.add('animate-spin');
+  
+  try {
+    const response = await fetch('{{ route("user.kqxs.scrape") }}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        'Accept': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      // Show success message
+      const message = `${data.message}\n` +
+        `Miền Nam: ${data.results.nam} kết quả\n` +
+        `Miền Trung: ${data.results.trung} kết quả\n` +
+        `Miền Bắc: ${data.results.bac} kết quả\n` +
+        `Tổng: ${data.total} kết quả`;
+      alert(message);
+      
+      // Reload page to show new results
+      window.location.reload();
+    } else {
+      // Show error message
+      let errorMsg = data.message;
+      if (data.errors) {
+        errorMsg += '\n\nLỗi chi tiết:\n';
+        Object.entries(data.errors).forEach(([region, error]) => {
+          errorMsg += `${region}: ${error}\n`;
+        });
+      }
+      alert(errorMsg);
+      
+      // Still reload if there are some results
+      if (data.total > 0) {
+        if (confirm('Đã lấy được một số kết quả. Bạn có muốn tải lại trang?')) {
+          window.location.reload();
+        }
+      }
+    }
+  } catch (error) {
+    alert('Lỗi khi lấy kết quả: ' + error.message);
+  } finally {
+    // Re-enable button
+    btn.disabled = false;
+    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    text.textContent = 'Lấy kết quả';
+    icon.classList.remove('animate-spin');
+  }
+}
+</script>
 @endsection
