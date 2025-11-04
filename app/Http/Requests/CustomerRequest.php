@@ -34,7 +34,7 @@ class CustomerRequest extends FormRequest
             'rates' => ['nullable', 'array'],
             'rates.*' => ['nullable', 'array'], // rates[bac], rates[trung], rates[nam]
             'rates.*.*' => ['nullable', 'array'], // rates[bac][bao_lo_2]
-            'rates.*.*.commission' => ['nullable', 'numeric', 'min:0', 'max:1'],
+            'rates.*.*.commission' => ['nullable', 'numeric', 'min:0'],
             'rates.*.*.payout_times' => ['nullable', 'numeric', 'min:0'],
         ];
     }

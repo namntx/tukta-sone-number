@@ -122,7 +122,7 @@
                   <div class="flex items-end gap-2 bg-gray-50 rounded-lg p-2">
                     <div class="flex-1 min-w-0">
                       <label class="block text-xs text-gray-600 mb-1">{{ $label }}</label>
-                      <input type="number" step="0.01" min="0" max="1"
+                      <input type="number" step="any" min="0"
                              name="rates[{{ $rKey }}][{{ $betKey }}][commission]"
                              value="{{ old("rates.$rKey.$betKey.commission", $val['commission']) }}"
                              placeholder="Giá"
