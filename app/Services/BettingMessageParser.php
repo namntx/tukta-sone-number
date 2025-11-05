@@ -76,12 +76,22 @@ class BettingMessageParser
         $splitTokens = function(string $s): array {
             $s = preg_replace('/[^\w\.]/u', ' ', $s);
             $s = preg_replace('/\s+/',' ', $s);
-            // tách combo dính
-            $s = preg_replace('/(\d{2,4})(xc)(\d+)(n|k)/', '$1 $2 $3$4', $s);
-            $s = preg_replace('/(\d{2,4})(lo)(\d+)(n|k)/', '$1 $2 $3$4', $s);
-            $s = preg_replace('/(\d{2,4})(dd)(\d+)(n|k)/', '$1 $2 $3$4', $s);
-            $s = preg_replace('/(\d{2,4})(d)(\d+)(n|k)/',  '$1 $2 $3$4', $s);
+
+            // Bảo vệ số thập phân trong amount token (3.5n, 7.5k) bằng placeholder
+            $s = preg_replace('/(\d+)\.(\d+)([nk])/i', '$1___DECIMAL___$2$3', $s);
+
+            // Tách combo dính (hỗ trợ decimal: 952xc3.5n, 92lo7.5k)
+            $s = preg_replace('/(\d{2,4})(xc)(\d+(?:___DECIMAL___\d+)?)(n|k)/', '$1 $2 $3$4', $s);
+            $s = preg_replace('/(\d{2,4})(lo)(\d+(?:___DECIMAL___\d+)?)(n|k)/', '$1 $2 $3$4', $s);
+            $s = preg_replace('/(\d{2,4})(dd)(\d+(?:___DECIMAL___\d+)?)(n|k)/', '$1 $2 $3$4', $s);
+            $s = preg_replace('/(\d{2,4})(d)(\d+(?:___DECIMAL___\d+)?)(n|k)/',  '$1 $2 $3$4', $s);
+
+            // Tách dấu chấm còn lại (không phải trong số thập phân)
             $s = str_replace('.', ' . ', $s);
+
+            // Restore lại dấu chấm thập phân
+            $s = str_replace('___DECIMAL___', '.', $s);
+
             $s = preg_replace('/\s+/', ' ', $s);
             return array_values(array_filter(explode(' ', trim($s))));
         };
@@ -642,8 +652,9 @@ class BettingMessageParser
                 continue;
             }
     
-            if (preg_match('/^(\d+)(n|k)$/', $tok, $m)) {
-                $ctx['amount'] = (int)$m[1] * 1000;
+            // Hỗ trợ số nguyên và số thập phân: 5n, 3.5n, 7.5n
+            if (preg_match('/^(\d+(?:\.\d+)?)(n|k)$/', $tok, $m)) {
+                $ctx['amount'] = (int)round((float)$m[1] * 1000);
                 $addEvent($events, 'amount_loose', [
                     'token'=>$tok, 'type'=>$ctx['current_type'] ?? null, 'amount'=>$ctx['amount']
                 ]);
@@ -651,8 +662,9 @@ class BettingMessageParser
                 continue;
             }
     
-            if (preg_match('/^(d|dd|lo)(\d+)(n|k)$/', $tok, $m)) {
-                $code = $m[1]; $amt = (int)$m[2]*1000;
+            // Combo token với số thập phân: lo5n, dd3.5n, d7.5n
+            if (preg_match('/^(d|dd|lo)(\d+(?:\.\d+)?)(n|k)$/', $tok, $m)) {
+                $code = $m[1]; $amt = (int)round((float)$m[2] * 1000);
 
                 if (($ctx['current_type'] ?? null) === 'xiu_chu') {
                     if ($code === 'dd') { $ctx['xc_dd_amount'] = $amt; $addEvent($events,'xc_pair_dd',['token'=>$tok,'amount'=>$amt]); }
@@ -1209,7 +1221,7 @@ class BettingMessageParser
     private function canonicalizeTypeCode(string $code): string
     {
         return match ($code) {
-            'lo', 'bao', 'baolo' => 'bao_lo',
+            'lo', 'bao', 'baolo', 'blo' => 'bao_lo',
             'd'                  => 'dau',
             'b'                  => 'duoi',
             'dd'                 => 'dau_duoi',
@@ -1227,7 +1239,7 @@ class BettingMessageParser
             'd'  => 'dau',
             'dd' => 'dau_duoi',
             'b'  => 'duoi',
-            'lo','bao','baolo' => 'bao_lo',
+            'lo','bao','baolo','blo' => 'bao_lo',
             'de' => 'de',
             'dx','dax','daxeo','dacheo' => 'da_xien',
             'dt' => 'da_thang',
@@ -1270,7 +1282,7 @@ class BettingMessageParser
     private function defaultTypeAliases(): array
     {
         return [
-            'lo' => 'bao_lo', 'bao' => 'bao_lo', 'baolo' => 'bao_lo',
+            'lo' => 'bao_lo', 'bao' => 'bao_lo', 'baolo' => 'bao_lo', 'blo' => 'bao_lo',
             'de' => 'de',
             'd'  => 'dau', 'dau' => 'dau',
             'b'  => 'duoi', 'duoi' => 'duoi',
