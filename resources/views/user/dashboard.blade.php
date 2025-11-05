@@ -48,8 +48,8 @@
                         </div>
                         
                         <div class="flex space-x-3">
-                            <button type="button" id="parse-btn" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
-                                <i class="fas fa-search mr-2"></i>Xử Lý Tin Nhắn
+                            <button type="button" id="parse-btn" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                                <i class="fas fa-check mr-2"></i>Tạo Phiếu Cược
                             </button>
                             <button type="button" id="clear-btn" class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
                                 <i class="fas fa-eraser mr-2"></i>Xóa
@@ -63,7 +63,7 @@
             <div>
                 <div class="bg-gray-50 rounded-lg h-full">
                     <h3 class="text-sm font-medium text-gray-700 mb-3">
-                        <i class="fas fa-eye mr-1"></i>Preview phiếu cược
+                        <i class="fas fa-info-circle mr-1"></i>Thông báo
                     </h3>
                     
                     <div id="preview-panel" class="hidden">
@@ -72,6 +72,18 @@
                                 <div>
                                     <h4 class="font-medium text-gray-900" id="preview-customer">-</h4>
                                     <p class="text-sm text-gray-500" id="preview-date-region">-</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Highlighted Message Preview -->
+                            <div class="border-t pt-3 mt-3 hidden" id="highlighted-message-preview">
+                                <div class="mb-2">
+                                    <span class="text-xs font-medium text-gray-600">
+                                        <i class="fas fa-code mr-1"></i>Tin nhắn đã phân tích:
+                                    </span>
+                                </div>
+                                <div class="bg-gray-50 border border-gray-200 rounded-md p-3 overflow-x-auto">
+                                    <div id="highlighted-message-content" class="text-sm font-mono whitespace-pre-wrap break-words [&_span]:inline-block [&_span.highlight]:bg-yellow-200 [&_span.highlight]:px-1 [&_span.highlight]:rounded [&_span.highlight-text]:font-semibold [&_span.highlight-text]:text-blue-700"></div>
                                 </div>
                             </div>
                             
@@ -164,11 +176,7 @@
                                 </div>
                             </div>
                             
-                            <div class="pt-3">
-                                <button type="submit" form="betting-form" id="submit-btn" class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors disabled:bg-gray-400" disabled>
-                                    <i class="fas fa-check mr-2"></i>Tạo phiếu cược
-                                </button>
-                            </div>
+                            <!-- Submit button hidden - tickets are created automatically when parsing succeeds -->
                         </div>
                     </div>
                     
@@ -177,9 +185,23 @@
                         <p class="text-gray-500">Nhập tin nhắn và nhấn "Phân tích" để xem preview</p>
                     </div>
                     
-                    <div id="error-preview" class="hidden text-center py-8">
-                        <i class="fas fa-exclamation-triangle text-4xl text-red-300 mb-3"></i>
-                        <p class="text-red-500" id="error-message">Có lỗi xảy ra</p>
+                    <div id="error-preview" class="hidden">
+                        <div class="text-center py-4">
+                            <i class="fas fa-exclamation-triangle text-4xl text-red-300 mb-3"></i>
+                            <p class="text-red-500 font-medium" id="error-message">Có lỗi xảy ra</p>
+                        </div>
+                        
+                        <!-- Highlighted Message in Error View -->
+                        <div class="border-t pt-3 mt-3 hidden" id="error-highlighted-message-preview">
+                            <div class="mb-2">
+                                <span class="text-xs font-medium text-gray-600">
+                                    <i class="fas fa-code mr-1"></i>Tin nhắn đã phân tích:
+                                </span>
+                            </div>
+                            <div class="bg-gray-50 border border-gray-200 rounded-md p-3 overflow-x-auto">
+                                <div id="error-highlighted-message-content" class="text-sm font-mono whitespace-pre-wrap break-words [&_span]:inline-block [&_span.highlight]:bg-yellow-200 [&_span.highlight]:px-1 [&_span.highlight]:rounded [&_span.highlight-text]:font-semibold [&_span.highlight-text]:text-blue-700"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -193,7 +215,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const parseBtn = document.getElementById('parse-btn');
     const clearBtn = document.getElementById('clear-btn');
-    const submitBtn = document.getElementById('submit-btn');
+    const submitBtn = document.getElementById('submit-btn'); // No longer used - tickets created automatically
     const originalMessage = document.getElementById('original_message');
     const customerId = document.getElementById('customer_id');
     const bettingDate = document.getElementById('betting_date'); // Hidden input
@@ -209,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     let currentParseData = null;
 
-    // Parse button click handler
+                // Parse and create ticket button click handler
     if (parseBtn) {
         parseBtn.addEventListener('click', function() {
             const message = originalMessage.value.trim();
@@ -225,7 +247,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Show loading
+            // Disable button and show loading
+            parseBtn.disabled = true;
+            const originalBtnText = parseBtn.innerHTML;
+            parseBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Đang xử lý...';
+            
             showLoading();
 
             // Parse message via AJAX
@@ -245,10 +271,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.is_valid) {
-                    currentParseData = data;
-                    showPreview(data);
-                    if (copyJsonBtn) copyJsonBtn.disabled = false;
-                    
                     // Auto-fill station if detected from first bet
                     if (data.multiple_bets && data.multiple_bets.length > 0) {
                         const firstBet = data.multiple_bets[0];
@@ -256,15 +278,66 @@ document.addEventListener('DOMContentLoaded', function() {
                             station.value = firstBet.station;
                         }
                     }
+                    
+                    // Store parsed data and submit form immediately
+                    currentParseData = data;
+                    
+                    // Create form data from parsed result
+                    const formData = new FormData(document.getElementById('betting-form'));
+                    
+                    // Submit form to create ticket
+                    fetch('{{ route("user.betting-tickets.store") }}', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                        }
+                    })
+                    .then(response => {
+                        if (response.redirected) {
+                            return fetch(response.url)
+                                .then(res => res.text())
+                                .then(html => {
+                                    const parser = new DOMParser();
+                                    const doc = parser.parseFromString(html, 'text/html');
+                                    const successMsg = doc.querySelector('.alert-success, [class*="success"]');
+                                    const message = successMsg ? successMsg.textContent : 'Phiếu cược đã được tạo thành công!';
+                                    return { success: true, message: message };
+                                });
+                        }
+                        return response.json();
+                    })
+                    .then(result => {
+                        if (result.success) {
+                            // Show success and clear form
+                            showSuccessAlert(result.message || 'Phiếu cược đã được tạo thành công!');
+                            originalMessage.value = '';
+                            station.value = '';
+                            hidePreview();
+                        } else {
+                            showError('Có lỗi xảy ra khi tạo phiếu cược: ' + (result.message || 'Lỗi không xác định'), null);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error creating ticket:', error);
+                        showError('Có lỗi xảy ra khi tạo phiếu cược', null);
+                    })
+                    .finally(() => {
+                        parseBtn.disabled = false;
+                        parseBtn.innerHTML = originalBtnText;
+                    });
                 } else {
-                    showError('Lỗi phân tích: ' + (data.errors ? data.errors.join(', ') : 'Không thể phân tích tin nhắn'));
-                    if (copyJsonBtn) copyJsonBtn.disabled = true;
+                    // Show error with highlighted message and stop
+                    showError('Lỗi phân tích: ' + (data.errors ? data.errors.join(', ') : 'Không thể phân tích tin nhắn'), data);
+                    parseBtn.disabled = false;
+                    parseBtn.innerHTML = originalBtnText;
                 }
             })
             .catch(error => {
-                showError('Có lỗi xảy ra khi phân tích tin nhắn');
+                showError('Có lỗi xảy ra khi phân tích tin nhắn', null);
                 console.error('Error:', error);
-                if (copyJsonBtn) copyJsonBtn.disabled = true;
+                parseBtn.disabled = false;
+                parseBtn.innerHTML = originalBtnText;
             });
         });
     }
@@ -279,7 +352,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Reset preview
             currentParseData = null;
             hidePreview();
-            submitBtn.disabled = true;
             if (copyJsonBtn) copyJsonBtn.disabled = true;
         });
     }
@@ -301,8 +373,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading in empty preview
         emptyPreview.innerHTML = `
             <div class="text-center py-8">
-                <i class="fas fa-spinner fa-spin text-4xl text-blue-500 mb-3"></i>
-                <p class="text-blue-600">Đang phân tích tin nhắn...</p>
+                <i class="fas fa-spinner fa-spin text-4xl text-green-500 mb-3"></i>
+                <p class="text-green-600">Đang phân tích và tạo phiếu cược...</p>
             </div>
         `;
         emptyPreview.classList.remove('hidden');
@@ -327,6 +399,16 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('preview-customer').textContent = customerText;
         document.getElementById('preview-date-region').textContent = `${dateFormatted} - ${regionLabel}`;
         
+        // Show highlighted message if available
+        const highlightedMsgPreview = document.getElementById('highlighted-message-preview');
+        const highlightedMsgContent = document.getElementById('highlighted-message-content');
+        if (data.highlighted_message) {
+            highlightedMsgContent.innerHTML = data.highlighted_message;
+            highlightedMsgPreview.classList.remove('hidden');
+        } else {
+            highlightedMsgPreview.classList.add('hidden');
+        }
+        
         // Check if we have multiple bets from new parser
         if (data.multiple_bets && data.multiple_bets.length > 0) {
             // Show multiple bets table
@@ -347,7 +429,6 @@ document.addEventListener('DOMContentLoaded', function() {
         updatePreviewRates();
         
         previewPanel.classList.remove('hidden');
-        submitBtn.disabled = false;
         if (copyJsonBtn) copyJsonBtn.disabled = false;
     }
     
@@ -646,13 +727,23 @@ document.addEventListener('DOMContentLoaded', function() {
         // Keeping it to avoid breaking references
     }
 
-    function showError(message) {
+    function showError(message, data = null) {
         emptyPreview.classList.add('hidden');
         previewPanel.classList.add('hidden');
         
         errorMessage.textContent = message;
+        
+        // Show highlighted_message if available, even when there's an error
+        const errorHighlightedMsgPreview = document.getElementById('error-highlighted-message-preview');
+        const errorHighlightedMsgContent = document.getElementById('error-highlighted-message-content');
+        if (data && data.highlighted_message) {
+            errorHighlightedMsgContent.innerHTML = data.highlighted_message;
+            errorHighlightedMsgPreview.classList.remove('hidden');
+        } else {
+            errorHighlightedMsgPreview.classList.add('hidden');
+        }
+        
         errorPreview.classList.remove('hidden');
-        submitBtn.disabled = true;
         if (copyJsonBtn) copyJsonBtn.disabled = true;
     }
 
@@ -664,7 +755,7 @@ document.addEventListener('DOMContentLoaded', function() {
         emptyPreview.innerHTML = `
             <div class="text-center py-8">
                 <i class="fas fa-file-alt text-4xl text-gray-300 mb-3"></i>
-                <p class="text-gray-500">Nhập tin nhắn và nhấn "Phân tích" để xem preview</p>
+                <p class="text-gray-500">Nhập tin nhắn và nhấn "Tạo Phiếu Cược" để tạo phiếu</p>
             </div>
         `;
         emptyPreview.classList.remove('hidden');
@@ -698,71 +789,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Submit form via AJAX
-    const form = document.getElementById('betting-form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Disable submit button
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Đang tạo...';
-            
-            // Get form data
-            const formData = new FormData(form);
-            
-            // Submit via AJAX
-            fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                }
-            })
-            .then(response => {
-                if (response.redirected) {
-                    // Get the redirected URL and parse message
-                    return fetch(response.url)
-                        .then(res => res.text())
-                        .then(html => {
-                            // Try to extract success message from session flash
-                            const parser = new DOMParser();
-                            const doc = parser.parseFromString(html, 'text/html');
-                            const successMsg = doc.querySelector('.alert-success, [class*="success"]');
-                            const message = successMsg ? successMsg.textContent : 'Phiếu cược đã được tạo thành công!';
-                            
-                            return { success: true, message: message };
-                        });
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Show success alert
-                    showSuccessAlert(data.message || 'Phiếu cược đã được tạo thành công!');
-                    
-                    // Clear form
-                    originalMessage.value = '';
-                    customerId.value = '';
-                    hidePreview();
-                } else {
-                    // Show error
-                    showErrorAlert(data.message || 'Có lỗi xảy ra khi tạo phiếu cược');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showErrorAlert('Có lỗi xảy ra khi tạo phiếu cược');
-            })
-            .finally(() => {
-                // Re-enable button after delay
-                setTimeout(() => {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Tạo phiếu cược';
-                }, 3000);
-            });
-        });
-    }
+    // Form submit handler removed - tickets are now created automatically when parsing succeeds
     
     // Show success alert
     function showSuccessAlert(message) {
