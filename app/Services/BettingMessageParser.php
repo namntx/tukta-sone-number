@@ -580,7 +580,7 @@ class BettingMessageParser
             'qng'=>'quang ngai', 'bdi'=>'binh dinh', 'tth'=>'thua thien hue',
         ];
         $typeAliases = [
-            'lo'=>'bao_lo','bao'=>'bao_lo','baolo'=>'bao_lo','b2s'=>'bao_lo','b2'=>'bao_lo','b3s'=>'bao_lo','b3'=>'bao_lo','b4s'=>'bao_lo','b4'=>'bao_lo','bd'=>'bao_lo_dao','baodao'=>'bao_lo_dao','bdao'=>'bao_lo_dao','bld'=>'bao_lo_dao','bldao'=>'bao_lo_dao','daolo'=>'bao_lo_dao',
+            'lo'=>'bao_lo','blo'=>'bao_lo','bao'=>'bao_lo','baolo'=>'bao_lo','b2s'=>'bao_lo','b2'=>'bao_lo','b3s'=>'bao_lo','b3'=>'bao_lo','b4s'=>'bao_lo','b4'=>'bao_lo','bd'=>'bao_lo_dao','baodao'=>'bao_lo_dao','bdao'=>'bao_lo_dao','bld'=>'bao_lo_dao','bldao'=>'bao_lo_dao','daolo'=>'bao_lo_dao',
             'dau'=>'dau','đầu'=>'dau','d'=>'dau',
             'duoi'=>'duoi','đuôi'=>'duoi','dui'=>'duoi',
             'dauduoi'=>'dau_duoi','đầuđuôi'=>'dau_duoi','dd'=>'dau_duoi',

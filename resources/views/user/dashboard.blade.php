@@ -382,19 +382,33 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalAmount = 0;
         let totalCostXac = 0;
         
-        // Format numbers
+        // Format numbers - hiển thị đúng số thập phân, không làm tròn
         const formatNumber = (num) => {
             if (num >= 1000) {
-                return (num / 1000).toFixed(0) + 'k';
+                const value = num / 1000;
+                // Nếu là số nguyên, hiển thị không có dấu phẩy
+                if (value % 1 === 0) {
+                    return value + 'k';
+                }
+                // Nếu có phần thập phân, hiển thị 1 chữ số và loại bỏ trailing zeros
+                return parseFloat(value.toFixed(1)) + 'k';
             }
             return num.toLocaleString();
         };
         
         const formatTotal = (num) => {
             if (num >= 1000000) {
-                return (num / 1000000).toFixed(1) + 'M';
+                const value = num / 1000000;
+                if (value % 1 === 0) {
+                    return value + 'M';
+                }
+                return parseFloat(value.toFixed(1)) + 'M';
             } else if (num >= 1000) {
-                return (num / 1000).toFixed(0) + 'k';
+                const value = num / 1000;
+                if (value % 1 === 0) {
+                    return value + 'k';
+                }
+                return parseFloat(value.toFixed(1)) + 'k';
             }
             return num.toLocaleString();
         };
@@ -473,7 +487,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const costXac = bet.cost_xac || 0;
             
             const formatNumber = (num) => {
-                if (num >= 1000) return (num / 1000).toFixed(0) + 'k';
+                if (num >= 1000) {
+                    const value = num / 1000;
+                    if (value % 1 === 0) {
+                        return value + 'k';
+                    }
+                    return parseFloat(value.toFixed(1)) + 'k';
+                }
                 return num.toLocaleString();
             };
             
@@ -530,7 +550,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         const formatNumber = (num) => {
-            if (num >= 1000) return (num / 1000).toFixed(0) + 'k';
+            if (num >= 1000) {
+                const value = num / 1000;
+                if (value % 1 === 0) {
+                    return value + 'k';
+                }
+                return parseFloat(value.toFixed(1)) + 'k';
+            }
             return num.toLocaleString();
         };
         

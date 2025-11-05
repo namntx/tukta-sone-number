@@ -148,12 +148,30 @@ class SettleBettingTickets extends Command
             $this->warn("⚠️ Có {$result['failed']} phiếu cược không thể quyết toán.");
 
             // Hiển thị lỗi chi tiết
-            $errors = array_filter($result['results'], fn($r) => !$r['success']);
-            if (count($errors) > 0 && $this->option('verbose')) {
+            $errors = array_filter($result['results'] ?? [], fn($r) => !($r['success'] ?? false));
+            if (count($errors) > 0) {
                 $this->newLine();
-                $this->error("Chi tiết lỗi:");
+                $this->error("📋 Chi tiết lỗi:");
                 foreach ($errors as $error) {
-                    $this->line("  - Ticket #{$error['ticket_id']}: " . ($error['error'] ?? 'Unknown error'));
+                    $ticketId = $error['ticket_id'] ?? 'N/A';
+                    $errorMessage = 'Unknown error';
+                    
+                    // Lấy thông báo lỗi từ các nguồn khác nhau
+                    if (isset($error['error'])) {
+                        // Lỗi từ exception
+                        $errorMessage = $error['error'];
+                    } elseif (isset($error['result']['details']['error'])) {
+                        // Lỗi từ settleTicket trả về (vd: "Chưa có kết quả xổ số")
+                        $errorMessage = $error['result']['details']['error'];
+                    } elseif (isset($error['result']['details']) && is_string($error['result']['details'])) {
+                        // Nếu details là string
+                        $errorMessage = $error['result']['details'];
+                    } elseif (isset($error['result'])) {
+                        // Fallback: hiển thị toàn bộ result nếu không có error cụ thể
+                        $errorMessage = 'Không thể quyết toán (kiểm tra kết quả xổ số hoặc dữ liệu cược)';
+                    }
+                    
+                    $this->line("  ❌ Ticket #{$ticketId}: {$errorMessage}");
                 }
             }
         }
