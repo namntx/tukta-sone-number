@@ -1018,9 +1018,12 @@ class BettingMessageParser
                 $expandedBets[] = $bet;
             }
         }
-        
+
         $outBets = $expandedBets;
-    
+
+        // Build highlighted message with skipped tokens marked in red
+        $highlightedMessage = $this->buildHighlightedMessage($message, $tokens, $events);
+
         if (empty($outBets)) {
             return [
                 'is_valid'        => false,
@@ -1028,6 +1031,7 @@ class BettingMessageParser
                 'errors'          => $errors,
                 'normalized'      => $normalized,
                 'parsed_message'  => $normalized,
+                'highlighted_message' => $highlightedMessage,
                 'tokens'          => $tokens,
                 'debug'           => [
                     'stations_default' => $defaultStations,
@@ -1035,13 +1039,14 @@ class BettingMessageParser
                 ],
             ];
         }
-    
+
         return [
             'is_valid'        => true,
             'multiple_bets'   => $outBets,
             'errors'          => $errors,
             'normalized'      => $normalized,
             'parsed_message'  => $normalized,
+            'highlighted_message' => $highlightedMessage,
             'tokens'          => $tokens,
             'debug'           => [
                     'stations_default' => $defaultStations,
@@ -1049,8 +1054,107 @@ class BettingMessageParser
             ],
         ];
     }
-    
-    
+
+    /**
+     * Build highlighted message with skipped/unrecognized tokens marked in red.
+     *
+     * @param string $originalMessage Original user input
+     * @param array $tokens Parsed tokens
+     * @param array $events Parse events
+     * @return string HTML string with highlighted skipped tokens
+     */
+    private function buildHighlightedMessage(string $originalMessage, array $tokens, array $events): string
+    {
+        // Collect skipped tokens from events
+        $skippedTokens = [];
+        foreach ($events as $event) {
+            if (($event['kind'] ?? '') === 'skip') {
+                $skippedTokens[] = $event['token'] ?? '';
+            }
+        }
+
+        if (empty($skippedTokens)) {
+            // No skipped tokens, return original message as-is
+            return htmlspecialchars($originalMessage, ENT_QUOTES, 'UTF-8');
+        }
+
+        // Normalize message for matching (lowercase, remove accents)
+        $normalizedOriginal = mb_strtolower($originalMessage, 'UTF-8');
+        $replacements = [
+            'à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ' => 'a',
+            'è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ'             => 'e',
+            'ì|í|ị|ỉ|ĩ'                         => 'i',
+            'ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ' => 'o',
+            'ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ'             => 'u',
+            'ỳ|ý|ỵ|ỷ|ỹ'                         => 'y',
+            'đ'                                 => 'd',
+        ];
+        foreach ($replacements as $pattern => $replacement) {
+            $normalizedOriginal = preg_replace('/(' . $pattern . ')/u', $replacement, $normalizedOriginal);
+        }
+
+        // Find all positions of skipped tokens in original message
+        $positions = [];
+        foreach ($skippedTokens as $skippedToken) {
+            $normalizedToken = mb_strtolower($skippedToken, 'UTF-8');
+            foreach ($replacements as $pattern => $replacement) {
+                $normalizedToken = preg_replace('/(' . $pattern . ')/u', $replacement, $normalizedToken);
+            }
+
+            // Tìm tất cả vị trí của token trong message (có thể có nhiều lần)
+            $offset = 0;
+            while (($pos = mb_strpos($normalizedOriginal, $normalizedToken, $offset)) !== false) {
+                $positions[] = [
+                    'start' => $pos,
+                    'end' => $pos + mb_strlen($skippedToken),
+                    'token' => mb_substr($originalMessage, $pos, mb_strlen($skippedToken))
+                ];
+                $offset = $pos + 1; // Move past this match
+            }
+        }
+
+        if (empty($positions)) {
+            return htmlspecialchars($originalMessage, ENT_QUOTES, 'UTF-8');
+        }
+
+        // Sort positions by start index
+        usort($positions, fn($a, $b) => $a['start'] <=> $b['start']);
+
+        // Remove overlapping positions (keep first occurrence)
+        $filteredPositions = [];
+        $lastEnd = -1;
+        foreach ($positions as $pos) {
+            if ($pos['start'] >= $lastEnd) {
+                $filteredPositions[] = $pos;
+                $lastEnd = $pos['end'];
+            }
+        }
+
+        // Build highlighted message
+        $highlightedMessage = '';
+        $lastIndex = 0;
+
+        foreach ($filteredPositions as $pos) {
+            // Add text before this token
+            $before = mb_substr($originalMessage, $lastIndex, $pos['start'] - $lastIndex);
+            $highlightedMessage .= htmlspecialchars($before, ENT_QUOTES, 'UTF-8');
+
+            // Add highlighted token
+            $highlightedMessage .= '<span class="text-red-600 font-semibold" title="Token không được nhận dạng">' .
+                                   htmlspecialchars($pos['token'], ENT_QUOTES, 'UTF-8') .
+                                   '</span>';
+
+            $lastIndex = $pos['end'];
+        }
+
+        // Add remaining text after last token
+        if ($lastIndex < mb_strlen($originalMessage)) {
+            $after = mb_substr($originalMessage, $lastIndex);
+            $highlightedMessage .= htmlspecialchars($after, ENT_QUOTES, 'UTF-8');
+        }
+
+        return $highlightedMessage;
+    }
 
     /* ========================= Normalize & Tokenize ========================= */
 
