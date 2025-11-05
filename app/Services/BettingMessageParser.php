@@ -612,9 +612,12 @@ class BettingMessageParser
                     $end   = (string)$tok;
                     $expanded = $expandKeoNumbers($start, $end);
                     if (!empty($expanded)) {
-                        $ctx['numbers_group'] = $expanded;
-                        $ctx['last_numbers']  = $expanded;
-                        $addEvent($events, 'keo_expand', ['start'=>$start,'end'=>$end,'expanded'=>$expanded]);
+                        // QUAN TRỌNG: THÊM vào numbers_group thay vì replace
+                        // Để hỗ trợ multiple keo: "00 keo 09. 20 keo 29" → [00-09] + [20-29]
+                        $ctx['numbers_group'] = array_merge($ctx['numbers_group'], $expanded);
+                        $ctx['numbers_group'] = array_values(array_unique($ctx['numbers_group'])); // Remove duplicates
+                        $ctx['last_numbers']  = $ctx['numbers_group'];
+                        $addEvent($events, 'keo_expand', ['start'=>$start,'end'=>$end,'expanded'=>$expanded,'total_numbers'=>count($ctx['numbers_group'])]);
                     } else {
                         $ctx['numbers_group'][] = $tok;
                         $ctx['last_numbers']    = $ctx['numbers_group'];
