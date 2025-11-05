@@ -213,6 +213,8 @@ class BettingMessageParser
                 'dau_duoi'  => $hasNumbers && (int)($ctx['amount'] ?? 0) > 0,
                 'xiu_chu'   => $hasNumbers && ( (int)($ctx['amount'] ?? 0) > 0 || !empty($ctx['xc_d_list']) || !empty($ctx['xc_dd_amount']) ),
                 'xien'      => (int)($ctx['amount'] ?? 0) > 0 && $hasNumbers && count($ctx['numbers_group']) >= (int)($ctx['meta']['xien_size'] ?? 0),
+                'da_xien'   => $hasNumbers && (int)($ctx['amount'] ?? 0) > 0,
+                'da_thang'  => $hasNumbers && (int)($ctx['amount'] ?? 0) > 0,
                 default     => false,
             };
         };
@@ -393,7 +395,7 @@ class BettingMessageParser
                 }
 
                 $addEvent($events, 'emit_da_thang', ['pairs' => $pairs, 'station' => $ctx['stations'][0]]);
-                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null; $ctx['stations']=[];
                 return;
             }
 
@@ -480,7 +482,7 @@ class BettingMessageParser
                     'station_pairs' => $stationPairs,
                     'stations' => $stations
                 ]);
-                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null; $ctx['stations']=[];
                 return;
             }
 
