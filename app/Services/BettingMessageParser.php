@@ -695,6 +695,8 @@ class BettingMessageParser
                 if ($isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'combo_token_auto_flush');
                 }
+                // Clear last_numbers sau combo token để tránh kế thừa sang type khác
+                $ctx['last_numbers'] = [];
 
                 $ctx['just_saw_station'] = false;
                 continue;
