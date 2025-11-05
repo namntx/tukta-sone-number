@@ -570,8 +570,27 @@ class BettingMessageParser
             'qng'=>'quang ngai', 'bdi'=>'binh dinh', 'tth'=>'thua thien hue',
         ];
         $typeAliases = [
-            'lo'=>'bao_lo','dau'=>'dau','duoi'=>'duoi','dd'=>'dau_duoi',
-            'xc'=>'xiu_chu','keo'=>'keo_hang_don_vi','dt'=>'da_thang','dx'=>'da_xien',
+            'lo'=>'bao_lo','bao'=>'bao_lo','baolo'=>'bao_lo','b2s'=>'bao_lo','b2'=>'bao_lo','b3s'=>'bao_lo','b3'=>'bao_lo','b4s'=>'bao_lo','b4'=>'bao_lo','bd'=>'bao_lo_dao','baodao'=>'bao_lo_dao','bdao'=>'bao_lo_dao','bld'=>'bao_lo_dao','bldao'=>'bao_lo_dao','daolo'=>'bao_lo_dao',
+            'dau'=>'dau','đầu'=>'dau','d'=>'dau',
+            'duoi'=>'duoi','đuôi'=>'duoi','dui'=>'duoi',
+            'dauduoi'=>'dau_duoi','đầuđuôi'=>'dau_duoi','dd'=>'dau_duoi',
+            'xc'=>'xiu_chu','x'=>'xiu_chu','xiu'=>'xiu_chu','tl'=>'xiu_chu','dxc'=>'xiu_chu_dao','xcd'=>'xiu_chu_dao','xd'=>'xiu_chu_dao','daoxc'=>'xiu_chu_dao','xcdao'=>'xiu_chu_dao','xcdau'=>'xiu_chu_dau','dauxc'=>'xiu_chu_dau','xdau'=>'xiu_chu_dau','xcduoi'=>'xiu_chu_duoi','duoixc'=>'xiu_chu_duoi','xcdui'=>'xiu_chu_duoi','xduoi'=>'xiu_chu_duoi','xdui'=>'xiu_chu_duoi',
+            'keo'=>'keo_hang_don_vi','dt'=>'da_thang','dth'=>'da_thang','dathang'=>'da_thang','dat'=>'da_thang','dx'=>'da_xien','xien'=>'da_xien','daxien'=>'da_xien','da xien'=>'da_xien','dacheo'=>'da_xien','da cheo'=>'da_xien','cheo'=>'da_xien','dax'=>'da_xien','đax'=>'da_xien',
+            'xien2'=>'xien_2','xh'=>'xien_2','xhai'=>'xien_2','xienhai'=>'xien_2',
+            'xien3'=>'xien_3','xienba'=>'xien_3','xba'=>'xien_3','x3'=>'xien_3','xi3'=>'xien_3','xn3'=>'xien_3',
+            'xien4'=>'xien_4','xienbon'=>'xien_4','xbon'=>'xien_4','x4'=>'xien_4','xi4'=>'xien_4','xn4'=>'xien_4',  
+            'kng'=>'keo_hang_ngan','keongan'=>'keo_hang_ngan','keohangngan'=>'keo_hang_ngan','kngan'=>'keo_hang_ngan',
+            'ktr'=>'keo_hang_tram','keotram'=>'keo_hang_tram','keohangtram'=>'keo_hang_tram','ktram'=>'keo_hang_tram',
+            'kch'=>'keo_hang_chuc','keochuc'=>'keo_hang_chuc','keohangchuc'=>'keo_hang_chuc','kchuc'=>'keo_hang_chuc',
+            'Sc'=>'xiu_chu','xc'=>'xiu_chu','x'=>'xiu_chu','xiu'=>'xiu_chu','tl'=>'xiu_chu',
+            'xccap'=>'xiu_chu_cap','xiuchucap'=>'xiu_chu_cap','xchucap'=>'xiu_chu_cap',
+            'dedaudacbiet'=>'de_dau_dac_biet','dedaugiai1'=>'de_dau_giai_1','degi1'=>'de_giai_1',
+            'giap'=>'giap_all','kepbang'=>'kep_bang','keplech'=>'kep_lech',
+            'tongto'=>'tong_to','tongbe'=>'tong_be','tongchan'=>'tong_chan','tongle'=>'tong_le',
+            'baylo'=>'bay_lo','baylodao'=>'bay_lo_dao','daobaylo'=>'bay_lo_dao',
+            'tamlo'=>'tam_lo','tamlodao'=>'tam_lo_dao','daotamlo'=>'tam_lo_dao',
+            'xcddau'=>'xiu_chu_dao_dau','xcdaud'=>'xiu_chu_dao_dau',
+            'xcdduoi'=>'xiu_chu_dao_duoi','xcduoid'=>'xiu_chu_dao_duoi',
         ];
     
         // ---------- 4) scan ----------
@@ -1210,9 +1229,9 @@ class BettingMessageParser
     {
         return match ($code) {
             'lo', 'bao', 'baolo' => 'bao_lo',
-            'd'                  => 'dau',
-            'b'                  => 'duoi',
-            'dd'                 => 'dau_duoi',
+            'd','đầu','dau'                 => 'dau',
+            'b','đuôi','dui','duoi'                  => 'duoi',
+            'dd','dauduoi'                 => 'dau_duoi',
             'dx', 'dax', 'daxeo', 'dacheo' => 'da_xien',
             'dt' => 'da_thang',
             'xc', 'xiu', 'xiuchu', 'xiu_chu' => 'xiu_chu',
@@ -1225,8 +1244,8 @@ class BettingMessageParser
     {
         return match ($alias) {
             'd'  => 'dau',
-            'dd' => 'dau_duoi',
-            'b'  => 'duoi',
+            'dd','dauduoi' => 'dau_duoi',
+            'b','đuôi','dui','duoi'  => 'duoi',
             'lo','bao','baolo' => 'bao_lo',
             'de' => 'de',
             'dx','dax','daxeo','dacheo' => 'da_xien',
@@ -1273,7 +1292,7 @@ class BettingMessageParser
             'lo' => 'bao_lo', 'bao' => 'bao_lo', 'baolo' => 'bao_lo',
             'de' => 'de',
             'd'  => 'dau', 'dau' => 'dau',
-            'b'  => 'duoi', 'duoi' => 'duoi',
+            'b', 'đuôi','dui','duoi'  => 'duoi',
             'dd' => 'dau_duoi',
             'dx' => 'da_xien', 'dax' => 'da_xien', 'daxeo' => 'da_xien', 'dacheo' => 'da_xien',
             'xc' => 'xiu_chu', 'xiu' => 'xiu_chu', 'xiu_chu' => 'xiu_chu',
