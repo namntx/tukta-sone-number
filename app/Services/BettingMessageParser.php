@@ -264,9 +264,10 @@ class BettingMessageParser
                         $addEvent($events, 'emit_xc_head_tail', ['mode'=>'d_sequence','dau'=>$dauAmt,'duoi'=>$duoiAmt,'numbers'=>$numbers]);
                     } else {
                         foreach ($numbers as $n) {
-                            $emitBet($outBets, $ctx, ['numbers'=>[$n],'type'=>'xiu_chu','amount'=>$amount]);
+                            $emitBet($outBets, $ctx, ['numbers'=>[$n],'type'=>'xiu_chu_dau','amount'=>$amount]);
+                            $emitBet($outBets, $ctx, ['numbers'=>[$n],'type'=>'xiu_chu_duoi','amount'=>$amount]);
                         }
-                        $addEvent($events, 'emit_xc_split_per_number', ['amount'=>$amount,'numbers'=>$numbers]);
+                        $addEvent($events, 'emit_xc_split_per_number_default', ['amount'=>$amount,'numbers'=>$numbers,'note'=>'Default split to dau+duoi']);
                     }
                 }
                 $ctx['numbers_group'] = [];

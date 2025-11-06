@@ -276,6 +276,10 @@ class BettingTicketController extends Controller
             'betting_date' => 'required|date|before_or_equal:today',
             'region' => 'required|string|max:50|in:Bắc,Trung,Nam,bac,trung,nam',
             'station' => 'required|string|max:100',
+            'original_message' => 'required|string|max:1000',
+            'betting_type_id' => 'required|exists:betting_types,id',
+            'bet_amount' => 'required|numeric|min:0',
+            'betting_numbers' => 'nullable|string|max:500',
             'result' => 'required|in:win,lose,pending',
             'payout_amount' => 'nullable|numeric|min:0',
         ], [
@@ -310,11 +314,68 @@ class BettingTicketController extends Controller
         try {
             $oldResult = $bettingTicket->result;
             
+            // Parse numbers from betting_numbers input
+            $numbers = [];
+            if ($request->filled('betting_numbers')) {
+                $numbersInput = preg_replace('/[,\s]+/', ' ', trim($request->betting_numbers));
+                $numbers = array_filter(array_map('trim', explode(' ', $numbersInput)));
+            }
+            
+            // Try to parse original_message if changed
+            $parsedMessage = $bettingTicket->parsed_message;
+            $bettingData = $bettingTicket->betting_data ?? [];
+            
+            // Get new betting type
+            $newBettingType = BettingType::find($request->betting_type_id);
+            
+            // If original_message changed, try to parse it
+            if ($request->original_message !== $bettingTicket->original_message) {
+                $parseResult = $this->messageParser->parseMessage($request->original_message, [
+                    'region' => $normalizedRegion,
+                    'date' => $request->betting_date,
+                ]);
+                
+                if ($parseResult['is_valid']) {
+                    $parsedMessage = $parseResult['parsed_message'];
+                    
+                    // Update betting_data with parsed info
+                    if (isset($parseResult['numbers']) && !empty($parseResult['numbers'])) {
+                        $numbers = $parseResult['numbers'];
+                    }
+                }
+            }
+            
+            // Update betting_data with new values
+            if (!empty($numbers)) {
+                $bettingData['numbers'] = $numbers;
+            }
+            
+            // Update betting_type in betting_data
+            if ($newBettingType) {
+                $bettingData['betting_type'] = $newBettingType->name;
+                $bettingData['betting_type_code'] = $newBettingType->code;
+            }
+            
+            // Always recalculate cost_xac when bet amount, type, or numbers change
+            $bet = [
+                'type' => $newBettingType->code ?? '',
+                'amount' => $request->bet_amount,
+                'numbers' => !empty($numbers) ? $numbers : ($bettingData['numbers'] ?? []),
+                'meta' => [],
+            ];
+            $costXac = $this->calculateCostXac($bet, $normalizedRegion, $request->customer_id);
+            $bettingData['total_cost_xac'] = $costXac;
+            
             $bettingTicket->update([
                 'customer_id' => $request->customer_id,
+                'betting_type_id' => $request->betting_type_id,
                 'betting_date' => $request->betting_date,
                 'region' => $normalizedRegion,
                 'station' => $request->station,
+                'original_message' => $request->original_message,
+                'parsed_message' => $parsedMessage,
+                'betting_data' => $bettingData,
+                'bet_amount' => $request->bet_amount,
                 'result' => $request->result,
                 'payout_amount' => $request->payout_amount ?? 0,
             ]);
@@ -430,16 +491,22 @@ class BettingTicketController extends Controller
                 $totalCostXac += $pricingData['cost_xac'];
                 $totalPotentialWin += $pricingData['potential_win'];
 
+                // Find betting_type_id by code
+                $bettingType = BettingType::where('code', $type)->first();
+                $bettingTypeId = $bettingType ? $bettingType->id : null;
+
                 return [
-                    'station'       => $bet['station'] ?? null,
-                    'numbers'       => $numbers,
-                    'type'          => $label,
-                    'amount'        => (int)($bet['amount'] ?? 0),
-                    'meta'          => $bet['meta'] ?? [],
-                    'cost_xac'      => $pricingData['cost_xac'],
-                    'potential_win' => $pricingData['potential_win'],
-                    'buy_rate'      => $pricingData['buy_rate'],
-                    'payout'        => $pricingData['payout'],
+                    'station'        => $bet['station'] ?? null,
+                    'numbers'        => $numbers,
+                    'type'           => $label,
+                    'type_code'      => $type,
+                    'betting_type_id'=> $bettingTypeId,
+                    'amount'         => (int)($bet['amount'] ?? 0),
+                    'meta'           => $bet['meta'] ?? [],
+                    'cost_xac'       => $pricingData['cost_xac'],
+                    'potential_win'  => $pricingData['potential_win'],
+                    'buy_rate'       => $pricingData['buy_rate'],
+                    'payout'         => $pricingData['payout'],
                 ];
             })->values()->all();
 

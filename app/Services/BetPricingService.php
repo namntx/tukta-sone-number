@@ -69,11 +69,15 @@ class BetPricingService
         }
         $xienSize = (int)($meta['xien_size'] ?? 0);
 
-        // resolve rate via cache
+        // resolve rate via cache (sẽ được override cho một số trường hợp đặc biệt)
         $typeCode = $this->rateKeyFor($type, $meta);
-        [$buyRate, $payout] = $this->resolver
-            ? $this->resolver->resolve($typeCode, $digits ?: null, $xienSize ?: null, (int)($meta['dai_count'] ?? 0) ?: null)
-            : [1.0, 0.0];
+        $baseBuyRate = 1.0;
+        $basePayout = 0.0;
+        if ($this->resolver) {
+            [$baseBuyRate, $basePayout] = $this->resolver->resolve($typeCode, $digits ?: null, $xienSize ?: null, (int)($meta['dai_count'] ?? 0) ?: null);
+        }
+        $buyRate = $baseBuyRate;
+        $payout = $basePayout;
 
         $region = $this->region;
         $cost = 0.0; $win = 0.0;
@@ -124,8 +128,8 @@ class BetPricingService
             }
             case 'xiu_chu': {
                 // Xỉu chủ chung (không tách đầu đuôi)
-                // MB: tiền cược * 4 * buy_rate
-                // MN/MT: tiền cược * 1 * buy_rate
+                // MB: tiền cược * 4 * buy_rate (chỉ tính GĐB và G6)
+                // MN/MT: tiền cược * 1 * buy_rate (chỉ tính GĐB và G7)
                 $coeff = ($region === 'bac') ? 4 : 1;
                 $cost  = $amount * $coeff * $buyRate;
                 $win   = $amount * $payout;
@@ -133,15 +137,32 @@ class BetPricingService
             }
             case 'xiu_chu_dau': {
                 // Xỉu chủ đầu
-                // MB: tiền cược * 3 * buy_rate
-                // MN/MT: tiền cược * 1 * buy_rate
+                // MB: tiền cược * 3 * buy_rate (G6 là đầu) - dùng rate từ xiu_chu_dau
+                // MN/MT: tiền cược * 1 * buy_rate (G7 là đầu) - dùng rate từ xiu_chu
+                if ($region === 'bac') {
+                    // MB: dùng rate từ xiu_chu_dau (đã resolve ở đầu, giữ nguyên)
+                    // Không cần override
+                } else {
+                    // MN/MT: dùng rate từ xiu_chu
+                    if ($this->resolver) {
+                        [$buyRate, $payout] = $this->resolver->resolve('xiu_chu', 3);
+                    }
+                }
                 $coeff = ($region === 'bac') ? 3 : 1;
                 $cost  = $amount * $coeff * $buyRate;
                 $win   = $amount * $payout;
                 break;
             }
             case 'xiu_chu_duoi': {
-                // Xỉu chủ đuôi - Tất cả miền
+                // Xỉu chủ đuôi
+                // MB: dùng rate từ xiu_chu_duoi (đã resolve ở đầu, giữ nguyên)
+                // MN/MT: dùng rate từ xiu_chu (GĐB là đuôi)
+                if ($region !== 'bac') {
+                    // MN/MT: dùng rate từ xiu_chu
+                    if ($this->resolver) {
+                        [$buyRate, $payout] = $this->resolver->resolve('xiu_chu', 3);
+                    }
+                }
                 $cost = $amount * 1 * $buyRate;
                 $win  = $amount * $payout;
                 break;
@@ -169,7 +190,14 @@ class BetPricingService
                 break;
             }
             case 'da_xien': {
-                // Đá chéo (cross package)
+                // Đá chéo (cross package) - chỉ áp dụng cho MN/MT
+                if ($region === 'bac') {
+                    // MB không có đá chéo, fallback
+                    $cost = $amount * $buyRate;
+                    $win = $amount * $payout;
+                    break;
+                }
+                
                 $stationCount = (int)($meta['dai_count'] ?? 0);
                 if (!$stationCount && !empty($meta['station_pairs']) && is_array($meta['station_pairs'])) {
                     $names = [];
@@ -181,13 +209,17 @@ class BetPricingService
                     $stationCount = count($names);
                 }
                 
-                // Da cheo 2 dai: tiền cược * 4 * 18 * buy_rate
+                // MN/MT: Da cheo 2 dai: tiền cược * 4 * 18 * buy_rate
                 // Da cheo 3 dai: tiền cược * 4 * 3 * 18 * buy_rate
                 // Da cheo 4 dai: tiền cược * 4 * 6 * 18 * buy_rate
-                $pairCount = $stationCount >= 2 ? (int) ($stationCount * ($stationCount - 1) / 2) : 0;
-                $coeff = 4 * $pairCount * 18;
-                $cost  = $amount * $coeff * $buyRate;
-                $win   = $amount * $payout;
+                $coeff = match($stationCount) {
+                    2 => 4 * 18,        // 2 đài: 4 * 18
+                    3 => 4 * 3 * 18,     // 3 đài: 4 * 3 * 18
+                    4 => 4 * 6 * 18,     // 4 đài: 4 * 6 * 18
+                    default => 4 * 18,    // default: 2 đài
+                };
+                $cost = $amount * $coeff * $buyRate;
+                $win  = $amount * $payout;
                 break;
             }
             default: {

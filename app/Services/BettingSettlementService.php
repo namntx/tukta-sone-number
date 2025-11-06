@@ -461,7 +461,13 @@ class BettingSettlementService
             }
         }
 
-        $rate = $this->rateResolver->resolve('xiu_chu_dau', 2);
+        // MN/MT: dùng rate từ xiu_chu, MB: dùng rate từ xiu_chu_dau
+        if ($isBac) {
+            $rate = $this->rateResolver->resolve('xiu_chu_dau', 2);
+        } else {
+            // MN/MT: lấy rate từ xiu_chu
+            $rate = $this->rateResolver->resolve('xiu_chu', 3);
+        }
 
         $buyRate = $rate[0] ?? 0.75;
         $payout = $rate[1] ?? 90;
@@ -523,7 +529,14 @@ class BettingSettlementService
             }
         }
 
-        $rate = $this->rateResolver->resolve('xiu_chu_duoi', 2);
+        // MN/MT: dùng rate từ xiu_chu, MB: dùng rate từ xiu_chu_duoi
+        $isBac = $ticket->region === 'bac';
+        if ($isBac) {
+            $rate = $this->rateResolver->resolve('xiu_chu_duoi', 2);
+        } else {
+            // MN/MT: lấy rate từ xiu_chu
+            $rate = $this->rateResolver->resolve('xiu_chu', 3);
+        }
 
         $buyRate = $rate[0] ?? 0.75;
         $payout = $rate[1] ?? 90;
@@ -666,11 +679,13 @@ class BettingSettlementService
 
         // Tính tiền xác
         $pairCount = count($pairs);
+        $winPairCount = count($winDetails); // Số cặp ăn được
+        
         if ($isBac) {
-            // MB: số cặp * 27 * buy_rate
+            // MB: tiền cược * số cặp * 27 * buy_rate
             $costXac = $amount * $pairCount * 27 * $buyRate;
         } else {
-            // MT/MN: 2 * 18 * buy_rate
+            // MT/MN: tiền cược * 2 * 18 * buy_rate (đá thẳng)
             $costXac = $amount * 2 * 18 * $buyRate;
         }
 
@@ -678,7 +693,8 @@ class BettingSettlementService
         $payoutAmount = 0;
 
         if ($isWin) {
-            $winAmount = $amount * count($winDetails);
+            // Tiền thắng: tiền cược * số cặp ăn được * payout
+            $winAmount = $amount * $winPairCount;
             $payoutAmount = $winAmount * $payout;
         }
 
@@ -762,23 +778,32 @@ class BettingSettlementService
         $buyRate = $rate[0] ?? 0.75;
         $payout = $rate[1] ?? 70;
 
-        // Tính tiền xác theo số đài
-        // 2 đài: 4 * 18, 3 đài: 4 * 3 * 18, 4 đài: 4 * 6 * 18
-        $multiplier = match($stationCount) {
-            2 => 4,
-            3 => 4 * 3,
-            4 => 4 * 6,
-            default => 4,
-        };
-
-        $costXac = $amount * $multiplier * 18 * $buyRate;
+        // Tính tiền xác theo số đài (chỉ áp dụng cho MN/MT)
+        $isBac = $ticket->region === 'bac';
+        if ($isBac) {
+            // MB không có đá chéo, fallback
+            $costXac = $amount * $buyRate;
+        } else {
+            // MN/MT: Da cheo 2 dai: tiền cược * 4 * 18 * buy_rate
+            // Da cheo 3 dai: tiền cược * 4 * 3 * 18 * buy_rate
+            // Da cheo 4 dai: tiền cược * 4 * 6 * 18 * buy_rate
+            $multiplier = match($stationCount) {
+                2 => 4,
+                3 => 4 * 3,
+                4 => 4 * 6,
+                default => 4,
+            };
+            $costXac = $amount * $multiplier * 18 * $buyRate;
+        }
+        
+        $winPairCount = count($winDetails); // Số cặp ăn được
 
         $winAmount = 0;
         $payoutAmount = 0;
 
         if ($isWin) {
-            // Mỗi cặp thắng = amount × 1
-            $winAmount = $amount * count($winDetails);
+            // Tiền thắng: tiền cược * số cặp ăn được * payout
+            $winAmount = $amount * $winPairCount;
             $payoutAmount = $winAmount * $payout;
         }
 
