@@ -101,7 +101,7 @@
                         
                         <div class="flex space-x-3">
                             <button type="button" id="parse-btn" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
-                                <i class="fas fa-check mr-2"></i>Tạo Phiếu Cược
+                                <i class="fas fa-check mr-2"></i>Xử lý
                             </button>
                             <button type="button" id="clear-btn" class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
                                 <i class="fas fa-eraser mr-2"></i>Xóa
