@@ -137,76 +137,64 @@
                         </div>
                     </button>
                     
-                    <!-- Customer Tickets Grid -->
+                    <!-- Customer Tickets Summary by Betting Type -->
                     <div id="customer-{{ $customerId }}" class="hidden mt-2">
-                        <div class="space-y-1">
-                        @foreach($customerTickets as $ticket)
                         @php
-                            $bettingData = $ticket->betting_data ?? [];
-                            $displayNumbers = [];
-                            
-                            // Handle new format: array of bets
-                            if (is_array($bettingData) && isset($bettingData[0]) && is_array($bettingData[0]) && isset($bettingData[0]['numbers'])) {
-                                foreach ($bettingData as $bet) {
-                                    $numbers = is_array($bet['numbers'] ?? []) ? $bet['numbers'] : [];
-                                    if (!empty($numbers)) {
-                                        $displayNumbers = array_merge($displayNumbers, $numbers);
-                                    }
-                                }
-                            }
-                            // Handle legacy format: single bet
-                            elseif (isset($bettingData['numbers'])) {
-                                $numbers = is_array($bettingData['numbers']) ? $bettingData['numbers'] : [];
-                                if (!empty($numbers)) {
-                                    $displayNumbers = $numbers;
-                                }
-                            }
-                            
-                            // Calculate profit
-                            if ($ticket->result === 'win') {
-                                $ticketProfit = $ticket->payout_amount;
-                            } elseif ($ticket->result === 'lose') {
-                                $costXac = $ticket->betting_data['total_cost_xac'] ?? 0;
-                                $ticketProfit = -$costXac;
-                            } else {
-                                $ticketProfit = null;
-                            }
-                            
-                            // Determine text color
-                            $profitColor = $ticket->result === 'pending' ? 'text-gray-400' : ($ticketProfit >= 0 ? 'text-green-700' : 'text-red-700');
+                            // Group tickets by betting type
+                            $ticketsByType = $customerTickets->groupBy('betting_type_id');
+                            $totalBetAmount = 0;
+                            $totalWinAmount = 0;
+                            $totalXacAmount = 0;
+                            $totalProfit = 0;
                         @endphp
-                        <a href="{{ route('user.betting-tickets.show', $ticket) }}" 
-                           class="block border-l-2 border {{ $ticket->result === 'win' ? 'border-l-green-500 border-gray-200' : ($ticket->result === 'lose' ? 'border-l-red-500 border-gray-200' : 'border-gray-300') }} hover:bg-gray-50 transition">
-                            <div class="px-2 py-1.5 flex items-center justify-between gap-2">
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 mb-0.5">
-                                        <span class="text-xs font-semibold {{ $ticket->result === 'win' ? 'text-green-900' : ($ticket->result === 'lose' ? 'text-red-900' : 'text-gray-900') }}">
-                                            {{ Str::limit($ticket->bettingType->name, 12) }}
-                                        </span>
-                                        <span class="text-[10px] text-gray-500">·</span>
-                                        <span class="text-[10px] text-gray-600">{{ Str::limit($ticket->station, 100) }}</span>
-                                    </div>
-                                    @if(!empty($displayNumbers))
-                                    <div class="text-xs font-semibold {{ $ticket->result === 'win' ? 'text-green-700' : ($ticket->result === 'lose' ? 'text-red-700' : 'text-gray-600') }} truncate">
-                                        {{ Str::limit(implode(' ', array_unique($displayNumbers)), 20) }}
-                                    </div>
-                                    @endif
-                                </div>
-                                <div class="flex-shrink-0 text-right">
-                                    <div class="text-xs font-bold {{ $profitColor }}">
-                                        @if($ticketProfit !== null)
-                                        {{ $ticketProfit >= 0 ? '+' : '' }}{{ number_format($ticketProfit / 1000, 1) }}k
-                                        @else
-                                        -
-                                        @endif
-                                    </div>
-                                    <div class="text-[10px] text-gray-500">
-                                        Cược {{ number_format($ticket->bet_amount / 1000, 1) }}k
-                                    </div>
-                                </div>
-                            </div>
-                        </a>
-                        @endforeach
+                        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                            <table class="w-full text-xs">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Loại cược</th>
+                                        <th class="px-3 py-2 text-right font-semibold text-gray-700">Tổng tiền cược</th>
+                                        <th class="px-3 py-2 text-right font-semibold text-gray-700">Tiền cược ăn</th>
+                                        <th class="px-3 py-2 text-right font-semibold text-gray-700">Tổng xác cược</th>
+                                        <th class="px-3 py-2 text-right font-semibold text-gray-700">Tổng ăn thua</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    @foreach($ticketsByType as $bettingTypeId => $typeTickets)
+                                        @php
+                                            $bettingType = $typeTickets->first()->bettingType;
+                                            $typeBetAmount = $typeTickets->sum('bet_amount');
+                                            $typeWinAmount = $typeTickets->where('result', 'win')->sum('payout_amount');
+                                            $typeXacAmount = $typeTickets->sum(function($t) { return $t->betting_data['total_cost_xac'] ?? 0; });
+                                            $typeProfit = $typeWinAmount - $typeXacAmount;
+                                            
+                                            $totalBetAmount += $typeBetAmount;
+                                            $totalWinAmount += $typeWinAmount;
+                                            $totalXacAmount += $typeXacAmount;
+                                            $totalProfit += $typeProfit;
+                                        @endphp
+                                        <tr class="hover:bg-gray-50 transition">
+                                            <td class="px-3 py-2 font-medium text-gray-900">{{ $bettingType->name }}</td>
+                                            <td class="px-3 py-2 text-right text-gray-700">{{ number_format($typeBetAmount / 1000, 1) }}k</td>
+                                            <td class="px-3 py-2 text-right {{ $typeWinAmount > 0 ? 'text-green-600' : 'text-gray-500' }}">{{ number_format($typeWinAmount / 1000, 1) }}k</td>
+                                            <td class="px-3 py-2 text-right text-blue-600">{{ number_format($typeXacAmount / 1000, 1) }}k</td>
+                                            <td class="px-3 py-2 text-right font-semibold {{ $typeProfit >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                                {{ $typeProfit >= 0 ? '+' : '' }}{{ number_format($typeProfit / 1000, 1) }}k
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot class="bg-gray-100 border-t-2 border-gray-300">
+                                    <tr>
+                                        <td class="px-3 py-2 font-bold text-gray-900">Tổng cộng:</td>
+                                        <td class="px-3 py-2 text-right font-bold text-gray-900">{{ number_format($totalBetAmount / 1000, 1) }}k</td>
+                                        <td class="px-3 py-2 text-right font-bold {{ $totalWinAmount > 0 ? 'text-green-700' : 'text-gray-900' }}">{{ number_format($totalWinAmount / 1000, 1) }}k</td>
+                                        <td class="px-3 py-2 text-right font-bold text-blue-700">{{ number_format($totalXacAmount / 1000, 1) }}k</td>
+                                        <td class="px-3 py-2 text-right font-bold {{ $totalProfit >= 0 ? 'text-green-700' : 'text-red-700' }}">
+                                            {{ $totalProfit >= 0 ? '+' : '' }}{{ number_format($totalProfit / 1000, 1) }}k
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         </div>
                     </div>
                 </div>
