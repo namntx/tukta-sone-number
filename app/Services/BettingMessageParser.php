@@ -396,7 +396,7 @@ class BettingMessageParser
                 }
 
                 $addEvent($events, 'emit_da_thang', ['pairs' => $pairs, 'station' => $ctx['stations'][0]]);
-                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null; $ctx['stations']=[];
+                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
                 return;
             }
 
@@ -483,7 +483,7 @@ class BettingMessageParser
                     'station_pairs' => $stationPairs,
                     'stations' => $stations
                 ]);
-                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null; $ctx['stations']=[];
+                $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
                 return;
             }
 

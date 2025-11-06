@@ -244,7 +244,46 @@
                                                 @foreach($ticketsByType as $groupKey => $typeTickets)
                                                     @php
                                                         $bettingType = $typeTickets->first()->bettingType;
-                                                        $typeBetAmount = $typeTickets->sum('bet_amount');
+                                                        $rawBetAmount = $typeTickets->sum('bet_amount');
+                                                        
+                                                        // Tính tiền cược đã nhân cho đá xiên (2 đài: * 1, 3 đài: * 3, 4 đài: * 6)
+                                                        $typeBetAmount = $rawBetAmount;
+                                                        if ($bettingType && $bettingType->code === 'da_xien') {
+                                                            // Tính tổng tiền cược đã nhân cho từng ticket
+                                                            $typeBetAmount = $typeTickets->sum(function($ticket) {
+                                                                $bettingData = $ticket->betting_data ?? [];
+                                                                $meta = [];
+                                                                
+                                                                // Lấy meta từ betting_data
+                                                                if (is_array($bettingData) && isset($bettingData[0]) && is_array($bettingData[0])) {
+                                                                    $meta = $bettingData[0]['meta'] ?? [];
+                                                                } elseif (isset($bettingData['meta'])) {
+                                                                    $meta = $bettingData['meta'];
+                                                                }
+                                                                
+                                                                $stationCount = (int)($meta['dai_count'] ?? 0);
+                                                                if (!$stationCount && !empty($meta['station_pairs']) && is_array($meta['station_pairs'])) {
+                                                                    $names = [];
+                                                                    foreach ($meta['station_pairs'] as $p) {
+                                                                        if (is_array($p) && count($p) === 2) {
+                                                                            $names[$p[0]] = true; $names[$p[1]] = true;
+                                                                        }
+                                                                    }
+                                                                    $stationCount = count($names);
+                                                                }
+                                                                
+                                                                // Hệ số nhân: 2 đài = 1, 3 đài = 3, 4 đài = 6
+                                                                $betMultiplier = match($stationCount) {
+                                                                    2 => 1,
+                                                                    3 => 3,
+                                                                    4 => 6,
+                                                                    default => 1,
+                                                                };
+                                                                
+                                                                return $ticket->bet_amount * $betMultiplier;
+                                                            });
+                                                        }
+                                                        
                                                         // Cột "Ăn" hiển thị win_amount (tiền cược * số lô trúng), không phải bet_amount
                                                         $typeWinAmount = $typeTickets->where('result', 'win')->sum('win_amount');
                                                         $typePayoutAmount = $typeTickets->where('result', 'win')->sum('payout_amount');
@@ -372,7 +411,7 @@
                                                                                         @else ⏳
                                                                                         @endif
                                         </span>
-                                                                                    <span class="text-xs font-medium text-gray-900">{{ Str::limit($ticket->station, 20) }}</span>
+                                                                                    <span class="text-xs font-medium text-gray-900">{{ Str::limit($ticket->station, 200) }}</span>
                                                                                     <span class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($ticket->created_at)->format('H:i') }}</span>
                                     </div>
                                                                                 

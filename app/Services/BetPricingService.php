@@ -198,6 +198,7 @@ class BetPricingService
                     break;
                 }
                 
+                // Tính số đài: ưu tiên từ meta (giống BettingSettlementService)
                 $stationCount = (int)($meta['dai_count'] ?? 0);
                 if (!$stationCount && !empty($meta['station_pairs']) && is_array($meta['station_pairs'])) {
                     $names = [];
@@ -209,16 +210,23 @@ class BetPricingService
                     $stationCount = count($names);
                 }
                 
+                // Resolve rate lại cho đá xiên (giống BettingSettlementService)
+                // Không truyền dai_count vào resolve, chỉ truyền 2 (có thể là default)
+                if ($this->resolver) {
+                    [$buyRate, $payout] = $this->resolver->resolve('da_xien', null, null, 2);
+                }
+                
                 // MN/MT: Da cheo 2 dai: tiền cược * 4 * 18 * buy_rate
                 // Da cheo 3 dai: tiền cược * 4 * 3 * 18 * buy_rate
                 // Da cheo 4 dai: tiền cược * 4 * 6 * 18 * buy_rate
-                $coeff = match($stationCount) {
-                    2 => 4 * 18,        // 2 đài: 4 * 18
-                    3 => 4 * 3 * 18,     // 3 đài: 4 * 3 * 18
-                    4 => 4 * 6 * 18,     // 4 đài: 4 * 6 * 18
-                    default => 4 * 18,    // default: 2 đài
+                // Logic này phải giống hệt với BettingSettlementService
+                $multiplier = match($stationCount) {
+                    2 => 4,
+                    3 => 4 * 3,
+                    4 => 4 * 6,
+                    default => 4,
                 };
-                $cost = $amount * $coeff * $buyRate;
+                $cost = $amount * $multiplier * 18 * $buyRate;
                 $win  = $amount * $payout;
                 break;
             }
@@ -261,22 +269,18 @@ class BetPricingService
                     'count' => 0,
                 ];
             }
-            $by[$label]['cost_xac']      += (int)$pricing['cost_xac'];
-            $by[$label]['potential_win'] += (int)$pricing['potential_win'];
+
+            $by[$label]['cost_xac'] += (int)($pricing['cost_xac'] ?? 0);
+            $by[$label]['potential_win'] += (int)($pricing['potential_win'] ?? 0);
             $by[$label]['count']++;
-            $totalCost += (int)$pricing['cost_xac'];
-            $totalWin  += (int)$pricing['potential_win'];
+            $totalCost += (int)($pricing['cost_xac'] ?? 0);
+            $totalWin += (int)($pricing['potential_win'] ?? 0);
         }
 
-        // sắp xếp nhẹ theo label
-        ksort($by);
-
         return [
-            'breakdown' => array_values($by),
-            'total'     => [
-                'cost_xac_total'      => (int)$totalCost,
-                'potential_win_total' => (int)$totalWin,
-            ],
+            'by_label' => array_values($by),
+            'total_cost_xac' => $totalCost,
+            'total_potential_win' => $totalWin,
         ];
     }
 }

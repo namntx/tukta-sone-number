@@ -740,7 +740,22 @@ class BettingSettlementService
     {
         $isWin = false;
         $winDetails = [];
-        $stationCount = count($results);
+        
+        // Tính số đài: ưu tiên từ meta (giống BetPricingService), fallback về count($results)
+        $stationCount = (int)($meta['dai_count'] ?? 0);
+        if (!$stationCount && !empty($meta['station_pairs']) && is_array($meta['station_pairs'])) {
+            $names = [];
+            foreach ($meta['station_pairs'] as $p) {
+                if (is_array($p) && count($p) === 2) {
+                    $names[$p[0]] = true; $names[$p[1]] = true;
+                }
+            }
+            $stationCount = count($names);
+        }
+        // Fallback: dùng số lượng results nếu không có trong meta
+        if (!$stationCount) {
+            $stationCount = count($results);
+        }
 
         // Sinh các cặp từ danh sách số
         $pairs = [];
