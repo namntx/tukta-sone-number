@@ -146,7 +146,10 @@ class BettingSettlementService
     }
 
     /**
-     * Match Bao Lô: Số trúng khi xuất hiện trong 2 số cuối của tất cả giải
+     * Match Bao Lô: Số trúng khi xuất hiện trong n số cuối của tất cả giải
+     * - Bao lô 2 số: check 2 số cuối
+     * - Bao lô 3 số: check 3 số cuối
+     * - Bao lô 4 số: check 4 số cuối
      */
     protected function matchBaoLo(array $numbers, array $results, float $amount, array $meta, BettingTicket $ticket): array
     {
@@ -158,7 +161,20 @@ class BettingSettlementService
             $num = str_pad((string)$number, $digits, '0', STR_PAD_LEFT);
 
             foreach ($results as $result) {
-                $hits = $result->countLo2(substr($num, -2)); // Luôn check 2 số cuối
+                $hits = 0;
+                
+                // Check theo số digits
+                if ($digits === 2) {
+                    $hits = $result->countLo2(substr($num, -2));
+                } elseif ($digits === 3) {
+                    $hits = $result->countLo3(substr($num, -3));
+                } elseif ($digits === 4) {
+                    $hits = $result->countLo4(substr($num, -4));
+                } else {
+                    // Fallback: dùng 2 số cuối
+                    $hits = $result->countLo2(substr($num, -2));
+                }
+                
                 if ($hits > 0) {
                     $winCount += $hits;
                     $winDetails[] = [
@@ -202,7 +218,13 @@ class BettingSettlementService
         $payoutAmount = 0;
 
         if ($isWin) {
+            // Tính tiền thắng: tiền cược * số lô trúng
+            // Ví dụ: cược 5n, về 2 lô → winAmount = 5n * 2 = 10n
+            // Ví dụ: cược 5n, về 3 lô → winAmount = 5n * 3 = 15n
             $winAmount = $amount * $winCount;
+            
+            // Tính tiền trả: tiền thắng * tỷ lệ trả
+            // Ví dụ: winAmount = 10n, payout = 80 → payoutAmount = 10n * 80 = 800n
             $payoutAmount = $winAmount * $payout;
         }
 

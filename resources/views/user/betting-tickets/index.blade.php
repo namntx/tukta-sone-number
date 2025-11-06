@@ -109,15 +109,15 @@
                                     <h3 class="text-sm font-semibold text-gray-900">{{ $customer->name }}</h3>
                                     <span class="text-xs text-gray-500">•</span>
                                     <!-- <span class="text-xs text-gray-600">{{ $customerTickets->count() }} phiếu</span> -->
-                                    @if($pendingCount > 0)
+                            @if($pendingCount > 0)
                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200">
                                             ⚠️ {{ $pendingCount }} chưa tính
-                                        </span>
-                                    @else
+                            </span>
+                            @else
                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-green-700 bg-green-50 border border-green-200">
                                             ✓ Đã tính xong
-                                        </span>
-                                    @endif
+                            </span>
+                            @endif
                                 </div>
                             </div>
                         </div>
@@ -193,7 +193,35 @@
                                 <!-- Statistics Table - Ẩn mặc định -->
                                 <div id="message-{{ $messageId }}" class="hidden bg-gray-50 border-t border-gray-200">
                                     @php
-                                        $ticketsByType = $messageTickets->groupBy('betting_type_id');
+                                        // Group tickets: tách riêng bao lô 2, 3, 4 số
+                                        $ticketsByType = $messageTickets->groupBy(function($ticket) {
+                                            $bettingType = $ticket->bettingType;
+                                            $typeId = $ticket->betting_type_id;
+                                            
+                                            // Nếu là bao lô, thêm digits vào key để tách riêng
+                                            if ($bettingType && $bettingType->code === 'bao_lo') {
+                                                $bettingData = $ticket->betting_data ?? [];
+                                                $digits = null;
+                                                
+                                                // Tìm digits trong betting_data
+                                                if (is_array($bettingData)) {
+                                                    // Kiểm tra trong mảng đầu tiên nếu là mảng của bets
+                                                    if (isset($bettingData[0]) && is_array($bettingData[0])) {
+                                                        $digits = $bettingData[0]['meta']['digits'] ?? null;
+                                                    } elseif (isset($bettingData['meta']['digits'])) {
+                                                        $digits = $bettingData['meta']['digits'];
+                                                    }
+                                                }
+                                                
+                                                // Nếu không tìm thấy digits, mặc định là 2
+                                                $digits = $digits ?? 2;
+                                                
+                                                return $typeId . '_bao_lo_' . $digits;
+                                            }
+                                            
+                                            return $typeId;
+                                        });
+                                        
                                         $totalBetAmount = 0;
                                         $totalWinAmount = 0;
                                         $totalXacAmount = 0;
@@ -213,13 +241,38 @@
                                                     </tr>
                                                 </thead>
                                             <tbody class="divide-y divide-gray-200">
-                                                @foreach($ticketsByType as $bettingTypeId => $typeTickets)
+                                                @foreach($ticketsByType as $groupKey => $typeTickets)
                                                     @php
                                                         $bettingType = $typeTickets->first()->bettingType;
                                                         $typeBetAmount = $typeTickets->sum('bet_amount');
-                                                        $typeWinBetAmount = $typeTickets->where('result', 'win')->sum('bet_amount');
+                                                        // Cột "Ăn" hiển thị win_amount (tiền cược * số lô trúng), không phải bet_amount
+                                                        $typeWinAmount = $typeTickets->where('result', 'win')->sum('win_amount');
                                                         $typePayoutAmount = $typeTickets->where('result', 'win')->sum('payout_amount');
                                                         $typeXacAmount = $typeTickets->sum(function($t) { return $t->betting_data['total_cost_xac'] ?? 0; });
+                                                        
+                                                        // Xác định tên hiển thị: nếu là bao lô thì thêm số digits
+                                                        $displayName = $bettingType->name;
+                                                        if ($bettingType && $bettingType->code === 'bao_lo') {
+                                                            // Lấy digits từ group key hoặc từ ticket đầu tiên
+                                                            if (preg_match('/_bao_lo_(\d+)$/', $groupKey, $matches)) {
+                                                                $digits = (int)$matches[1];
+                                                                $displayName = 'Bao lô ' . $digits . ' số';
+                                                            } else {
+                                                                // Fallback: lấy từ betting_data
+                                                                $firstTicket = $typeTickets->first();
+                                                                $bettingData = $firstTicket->betting_data ?? [];
+                                                                $digits = null;
+                                                                if (is_array($bettingData)) {
+                                                                    if (isset($bettingData[0]) && is_array($bettingData[0])) {
+                                                                        $digits = $bettingData[0]['meta']['digits'] ?? 2;
+                                                                    } elseif (isset($bettingData['meta']['digits'])) {
+                                                                        $digits = $bettingData['meta']['digits'];
+                                                                    }
+                                                                }
+                                                                $digits = $digits ?? 2;
+                                                                $displayName = 'Bao lô ' . $digits . ' số';
+                                                            }
+                                                        }
                                                         
                                                         if ($typePayoutAmount > 0) {
                                                             $typeEatThua = $typePayoutAmount - $typeXacAmount;
@@ -230,17 +283,20 @@
                                                         }
                                                         
                                                         $totalBetAmount += $typeBetAmount;
-                                                        $totalWinAmount += $typeWinBetAmount;
+                                                        $totalWinAmount += $typeWinAmount;
                                                         $totalXacAmount += $typeXacAmount;
                                                         $totalEatThua += $typeEatThua;
+                                                        
+                                                        // Tạo unique ID cho toggle
+                                                        $uniqueTypeId = str_replace(['_', '-'], '', $groupKey);
                                                     @endphp
                                                     
                                                     <!-- Betting Type Row -->
                                                     <tr class="hover:bg-blue-50 transition-colors cursor-pointer" 
-                                                        onclick="toggleTypeTickets('{{ $messageId }}-{{ $bettingTypeId }}')">
+                                                        onclick="toggleTypeTickets('{{ $messageId }}-{{ $uniqueTypeId }}')">
                                                         <td class="px-2 py-2">
                                                             <div class="flex items-center gap-1">
-                                                                <span class="text-xs font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{{ $bettingType->name }}</span>
+                                                                <span class="text-xs font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{{ $displayName }}</span>
                                                             </div>
                                                         </td>
                                                         <td class="px-2 py-2 text-right text-xs whitespace-nowrap">
@@ -249,10 +305,10 @@
                                                                 echo $typeBetAmount % 1000 == 0 ? (int)$betAmountInK : number_format($betAmountInK, 1, '.', '');
                                                             @endphp
                                                         </td>
-                                                        <td class="px-2 py-2 text-right text-xs whitespace-nowrap {{ $typeWinBetAmount > 0 ? 'text-green-700 font-semibold' : 'text-gray-500' }}">
+                                                        <td class="px-2 py-2 text-right text-xs whitespace-nowrap {{ $typeWinAmount > 0 ? 'text-green-700 font-semibold' : 'text-gray-500' }}">
                                                             @php
-                                                                $winBetAmountInK = $typeWinBetAmount / 1000;
-                                                                echo $typeWinBetAmount % 1000 == 0 ? (int)$winBetAmountInK : number_format($winBetAmountInK, 1, '.', '');
+                                                                $winAmountInK = $typeWinAmount / 1000;
+                                                                echo $typeWinAmount % 1000 == 0 ? (int)$winAmountInK : number_format($winAmountInK, 1, '.', '');
                                                             @endphp
                                                         </td>
                                                         <td class="px-2 py-2 text-right text-xs text-blue-700 font-semibold whitespace-nowrap">{{ number_format($typeXacAmount / 1000, 0) }}k</td>
@@ -262,7 +318,7 @@
                                                     </tr>
                                                     
                                                     <!-- Tickets List Row - Ẩn mặc định -->
-                                                    <tr id="tickets-{{ $messageId }}-{{ $bettingTypeId }}" class="hidden">
+                                                    <tr id="tickets-{{ $messageId }}-{{ $uniqueTypeId }}" class="hidden">
                                                         <td colspan="5" class="px-0 py-0">
                                                             <div class="bg-gray-50 border-t-2 border-blue-200 px-3 py-2 space-y-2 max-h-80 overflow-y-auto">
                                                                 @foreach($typeTickets as $ticket)
@@ -294,6 +350,14 @@
                             }
                             
                             $profitColor = $ticket->result === 'pending' ? 'text-gray-400' : ($ticketProfit >= 0 ? 'text-green-700' : 'text-red-700');
+                            
+                            // Tính số lần trúng (số lô) cho bao lô
+                            $winCount = null;
+                            if ($ticket->result === 'win' && $ticket->win_amount > 0 && $ticket->bet_amount > 0) {
+                                // win_amount = bet_amount * win_count
+                                // win_count = win_amount / bet_amount
+                                $winCount = round($ticket->win_amount / $ticket->bet_amount, 0);
+                            }
                         @endphp
                                                                     
                                                                     <!-- Individual Ticket Card -->
@@ -322,12 +386,17 @@
                                                                                     <span class="text-gray-600">
                                                                                         Cược: <span class="font-semibold text-gray-900">{{ number_format($ticket->bet_amount / 1000, 1) }}k</span>
                                                                                     </span>
-                                        @if($ticketProfit !== null)
-                                                                                        <span class="font-semibold {{ $profitColor }}">
-                                        {{ $ticketProfit >= 0 ? '+' : '' }}{{ number_format($ticketProfit / 1000, 1) }}k
+                                                                                    @if($winCount !== null && $winCount > 0)
+                                                                                        <span class="text-green-700 font-semibold">
+                                                                                            Trúng {{ $winCount }} lô
                                                                                         </span>
-                                        @endif
-                                    </div>
+                                                                                    @endif
+                                                                                    @if($ticketProfit !== null)
+                                                                                        <span class="font-semibold {{ $profitColor }}">
+                                                                                            {{ $ticketProfit >= 0 ? '+' : '' }}{{ number_format($ticketProfit / 1000, 1) }}k
+                                                                                        </span>
+                                                                                    @endif
+                                                                                </div>
                                                                             </div>
                                                                             
                                                                             <!-- Action Buttons -->

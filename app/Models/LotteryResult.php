@@ -28,6 +28,52 @@ class LotteryResult extends Model
         return (int)($this->tails2_counts[$n2] ?? 0);
     }
 
+    public function countLo3(string $n3): int {
+        $n3 = str_pad(preg_replace('/\D/','',$n3), 3, '0', STR_PAD_LEFT);
+        // Kiểm tra trong tails3_counts nếu có
+        if (isset($this->tails3_counts) && is_array($this->tails3_counts)) {
+            return (int)($this->tails3_counts[$n3] ?? 0);
+        }
+        // Fallback: đếm từ all_numbers
+        return $this->countTailsFromNumbers($n3, 3);
+    }
+
+    public function countLo4(string $n4): int {
+        $n4 = str_pad(preg_replace('/\D/','',$n4), 4, '0', STR_PAD_LEFT);
+        // Đếm từ all_numbers vì không có tails4_counts
+        return $this->countTailsFromNumbers($n4, 4);
+    }
+
+    /**
+     * Đếm số lần xuất hiện của n số cuối trong all_numbers
+     * 
+     * Ví dụ: 
+     * - digits = 2, target = "23": đếm số có 2 số cuối là "23" (123, 023, 923, ...)
+     * - digits = 3, target = "345": đếm số có 3 số cuối là "345" (12345, 00345, ...)
+     * - digits = 4, target = "1234": đếm số có 4 số cuối là "1234" (51234, 001234, ...)
+     */
+    protected function countTailsFromNumbers(string $target, int $digits): int {
+        $target = str_pad(preg_replace('/\D/','',$target), $digits, '0', STR_PAD_LEFT);
+        $allNumbers = $this->all_numbers ?? [];
+        $count = 0;
+        
+        foreach ($allNumbers as $number) {
+            // Chuyển số thành string và lấy n số cuối
+            $numStr = (string)$number;
+            // Nếu số có ít hơn digits chữ số, pad với 0 ở đầu
+            if (strlen($numStr) < $digits) {
+                $numStr = str_pad($numStr, $digits, '0', STR_PAD_LEFT);
+            }
+            // Lấy n số cuối
+            $tail = substr($numStr, -$digits);
+            if ($tail === $target) {
+                $count++;
+            }
+        }
+        
+        return $count;
+    }
+
     public function matchDau(string $n2): bool {
         $n2 = str_pad(preg_replace('/\D/','',$n2), 2, '0', STR_PAD_LEFT);
         return $this->db_first2 === $n2;
