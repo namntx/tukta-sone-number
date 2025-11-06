@@ -44,7 +44,59 @@
                             <label for="original_message" class="block text-sm font-medium text-gray-700 mb-1">
                                 <i class="fas fa-comment mr-1"></i>Tin nhắn cược
                             </label>
-                            <textarea name="original_message" id="original_message" rows="4" placeholder="Ví dụ: lo 12 34 56 100000 mb&#10;bao 01 02 03 50000 2d&#10;da 12 34 200000 hcm" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required></textarea>
+                            
+                            <!-- Syntax Guide -->
+                            <div class="mb-2 space-y-2">
+                                <!-- Rule 1: Station before bet -->
+                                <div class="p-2.5 bg-blue-50 border border-blue-200 rounded-md">
+                                    <div class="flex items-start gap-2">
+                                        <svg class="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-xs font-semibold text-blue-900 mb-1.5">1️⃣ Tỉnh đài phải nằm trước phiếu</p>
+                                            <div class="text-xs text-blue-800 space-y-1">
+                                                <div class="flex items-start gap-1.5">
+                                                    <span class="text-red-600 font-medium">❌</span>
+                                                    <code class="flex-1 bg-white px-2 py-1 rounded text-red-600 font-mono text-xs break-all">22,29 đax 1.4n vt và bt</code>
+                                                </div>
+                                                <div class="flex items-start gap-1.5 mt-1">
+                                                    <span class="text-green-600 font-medium">✅</span>
+                                                    <code class="flex-1 bg-white px-2 py-1 rounded text-green-600 font-mono text-xs">vt bt 22,29 đax 1.4n</code>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Rule 2: Multiple stations without "và" or "+" -->
+                                <div class="p-2.5 bg-blue-50 border border-blue-200 rounded-md">
+                                    <div class="flex items-start gap-2">
+                                        <svg class="w-4 h-4 text-blue-900 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-xs font-semibold text-blue-900 mb-1.5">2️⃣ Nhiều đài: chỉ nhập mã đài, không cần "và" hay dấu "+"</p>
+                                            <div class="text-xs text-amber-800 space-y-1">
+                                                <div class="flex items-start gap-1.5">
+                                                    <span class="text-red-600 font-medium">❌</span>
+                                                    <code class="flex-1 bg-white px-2 py-1 rounded text-red-600 font-mono text-xs break-all">vt và bl 22,29 đax 1.4n</code>
+                                                </div>
+                                                <div class="flex items-start gap-1.5">
+                                                    <span class="text-red-600 font-medium">❌</span>
+                                                    <code class="flex-1 bg-white px-2 py-1 rounded text-red-600 font-mono text-xs break-all">vt + bl 22,29 đax 1.4n</code>
+                                                </div>
+                                                <div class="flex items-start gap-1.5 mt-1">
+                                                    <span class="text-green-600 font-medium">✅</span>
+                                                    <code class="flex-1 bg-white px-2 py-1 rounded text-green-600 font-mono text-xs">vt bl 22,29 đax 1.4n</code>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <textarea name="original_message" id="original_message" rows="4" placeholder="Ví dụ: vt bt 22,29 đax 1.4n&#10;vt bl 79,29 đáx 0.7n&#10;hcm 12 34 56 lo 100000" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" required></textarea>
                         </div>
                         
                         <div class="flex space-x-3">
