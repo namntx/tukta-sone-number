@@ -167,7 +167,7 @@
                                         <!-- Message Content -->
                                         <div class="flex-1 min-w-0">
                                             <div class="text-xs sm:text-sm font-medium text-gray-900 break-words">
-                                                {{ Str::limit($originalMessage, 60) }}
+                                                {{ Str::limit($originalMessage, 100) }}
                                             </div>
                                             <div class="text-xs text-gray-500 mt-0.5">
                                                 {{ $messageCount }} phiếu
