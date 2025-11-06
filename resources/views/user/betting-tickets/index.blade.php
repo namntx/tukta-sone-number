@@ -77,9 +77,9 @@
                 @php
                     $customer = $customerTickets->first()->customer;
                     // Tính tổng tiền xác customer trả và tổng tiền customer thắng
-                    $customerXac = 0; // Tổng tiền xác customer trả
-                    $customerThang = 0; // Tổng tiền customer thắng
-                    $pendingCount = 0; // Số phiếu chưa tính tiền
+                    $customerXac = 0;
+                    $customerThang = 0;
+                    $pendingCount = 0;
                     foreach ($customerTickets as $t) {
                         $customerXac += $t->betting_data['total_cost_xac'] ?? 0;
                         if ($t->result === 'win') {
@@ -89,235 +89,300 @@
                             $pendingCount++;
                         }
                     }
-                    // Profit của Customer = Thắng - Xác
                     $customerProfit = $customerThang - $customerXac;
                 @endphp
-                <div class="mb-3">
-                    <!-- Customer Header -->
+                
+                <!-- Customer Card -->
+                <div class="mb-3 bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <!-- Customer Header - Click để mở/đóng -->
                     <button type="button" onclick="toggleCustomer('{{ $customerId }}')" 
-                            class="w-full grid grid-cols-12 gap-2 items-center px-3 py-2 bg-gray-100 rounded-lg border border-gray-200 hover:bg-gray-200 transition">
-                        <!-- Icon + Tên -->
-                        <div class="col-span-4 flex items-center gap-2 min-w-0">
-                            <svg id="icon-{{ $customerId }}" class="w-4 h-4 text-gray-600 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="w-full px-4 py-2.5 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between gap-3 border-b border-gray-100">
+                        <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                            <!-- Arrow Icon -->
+                            <svg id="icon-{{ $customerId }}" class="w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
-                            <span class="text-xs font-semibold text-gray-900 truncate">{{ $customer->name }}</span>
+                            
+                            <!-- Customer Name và Thông tin -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2.5 flex-wrap">
+                                    <h3 class="text-sm font-semibold text-gray-900">{{ $customer->name }}</h3>
+                                    <span class="text-xs text-gray-500">•</span>
+                                    <!-- <span class="text-xs text-gray-600">{{ $customerTickets->count() }} phiếu</span> -->
+                                    @if($pendingCount > 0)
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200">
+                                            ⚠️ {{ $pendingCount }} chưa tính
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-green-700 bg-green-50 border border-green-200">
+                                            ✓ Đã tính xong
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                         
-                        <!-- Status + Số phiếu -->
-                        <div class="col-span-3 flex flex-col gap-1 items-center">
-                            @if($pendingCount > 0)
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 whitespace-nowrap">
-                                {{ $pendingCount }} chưa tính
-                            </span>
-                            @else
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
-                                ✓ Tính xong
-                            </span>
-                            @endif
-                            <span class="text-xs text-gray-500 whitespace-nowrap">({{ $customerTickets->count() }} phiếu)</span>
-                        </div>
-                        
-                        <!-- Thông tin tài chính -->
-                        <div class="col-span-5 flex flex-col items-end gap-0.5">
-                            <div class="flex items-center gap-2 w-full justify-end">
-                                <span class="text-[10px] text-gray-500">Xác:</span>
-                                <span class="text-xs font-semibold text-blue-600 whitespace-nowrap">{{ number_format($customerXac) }}</span>
+                        <!-- Financial Summary - Compact -->
+                        <div class="flex items-center gap-3 flex-shrink-0">
+                            <div class="text-right">
+                                <div class="text-xs text-gray-500">Xác</div>
+                                <div class="text-xs font-semibold text-gray-700">{{ number_format($customerXac / 1000, 0) }}k</div>
                             </div>
-                            <div class="flex items-center gap-2 w-full justify-end">
-                                <span class="text-[10px] text-gray-500">Thắng:</span>
-                                <span class="text-xs font-semibold text-green-600 whitespace-nowrap">{{ number_format($customerThang) }}</span>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-500">Thắng</div>
+                                <div class="text-xs font-semibold text-green-600">{{ number_format($customerThang / 1000, 0) }}k</div>
                             </div>
-                            <div class="flex items-center gap-2 w-full justify-end pt-0.5 mt-0.5">
-                                <span class="text-[10px] {{ $customerProfit >= 0 ? 'text-green-600' : 'text-red-600' }}">Lời:</span>
-                                <span class="text-xs font-bold {{ $customerProfit >= 0 ? 'text-green-600' : 'text-red-600' }} whitespace-nowrap">
-                                    {{ $customerProfit >= 0 ? '+' : '' }}{{ number_format($customerProfit) }}
-                                </span>
+                            <div class="text-right border-l border-gray-200 pl-3">
+                                <div class="text-xs text-gray-500">Lời/Lỗ</div>
+                                <div class="text-xs font-bold {{ $customerProfit >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                    {{ $customerProfit >= 0 ? '+' : '' }}{{ number_format($customerProfit / 1000, 0) }}k
+                                </div>
                             </div>
                         </div>
                     </button>
                     
-                    <!-- Customer Tickets Summary by Betting Type -->
-                    <div id="customer-{{ $customerId }}" class="hidden mt-2">
+                    <!-- Messages List - Ẩn mặc định -->
+                    <div id="customer-{{ $customerId }}" class="hidden" style="display: none;">
                         @php
-                            // Group tickets by betting type
-                            $ticketsByType = $customerTickets->groupBy('betting_type_id');
-                            $totalBetAmount = 0;
-                            $totalWinAmount = 0;
-                            $totalXacAmount = 0;
-                            $totalEatThua = 0;
+                            $ticketsByMessage = $customerTickets->groupBy('original_message');
                         @endphp
-                        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                            <table class="w-full text-xs">
-                                <thead class="bg-gray-50 border-b border-gray-200">
-                                    <tr>
-                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Loại cược</th>
-                                        <th class="px-3 py-2 text-right font-semibold text-gray-700">Cược</th>
-                                        <th class="px-3 py-2 text-right font-semibold text-gray-700">Ăn</th>
-                                        <th class="px-3 py-2 text-right font-semibold text-gray-700">Xác</th>
-                                        <th class="px-3 py-2 text-right font-semibold text-gray-700">Tổng</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                    @foreach($ticketsByType as $bettingTypeId => $typeTickets)
-                                        @php
-                                            $bettingType = $typeTickets->first()->bettingType;
-                                            $typeBetAmount = $typeTickets->sum('bet_amount');
-                                            // Tiền cược ăn = tổng bet_amount của các phiếu thắng
-                                            $typeWinBetAmount = $typeTickets->where('result', 'win')->sum('bet_amount');
-                                            // Tổng payout_amount của các phiếu thắng (dùng cho Tổng ăn thua)
-                                            $typePayoutAmount = $typeTickets->where('result', 'win')->sum('payout_amount');
-                                            $typeXacAmount = $typeTickets->sum(function($t) { return $t->betting_data['total_cost_xac'] ?? 0; });
-                                            
-                                            // Tổng ăn thua: nếu có payout_amount thì show payout_amount - tiền xác, nếu không thì show -tiền xác (âm)
-                                            if ($typePayoutAmount > 0) {
-                                                $typeEatThua = $typePayoutAmount - $typeXacAmount; // payout_amount - tiền xác
-                                                $typeEatThuaColor = $typeEatThua >= 0 ? 'text-green-600' : 'text-red-600';
-                                            } else {
-                                                $typeEatThua = -$typeXacAmount; // Âm, màu đỏ
-                                                $typeEatThuaColor = 'text-red-600';
-                                            }
-                                            
-                                            $totalBetAmount += $typeBetAmount;
-                                            $totalWinAmount += $typeWinBetAmount;
-                                            $totalXacAmount += $typeXacAmount;
-                                            $totalEatThua += $typeEatThua; // Tổng hợp các giá trị "Tổng ăn thua"
-                                        @endphp
-                                        <tr class="hover:bg-gray-50 transition cursor-pointer" onclick="toggleTypeTickets('{{ $customerId }}-{{ $bettingTypeId }}')">
-                                            <td class="px-3 py-2 font-medium text-gray-900">
-                                                <div class="flex items-center gap-2">
-                                                    <svg id="icon-{{ $customerId }}-{{ $bettingTypeId }}" class="w-3 h-3 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                                    </svg>
-                                                    {{ $bettingType->name }}
-                                                </div>
-                                            </td>
-                                            <td class="px-3 py-2 text-right text-gray-700">
-                                                @php
-                                                    $betAmountInK = $typeBetAmount / 1000;
-                                                    echo $typeBetAmount % 1000 == 0 ? (int)$betAmountInK : number_format($betAmountInK, 1, '.', '');
-                                                @endphp
-                                            </td>
-                                            <td class="px-3 py-2 text-right {{ $typeWinBetAmount > 0 ? 'text-green-600' : 'text-gray-500' }}">
-                                                @php
-                                                    $winBetAmountInK = $typeWinBetAmount / 1000;
-                                                    echo $typeWinBetAmount % 1000 == 0 ? (int)$winBetAmountInK : number_format($winBetAmountInK, 1, '.', '');
-                                                @endphp
-                                            </td>
-                                            <td class="px-3 py-2 text-right text-blue-600">{{ number_format($typeXacAmount) }}</td>
-                                            <td class="px-3 py-2 text-right font-semibold {{ $typeEatThuaColor }}">
-                                                {{ $typeEatThua >= 0 ? '+' : '' }}{{ number_format($typeEatThua) }}
-                                            </td>
-                                        </tr>
-                                        <!-- Danh sách phiếu cược của loại này -->
-                                        <tr id="tickets-{{ $customerId }}-{{ $bettingTypeId }}" class="hidden">
-                                            <td colspan="5" class="px-0 py-0">
-                                                <div class="bg-gray-50 border-t border-gray-200 px-3 py-2 space-y-1 max-h-64 overflow-y-auto">
-                                                    @foreach($typeTickets as $ticket)
+                        
+                        @foreach($ticketsByMessage as $originalMessage => $messageTickets)
+                            @php
+                                $messageId = md5($customerId . '_' . $originalMessage);
+                                $messageCount = $messageTickets->count();
+                            @endphp
+                            
+                            <!-- Message Card -->
+                            <div class="border-b border-gray-200 last:border-b-0">
+                                <!-- Message Header -->
+                                <div class="w-full px-3 sm:px-4 py-2.5 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between gap-2">
+                                    <button type="button" onclick="toggleMessage('{{ $messageId }}')" 
+                                            class="flex items-center gap-2.5 flex-1 min-w-0 text-left">
+                                        <!-- Arrow Icon -->
+                                        <svg id="icon-msg-{{ $messageId }}" class="w-4 h-4 text-gray-500 transition-transform duration-200 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                        
+                                        <!-- Message Content -->
+                                        <div class="flex-1 min-w-0">
+                                            <div class="text-xs sm:text-sm font-medium text-gray-900 break-words">
+                                                {{ Str::limit($originalMessage, 60) }}
+                                            </div>
+                                            <div class="text-xs text-gray-500 mt-0.5">
+                                                {{ $messageCount }} phiếu
+                                            </div>
+                                        </div>
+                                    </button>
+                                    
+                                    <!-- Delete Button -->
+                                    <form method="POST" 
+                                          action="{{ route('user.betting-tickets.destroy-by-message', $messageTickets->first()) }}" 
+                                          onsubmit="return confirm('⚠️ Bạn có chắc muốn xóa TẤT CẢ {{ $messageCount }} phiếu cược này?\n\nHành động này KHÔNG THỂ hoàn tác!')"
+                                          class="flex-shrink-0"
+                                          onclick="event.stopPropagation();">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" 
+                                                class="px-2 py-1.5 text-xs font-medium text-red-600 bg-red-300 rounded-md hover:bg-red-100 hover:text-red-700 transition-colors border border-red-200">
+                                            Xoá
+                                        </button>
+                                    </form>
+                                </div>
+                                
+                                <!-- Statistics Table - Ẩn mặc định -->
+                                <div id="message-{{ $messageId }}" class="hidden bg-gray-50 border-t border-gray-200">
+                                    @php
+                                        $ticketsByType = $messageTickets->groupBy('betting_type_id');
+                                        $totalBetAmount = 0;
+                                        $totalWinAmount = 0;
+                                        $totalXacAmount = 0;
+                                        $totalEatThua = 0;
+                                    @endphp
+                                    
+                                    <div class="px-2 sm:px-4 py-3 overflow-x-auto">
+                                        <table class="w-full bg-white rounded-lg border border-gray-200 shadow-sm min-w-[500px]">
+                                            <thead class="bg-gray-100">
+                                                <tr>
+                                                    <th class="px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-bold text-gray-700 border-b border-gray-200">Loại cược</th>
+                                                    <th class="px-2 sm:px-4 py-3 text-right text-xs sm:text-sm font-bold text-gray-700 border-b border-gray-200">Cược</th>
+                                                    <th class="px-2 sm:px-4 py-3 text-right text-xs sm:text-sm font-bold text-gray-700 border-b border-gray-200">Ăn</th>
+                                                    <th class="px-2 sm:px-4 py-3 text-right text-xs sm:text-sm font-bold text-gray-700 border-b border-gray-200">Xác</th>
+                                                    <th class="px-2 sm:px-4 py-3 text-right text-xs sm:text-sm font-bold text-gray-700 border-b border-gray-200">Ăn/Thua</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-200">
+                                                @foreach($ticketsByType as $bettingTypeId => $typeTickets)
+                                                    @php
+                                                        $bettingType = $typeTickets->first()->bettingType;
+                                                        $typeBetAmount = $typeTickets->sum('bet_amount');
+                                                        $typeWinBetAmount = $typeTickets->where('result', 'win')->sum('bet_amount');
+                                                        $typePayoutAmount = $typeTickets->where('result', 'win')->sum('payout_amount');
+                                                        $typeXacAmount = $typeTickets->sum(function($t) { return $t->betting_data['total_cost_xac'] ?? 0; });
+                                                        
+                                                        if ($typePayoutAmount > 0) {
+                                                            $typeEatThua = $typePayoutAmount - $typeXacAmount;
+                                                            $typeEatThuaColor = $typeEatThua >= 0 ? 'text-green-700' : 'text-red-700';
+                                                        } else {
+                                                            $typeEatThua = -$typeXacAmount;
+                                                            $typeEatThuaColor = 'text-red-700';
+                                                        }
+                                                        
+                                                        $totalBetAmount += $typeBetAmount;
+                                                        $totalWinAmount += $typeWinBetAmount;
+                                                        $totalXacAmount += $typeXacAmount;
+                                                        $totalEatThua += $typeEatThua;
+                                                    @endphp
+                                                    
+                                                    <!-- Betting Type Row -->
+                                                    <tr class="hover:bg-blue-50 transition-colors cursor-pointer" 
+                                                        onclick="toggleTypeTickets('{{ $messageId }}-{{ $bettingTypeId }}')">
+                                                        <td class="px-2 sm:px-4 py-3">
+                                                            <div class="flex items-center gap-2">
+                                                                <svg id="icon-type-{{ $messageId }}-{{ $bettingTypeId }}" class="w-4 h-4 text-gray-400 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                                </svg>
+                                                                <span class="text-xs sm:text-sm font-semibold text-gray-900">{{ $bettingType->name }}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td class="px-2 sm:px-4 py-3 text-right text-xs sm:text-sm">
+                                                            @php
+                                                                $betAmountInK = $typeBetAmount / 1000;
+                                                                echo $typeBetAmount % 1000 == 0 ? (int)$betAmountInK : number_format($betAmountInK, 1, '.', '');
+                                                            @endphp
+                                                        </td>
+                                                        <td class="px-2 sm:px-4 py-3 text-right text-xs sm:text-sm {{ $typeWinBetAmount > 0 ? 'text-green-700 font-semibold' : 'text-gray-500' }}">
+                                                            @php
+                                                                $winBetAmountInK = $typeWinBetAmount / 1000;
+                                                                echo $typeWinBetAmount % 1000 == 0 ? (int)$winBetAmountInK : number_format($winBetAmountInK, 1, '.', '');
+                                                            @endphp
+                                                        </td>
+                                                        <td class="px-2 sm:px-4 py-3 text-right text-xs sm:text-sm text-blue-700 font-semibold">{{ number_format($typeXacAmount) }}</td>
+                                                        <td class="px-2 sm:px-4 py-3 text-right text-xs sm:text-sm font-bold {{ $typeEatThuaColor }}">
+                                                            {{ $typeEatThua >= 0 ? '+' : '' }}{{ number_format($typeEatThua) }}
+                                                        </td>
+                                                    </tr>
+                                                    
+                                                    <!-- Tickets List Row - Ẩn mặc định -->
+                                                    <tr id="tickets-{{ $messageId }}-{{ $bettingTypeId }}" class="hidden">
+                                                        <td colspan="5" class="px-0 py-0">
+                                                            <div class="bg-gray-50 border-t-2 border-blue-200 px-3 py-2 space-y-2 max-h-80 overflow-y-auto">
+                                                                @foreach($typeTickets as $ticket)
+                        @php
+                            $bettingData = $ticket->betting_data ?? [];
+                            $displayNumbers = [];
+                            
+                            if (is_array($bettingData) && isset($bettingData[0]) && is_array($bettingData[0]) && isset($bettingData[0]['numbers'])) {
+                                foreach ($bettingData as $bet) {
+                                    $numbers = is_array($bet['numbers'] ?? []) ? $bet['numbers'] : [];
+                                    if (!empty($numbers)) {
+                                        $displayNumbers = array_merge($displayNumbers, $numbers);
+                                    }
+                                }
+                                                                        } elseif (isset($bettingData['numbers'])) {
+                                $numbers = is_array($bettingData['numbers']) ? $bettingData['numbers'] : [];
+                                if (!empty($numbers)) {
+                                    $displayNumbers = $numbers;
+                                }
+                            }
+                            
+                            if ($ticket->result === 'win') {
+                                $ticketProfit = $ticket->payout_amount;
+                            } elseif ($ticket->result === 'lose') {
+                                $costXac = $ticket->betting_data['total_cost_xac'] ?? 0;
+                                $ticketProfit = -$costXac;
+                            } else {
+                                $ticketProfit = null;
+                            }
+                            
+                            $profitColor = $ticket->result === 'pending' ? 'text-gray-400' : ($ticketProfit >= 0 ? 'text-green-700' : 'text-red-700');
+                        @endphp
+                                                                    
+                                                                    <!-- Individual Ticket Card -->
+                                                                    <div class="bg-white border border-gray-200 rounded-md p-2.5 hover:shadow-sm transition-shadow">
+                                                                        <div class="flex items-start justify-between gap-2.5">
+                                                                            <!-- Ticket Info -->
+                                <div class="flex-1 min-w-0">
+                                                                                <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold {{ $ticket->result === 'win' ? 'bg-green-100 text-green-700' : ($ticket->result === 'lose' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600') }}">
+                                                                                        @if($ticket->result === 'win') ✓
+                                                                                        @elseif($ticket->result === 'lose') ✗
+                                                                                        @else ⏳
+                                                                                        @endif
+                                        </span>
+                                                                                    <span class="text-xs font-medium text-gray-900">{{ Str::limit($ticket->station, 20) }}</span>
+                                                                                    <span class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($ticket->created_at)->format('H:i') }}</span>
+                                    </div>
+                                                                                
+                                    @if(!empty($displayNumbers))
+                                                                                <div class="text-xs font-medium {{ $ticket->result === 'win' ? 'text-green-700' : ($ticket->result === 'lose' ? 'text-red-700' : 'text-gray-600') }} mb-1.5">
+                                                                                    {{ Str::limit(implode(' ', array_unique($displayNumbers)), 40) }}
+                                    </div>
+                                    @endif
+                                                                                
+                                                                                <div class="flex items-center gap-2.5 text-xs flex-wrap">
+                                                                                    <span class="text-gray-600">
+                                                                                        Cược: <span class="font-semibold text-gray-900">{{ number_format($ticket->bet_amount / 1000, 1) }}k</span>
+                                                                                    </span>
+                                        @if($ticketProfit !== null)
+                                                                                        <span class="font-semibold {{ $profitColor }}">
+                                        {{ $ticketProfit >= 0 ? '+' : '' }}{{ number_format($ticketProfit / 1000, 1) }}k
+                                                                                        </span>
+                                        @endif
+                                    </div>
+                                                                            </div>
+                                                                            
+                                                                            <!-- Action Buttons -->
+                                                                            <div class="flex items-center gap-1.5 flex-shrink-0">
+                                                                                <a href="{{ route('user.betting-tickets.edit', $ticket) }}" 
+                                                                                   class="px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 rounded-md hover:bg-indigo-100 transition-colors border border-indigo-200">
+                                                                                    ✏️
+                                                                                </a>
+                                                                                <form method="POST" action="{{ route('user.betting-tickets.destroy', $ticket) }}" 
+                                                                                      onsubmit="return confirm('⚠️ Bạn có chắc muốn xóa phiếu cược này?')" 
+                                                                                      class="inline">
+                                                                                    @csrf
+                                                                                    @method('DELETE')
+                                                                                    <button type="submit" 
+                                                                                            class="px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-colors border border-red-200">
+                                                                                        🗑️
+                                                                                    </button>
+                                                                                </form>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                            <tfoot class="bg-gray-200 border-t-2 border-gray-300">
+                                                <tr>
+                                                    <td class="px-2 sm:px-4 py-2 font-semibold text-xs sm:text-sm text-gray-900">📊 Tổng:</td>
+                                                    <td class="px-2 sm:px-4 py-2 text-right font-semibold text-xs sm:text-sm text-gray-900">
                                                         @php
-                                                            $bettingData = $ticket->betting_data ?? [];
-                                                            $displayNumbers = [];
-                                                            
-                                                            // Handle new format: array of bets
-                                                            if (is_array($bettingData) && isset($bettingData[0]) && is_array($bettingData[0]) && isset($bettingData[0]['numbers'])) {
-                                                                foreach ($bettingData as $bet) {
-                                                                    $numbers = is_array($bet['numbers'] ?? []) ? $bet['numbers'] : [];
-                                                                    if (!empty($numbers)) {
-                                                                        $displayNumbers = array_merge($displayNumbers, $numbers);
-                                                                    }
-                                                                }
-                                                            }
-                                                            // Handle legacy format: single bet
-                                                            elseif (isset($bettingData['numbers'])) {
-                                                                $numbers = is_array($bettingData['numbers']) ? $bettingData['numbers'] : [];
-                                                                if (!empty($numbers)) {
-                                                                    $displayNumbers = $numbers;
-                                                                }
-                                                            }
-                                                            
-                                                            // Calculate profit
-                                                            if ($ticket->result === 'win') {
-                                                                $ticketProfit = $ticket->payout_amount;
-                                                            } elseif ($ticket->result === 'lose') {
-                                                                $costXac = $ticket->betting_data['total_cost_xac'] ?? 0;
-                                                                $ticketProfit = -$costXac;
-                                                            } else {
-                                                                $ticketProfit = null;
-                                                            }
-                                                            
-                                                            $profitColor = $ticket->result === 'pending' ? 'text-gray-400' : ($ticketProfit >= 0 ? 'text-green-700' : 'text-red-700');
+                                                            $totalBetAmountInK = $totalBetAmount / 1000;
+                                                            echo $totalBetAmount % 1000 == 0 ? (int)$totalBetAmountInK : number_format($totalBetAmountInK, 1, '.', '');
                                                         @endphp
-                                                        <div class="flex items-center justify-between gap-2 px-2 py-1.5 bg-white border border-gray-200 rounded hover:bg-gray-50 transition">
-                                                            <div class="flex-1 min-w-0">
-                                                                <div class="flex items-center gap-2 mb-0.5">
-                                                                    <span class="text-xs font-semibold {{ $ticket->result === 'win' ? 'text-green-900' : ($ticket->result === 'lose' ? 'text-red-900' : 'text-gray-900') }}">
-                                                                        {{ Str::limit($ticket->station, 20) }}
-                                                                    </span>
-                                                                    <span class="text-[10px] text-gray-500">·</span>
-                                                                    <span class="text-[10px] text-gray-600">{{ \Carbon\Carbon::parse($ticket->created_at)->format('H:i') }}</span>
-                                                                </div>
-                                                                @if(!empty($displayNumbers))
-                                                                <div class="text-xs font-semibold {{ $ticket->result === 'win' ? 'text-green-700' : ($ticket->result === 'lose' ? 'text-red-700' : 'text-gray-600') }} truncate">
-                                                                    {{ Str::limit(implode(' ', array_unique($displayNumbers)), 30) }}
-                                                                </div>
-                                                                @endif
-                                                                <div class="text-[10px] text-gray-500 mt-0.5">
-                                                                    Cược {{ number_format($ticket->bet_amount / 1000, 1) }}k
-                                                                    @if($ticketProfit !== null)
-                                                                        · <span class="{{ $profitColor }}">
-                                                                            {{ $ticketProfit >= 0 ? '+' : '' }}{{ number_format($ticketProfit / 1000, 1) }}k
-                                                                        </span>
-                                                                    @endif
-                                                                </div>
-                                                            </div>
-                                                            <div class="flex items-center gap-1 flex-shrink-0">
-                                                                <a href="{{ route('user.betting-tickets.edit', $ticket) }}" 
-                                                                   class="inline-flex items-center justify-center px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 rounded hover:bg-indigo-100 transition">
-                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                                                    </svg>
-                                                                </a>
-                                                                <form method="POST" action="{{ route('user.betting-tickets.destroy', $ticket) }}" 
-                                                                      onsubmit="return confirm('Bạn có chắc chắn muốn xóa phiếu cược này?')" class="inline">
-                                                                    @csrf
-                                                                    @method('DELETE')
-                                                                    <button type="submit" class="inline-flex items-center justify-center px-2 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100 transition">
-                                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                                                        </svg>
-                                                                    </button>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                                <tfoot class="bg-gray-100 border-t-2 border-gray-300">
-                                    <tr>
-                                        <td class="px-3 py-2 font-bold text-gray-900">Tổng cộng:</td>
-                                        <td class="px-3 py-2 text-right font-bold text-gray-900">
-                                            @php
-                                                $totalBetAmountInK = $totalBetAmount / 1000;
-                                                echo $totalBetAmount % 1000 == 0 ? (int)$totalBetAmountInK : number_format($totalBetAmountInK, 1, '.', '');
-                                            @endphp
-                                        </td>
-                                        <td class="px-3 py-2 text-right font-bold {{ $totalWinAmount > 0 ? 'text-green-700' : 'text-gray-900' }}">
-                                            @php
-                                                $totalWinAmountInK = $totalWinAmount / 1000;
-                                                echo $totalWinAmount % 1000 == 0 ? (int)$totalWinAmountInK : number_format($totalWinAmountInK, 1, '.', '');
-                                            @endphp
-                                        </td>
-                                        <td class="px-3 py-2 text-right font-bold text-blue-700">{{ number_format($totalXacAmount) }}</td>
-                                        <td class="px-3 py-2 text-right font-bold {{ $totalEatThua >= 0 ? 'text-green-700' : 'text-red-700' }}">
-                                            {{ $totalEatThua >= 0 ? '+' : '' }}{{ number_format($totalEatThua) }}
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                                                    </td>
+                                                    <td class="px-2 sm:px-4 py-2 text-right font-semibold text-xs sm:text-sm {{ $totalWinAmount > 0 ? 'text-green-700' : 'text-gray-900' }}">
+                                                        @php
+                                                            $totalWinAmountInK = $totalWinAmount / 1000;
+                                                            echo $totalWinAmount % 1000 == 0 ? (int)$totalWinAmountInK : number_format($totalWinAmountInK, 1, '.', '');
+                                                        @endphp
+                                                    </td>
+                                                    <td class="px-2 sm:px-4 py-2 text-right font-semibold text-xs sm:text-sm text-blue-700">{{ number_format($totalXacAmount) }}</td>
+                                                    <td class="px-2 sm:px-4 py-2 text-right font-semibold text-xs sm:text-sm {{ $totalEatThua >= 0 ? 'text-green-700' : 'text-red-700' }}">
+                                                        {{ $totalEatThua >= 0 ? '+' : '' }}{{ number_format($totalEatThua) }}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             @endforeach
@@ -490,12 +555,42 @@ document.addEventListener('DOMContentLoaded', function() {
         const customerDiv = document.getElementById('customer-' + customerId);
         const icon = document.getElementById('icon-' + customerId);
         
-        if (customerDiv) {
-            if (customerDiv.classList.contains('hidden')) {
+        if (!customerDiv) {
+            console.error('Cannot find customer div:', 'customer-' + customerId);
+            return;
+        }
+        
+        // Kiểm tra trạng thái hiện tại
+        const isHidden = customerDiv.style.display === 'none' || 
+                        customerDiv.classList.contains('hidden') ||
+                        window.getComputedStyle(customerDiv).display === 'none';
+        
+        if (isHidden) {
+            // Hiện: xóa cả class và style
                 customerDiv.classList.remove('hidden');
+            customerDiv.style.display = 'block';
+            if (icon) icon.style.transform = 'rotate(180deg)';
+        } else {
+            // Ẩn: thêm cả class và style
+            customerDiv.classList.add('hidden');
+            customerDiv.style.display = 'none';
+            if (icon) icon.style.transform = 'rotate(0deg)';
+        }
+    };
+    
+    // Toggle message tickets
+    window.toggleMessage = function(messageId) {
+        const messageDiv = document.getElementById('message-' + messageId);
+        const icon = document.getElementById('icon-msg-' + messageId);
+        
+        if (messageDiv) {
+            const isHidden = messageDiv.classList.contains('hidden');
+            
+            if (isHidden) {
+                messageDiv.classList.remove('hidden');
                 if (icon) icon.style.transform = 'rotate(180deg)';
             } else {
-                customerDiv.classList.add('hidden');
+                messageDiv.classList.add('hidden');
                 if (icon) icon.style.transform = 'rotate(0deg)';
             }
         }
@@ -504,16 +599,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle type tickets list
     window.toggleTypeTickets = function(typeId) {
         const ticketsRow = document.getElementById('tickets-' + typeId);
-        const icon = document.getElementById('icon-' + typeId);
+        const icon = document.getElementById('icon-type-' + typeId);
         
-        if (ticketsRow) {
-            if (ticketsRow.classList.contains('hidden')) {
-                ticketsRow.classList.remove('hidden');
-                if (icon) icon.style.transform = 'rotate(180deg)';
-            } else {
-                ticketsRow.classList.add('hidden');
-                if (icon) icon.style.transform = 'rotate(0deg)';
-            }
+        if (!ticketsRow) {
+            console.error('Cannot find tickets row:', 'tickets-' + typeId);
+            return;
+        }
+        
+        if (!icon) {
+            console.error('Cannot find icon:', 'icon-type-' + typeId);
+        }
+        
+        const isHidden = ticketsRow.classList.contains('hidden');
+        
+        if (isHidden) {
+            ticketsRow.classList.remove('hidden');
+            if (icon) icon.style.transform = 'rotate(180deg)';
+        } else {
+            ticketsRow.classList.add('hidden');
+            if (icon) icon.style.transform = 'rotate(0deg)';
         }
     };
 });

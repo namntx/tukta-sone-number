@@ -97,6 +97,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/betting-tickets/settle-batch', [UserBettingTicketController::class, 'settleBatch'])->name('betting-tickets.settle-batch');
         Route::post('/betting-tickets/settle-by-global', [UserBettingTicketController::class, 'settleByGlobalFilters'])->name('betting-tickets.settle-by-global');
         Route::post('/betting-tickets/{bettingTicket}/settle', [UserBettingTicketController::class, 'settle'])->name('betting-tickets.settle');
+        Route::delete('/betting-tickets/{bettingTicket}/delete-by-message', [UserBettingTicketController::class, 'destroyByMessage'])->name('betting-tickets.destroy-by-message');
         Route::resource('betting-tickets', UserBettingTicketController::class);
     });
     

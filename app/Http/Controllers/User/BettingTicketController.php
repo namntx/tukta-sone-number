@@ -426,6 +426,53 @@ class BettingTicketController extends Controller
     }
 
     /**
+     * Delete all betting tickets with the same original_message
+     */
+    public function destroyByMessage(BettingTicket $bettingTicket)
+    {
+        $this->authorize('delete', $bettingTicket);
+
+        $originalMessage = $bettingTicket->original_message;
+        
+        // Find all tickets with the same original_message belonging to the same user
+        $ticketsToDelete = Auth::user()->bettingTickets()
+            ->where('original_message', $originalMessage)
+            ->get();
+
+        if ($ticketsToDelete->isEmpty()) {
+            return redirect()->route('user.betting-tickets.index')
+                ->with('error', 'Không tìm thấy phiếu cược nào để xóa.');
+        }
+
+        $count = $ticketsToDelete->count();
+
+        DB::beginTransaction();
+        try {
+            // Reverse customer statistics for all tickets that have results
+            foreach ($ticketsToDelete as $ticket) {
+                if ($ticket->result !== 'pending') {
+                    $this->reverseCustomerStats($ticket);
+                }
+            }
+
+            // Delete all tickets
+            Auth::user()->bettingTickets()
+                ->where('original_message', $originalMessage)
+                ->delete();
+
+            DB::commit();
+
+            return redirect()->route('user.betting-tickets.index')
+                ->with('success', "Đã xóa {$count} phiếu cược có cùng tin nhắn.");
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->route('user.betting-tickets.index')
+                ->with('error', 'Có lỗi xảy ra khi xóa phiếu cược: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Parse betting message via AJAX
      */
     public function parseMessage(Request $request, BettingMessageParser $parser, BetPricingService $pricing)
