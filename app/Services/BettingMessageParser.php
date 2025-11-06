@@ -1440,7 +1440,7 @@ class BettingMessageParser
             'cm' => 'ca mau', 'camau' => 'ca mau',
             'tg' => 'tien giang', 'tiengiang' => 'tien giang',
             'kg' => 'kien giang', 'kiengiang' => 'kien giang',
-            'btuan' => 'binh thuan', 'binhthuan' => 'binh thuan',
+            'bth' => 'binh thuan', 'binhthuan' => 'binh thuan',
             'vl' => 'vinh long', 'vinhlong' => 'vinh long',
             'tv' => 'tra vinh', 'travinh' => 'tra vinh',
             // Miền Bắc
