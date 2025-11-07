@@ -572,6 +572,9 @@ class BettingMessageParser
             // NEW: chế độ bắt N đài (2d/3d/4d/2dai/3dai/4dai)
             'dai_count'           => null,  // 2|3|4
             'dai_capture_remaining'=> 0,    // còn bao nhiêu đài cần bắt sau token Ndai
+
+            // NEW: track xem vừa flush qua amount/combo token chưa
+            'just_flushed_via_amount' => false,  // để biết station token đầu tiên sau flush phải reset
         ];
     
         $outBets = [];
@@ -638,6 +641,9 @@ class BettingMessageParser
     
             // số 2-4 chữ số (giữ leading zero)
             if (preg_match('/^\d{2,4}$/', $tok)) {
+                // Clear just_flushed_via_amount - nếu không gặp station token thì inherit stations
+                $ctx['just_flushed_via_amount'] = false;
+
                 // QUAN TRỌNG: Nếu đã có AMOUNT, group đã hoàn chỉnh (type + amount)
                 // → flush trước khi thêm số mới (số mới thuộc group tiếp theo)
                 if (!empty($ctx['amount']) && $isGroupPending($ctx)) {
@@ -700,7 +706,9 @@ class BettingMessageParser
                     // Ndai directive chỉ apply cho 1 cược duy nhất
                     $ctx['dai_count'] = null;
                     $ctx['dai_capture_remaining'] = 0;
-                    $ctx['stations'] = [];  // Reset stations để explicit stations tiếp theo không bị cộng dồn
+                    // ĐỪNG reset stations - để kế thừa cho implicit stations
+                    // Station token đầu tiên sau flush sẽ tự reset nếu cần
+                    $ctx['just_flushed_via_amount'] = true;
                     $addEvent($events, 'ndai_mode_reset_after_amount_flush', []);
                 }
 
@@ -752,7 +760,8 @@ class BettingMessageParser
                     // Reset Ndai mode sau khi flush hoàn chỉnh
                     $ctx['dai_count'] = null;
                     $ctx['dai_capture_remaining'] = 0;
-                    $ctx['stations'] = [];  // Reset stations để explicit stations tiếp theo không bị cộng dồn
+                    // ĐỪNG reset stations - để kế thừa cho implicit stations
+                    $ctx['just_flushed_via_amount'] = true;
                     $addEvent($events, 'ndai_mode_reset_after_combo_flush', []);
                 }
                 // Không clear last_numbers - cho phép kế thừa số sang phiếu tiếp theo nếu cần
@@ -786,8 +795,11 @@ class BettingMessageParser
     
             // type rời (kéo/lo/dau/duoi/xc…)
             if (isset($typeAliases[$tok])) {
+                // Clear just_flushed_via_amount - nếu không gặp station token thì inherit stations
+                $ctx['just_flushed_via_amount'] = false;
+
                 $newType = $typeAliases[$tok];
-                
+
                 // Special handling for 'keo': pop số cuối TRƯỚC KHI flush
                 if ($newType === 'keo_hang_don_vi') {
                     $start = null;
@@ -874,10 +886,18 @@ class BettingMessageParser
                 // - Nếu CHƯA có kiểu cược → coi là phase "khai báo đài", cộng dồn nhiều mã đài liên tiếp
                 //   (cho phép "14 27 72 tn bt dx" → 2 đài cho đá xiên)
                 if ($ctx['current_type'] === null) {
-                    if (!in_array($name, $ctx['stations'], true)) {
-                        $ctx['stations'][] = $name;
+                    // Nếu vừa flush qua amount/combo → station đầu tiên RESET stations cũ
+                    if ($ctx['just_flushed_via_amount']) {
+                        $ctx['stations'] = [$name];
+                        $ctx['just_flushed_via_amount'] = false;
+                        $addEvent($events, 'stations_reset_after_amount_flush', ['station' => $name]);
+                    } else {
+                        // Khai báo đài bình thường → cộng dồn
+                        if (!in_array($name, $ctx['stations'], true)) {
+                            $ctx['stations'][] = $name;
+                        }
+                        $addEvent($events, 'stations', ['set' => array_values($ctx['stations'])]);
                     }
-                    $addEvent($events, 'stations', ['set' => array_values($ctx['stations'])]);
                     continue;
                 }
 
