@@ -1058,6 +1058,7 @@ class BettingMessageParser
         ];
     }
 
+    
     /**
      * Build highlighted message with problematic tokens marked with appropriate colors and tooltips.
      *
