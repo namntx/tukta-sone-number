@@ -227,6 +227,14 @@ class BettingMessageParser
             $amount  = (int)($ctx['amount'] ?? 0);
             $region  = $ctx['region'] ?? 'nam';
 
+            // INHERIT NUMBERS AT FLUSH TIME: Chỉ inherit khi chưa có số mới
+            // Logic: Nếu sau type token không có số xuất hiện → inherit từ last_numbers
+            if (empty($numbers) && !empty($ctx['last_numbers']) && $reason !== 'type_switch_flush') {
+                $numbers = $ctx['last_numbers'];
+                $ctx['numbers_group'] = $numbers; // Update ctx để các logic khác dùng
+                $addEvent($events, 'inherit_numbers_at_flush', ['type'=>$type,'numbers'=>$numbers,'reason'=>$reason]);
+            }
+
             // LƯU last_numbers CHỈ KHI flush vì hoàn chỉnh (combo token, amount complete)
             // KHÔNG lưu khi flush vì chuyển type (type_switch_flush)
             // → Tránh kế thừa số của type cũ cho type mới
@@ -711,10 +719,7 @@ class BettingMessageParser
                     $flushGroup($outBets, $ctx, $events, 'type_switch_flush');
                 }
 
-                if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers'])) {
-                    $ctx['numbers_group'] = $ctx['last_numbers'];
-                    $addEvent($events,'inherit_numbers_for_amount',['numbers'=>$ctx['numbers_group']]);
-                }
+                // REMOVED: Inherit logic moved to flush time (chỉ inherit khi chưa có số mới)
 
                 if ($targetType==='bao_lo') {
                     $ctx['current_type']='bao_lo';
@@ -760,10 +765,7 @@ class BettingMessageParser
                 if (($ctx['current_type'] ?? null) !== null && 'xien' !== $ctx['current_type'] && $isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'type_switch_flush');
                 }
-                if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers'])) {
-                    $ctx['numbers_group'] = $ctx['last_numbers'];
-                    $addEvent($events,'inherit_numbers_for_type',['type'=>'xien','numbers'=>$ctx['numbers_group']]);
-                }
+                // REMOVED: Inherit logic moved to flush time (chỉ inherit khi chưa có số mới)
                 $ctx['current_type']='xien';
                 $ctx['meta']['xien_size']=$size;
                 $ctx['just_saw_station']=false;
@@ -803,10 +805,7 @@ class BettingMessageParser
                 if (($ctx['current_type'] ?? null) !== null && $newType !== $ctx['current_type'] && $isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'type_switch_flush');
                 }
-                if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers'])) {
-                    $ctx['numbers_group']=$ctx['last_numbers'];
-                    $addEvent($events,'inherit_numbers_for_type',['type'=>$newType,'numbers'=>$ctx['numbers_group']]);
-                }
+                // REMOVED: Inherit logic moved to flush time (chỉ inherit khi chưa có số mới)
                 $ctx['current_type']=$newType;
                 $ctx['just_saw_station']=false;
                 $addEvent($events, 'type_loose', ['token'=>$tok,'type'=>$ctx['current_type']]);
