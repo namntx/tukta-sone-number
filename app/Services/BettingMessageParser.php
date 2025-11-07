@@ -620,6 +620,7 @@ class BettingMessageParser
                 $ctx['dai_count']            = $count;
                 $ctx['dai_capture_remaining']= $count;
                 $ctx['stations']             = []; // reset list để bắt mới
+                $ctx['last_numbers']         = []; // reset để không kế thừa số từ group cũ
                 $addEvent($events, 'dai_count_set', ['count'=>$count,'token'=>$tok]);
                 continue;
             }
