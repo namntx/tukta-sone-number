@@ -263,6 +263,7 @@ class BettingMessageParser
                         }
                         $addEvent($events, 'emit_xc_head_tail', ['mode'=>'d_sequence','dau'=>$dauAmt,'duoi'=>$duoiAmt,'numbers'=>$numbers]);
                     } else {
+                        // Mặc định: tách thành xỉu chủ đầu + xỉu chủ đuôi
                         foreach ($numbers as $n) {
                             $emitBet($outBets, $ctx, ['numbers'=>[$n],'type'=>'xiu_chu_dau','amount'=>$amount]);
                             $emitBet($outBets, $ctx, ['numbers'=>[$n],'type'=>'xiu_chu_duoi','amount'=>$amount]);
@@ -397,6 +398,7 @@ class BettingMessageParser
 
                 $addEvent($events, 'emit_da_thang', ['pairs' => $pairs, 'station' => $ctx['stations'][0]]);
                 $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+                // Không reset stations để type tiếp theo có thể dùng (nếu inherit numbers)
                 return;
             }
 
@@ -484,6 +486,7 @@ class BettingMessageParser
                     'stations' => $stations
                 ]);
                 $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
+                // Không reset stations để type tiếp theo có thể dùng (nếu inherit numbers)
                 return;
             }
 
@@ -680,6 +683,12 @@ class BettingMessageParser
                 $addEvent($events, 'amount_loose', [
                     'token'=>$tok, 'type'=>$ctx['current_type'] ?? null, 'amount'=>$ctx['amount']
                 ]);
+
+                // Amount kết thúc phiếu → flush ngay nếu group pending
+                if ($isGroupPending($ctx)) {
+                    $flushGroup($outBets, $ctx, $events, 'amount_delimiter_flush');
+                }
+
                 $ctx['just_saw_station'] = false;
                 continue;
             }
@@ -729,8 +738,7 @@ class BettingMessageParser
                 if ($isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'combo_token_auto_flush');
                 }
-                // Clear last_numbers sau combo token để tránh kế thừa sang type khác
-                $ctx['last_numbers'] = [];
+                // Không clear last_numbers - cho phép kế thừa số sang phiếu tiếp theo nếu cần
 
                 $ctx['just_saw_station'] = false;
                 continue;
