@@ -74,13 +74,6 @@ class BettingMessageParser
         };
     
         $splitTokens = function(string $s): array {
-            // Normalize Ndai: "2 dai", "3 đ ai", "2 d" → "2dai", "3dai", "2d"
-            $s = preg_replace('/([234])\s*đ\s*(?:ai|ài)?/ui', '$1dai', $s);
-            $s = preg_replace('/([234])\s*d\s*(?:ai)?/i', '$1dai', $s);
-
-            // Normalize dấu phẩy trong amounts: "10,5n" → "10.5n"
-            $s = preg_replace('/(\d+),(\d+)([nk])/i', '$1.$2$3', $s);
-
             $s = preg_replace('/[^\w\.]/u', ' ', $s);
             $s = preg_replace('/\s+/',' ', $s);
 
@@ -234,14 +227,6 @@ class BettingMessageParser
             $amount  = (int)($ctx['amount'] ?? 0);
             $region  = $ctx['region'] ?? 'nam';
 
-            // INHERIT NUMBERS AT FLUSH TIME: Chỉ inherit khi chưa có số mới
-            // Logic: Nếu sau type token không có số xuất hiện → inherit từ last_numbers
-            if (empty($numbers) && !empty($ctx['last_numbers']) && $reason !== 'type_switch_flush') {
-                $numbers = $ctx['last_numbers'];
-                $ctx['numbers_group'] = $numbers; // Update ctx để các logic khác dùng
-                $addEvent($events, 'inherit_numbers_at_flush', ['type'=>$type,'numbers'=>$numbers,'reason'=>$reason]);
-            }
-
             // LƯU last_numbers CHỈ KHI flush vì hoàn chỉnh (combo token, amount complete)
             // KHÔNG lưu khi flush vì chuyển type (type_switch_flush)
             // → Tránh kế thừa số của type cũ cho type mới
@@ -278,7 +263,6 @@ class BettingMessageParser
                         }
                         $addEvent($events, 'emit_xc_head_tail', ['mode'=>'d_sequence','dau'=>$dauAmt,'duoi'=>$duoiAmt,'numbers'=>$numbers]);
                     } else {
-                        // Mặc định: tách thành xỉu chủ đầu + xỉu chủ đuôi
                         foreach ($numbers as $n) {
                             $emitBet($outBets, $ctx, ['numbers'=>[$n],'type'=>'xiu_chu_dau','amount'=>$amount]);
                             $emitBet($outBets, $ctx, ['numbers'=>[$n],'type'=>'xiu_chu_duoi','amount'=>$amount]);
@@ -413,7 +397,6 @@ class BettingMessageParser
 
                 $addEvent($events, 'emit_da_thang', ['pairs' => $pairs, 'station' => $ctx['stations'][0]]);
                 $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
-                // Không reset stations để type tiếp theo có thể dùng (nếu inherit numbers)
                 return;
             }
 
@@ -501,7 +484,6 @@ class BettingMessageParser
                     'stations' => $stations
                 ]);
                 $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
-                // Không reset stations để type tiếp theo có thể dùng (nếu inherit numbers)
                 return;
             }
 
@@ -579,9 +561,6 @@ class BettingMessageParser
             // NEW: chế độ bắt N đài (2d/3d/4d/2dai/3dai/4dai)
             'dai_count'           => null,  // 2|3|4
             'dai_capture_remaining'=> 0,    // còn bao nhiêu đài cần bắt sau token Ndai
-
-            // NEW: track xem vừa flush qua amount/combo token chưa
-            'just_flushed_via_amount' => false,  // để biết station token đầu tiên sau flush phải reset
         ];
     
         $outBets = [];
@@ -630,8 +609,8 @@ class BettingMessageParser
         // ---------- 4) scan ----------
         foreach ($tokens as $tok) {
     
-            // Ndai / Nd - hỗ trợ cả "2dai", "2 dai", "2d", "2 d"
-            if (preg_match('/^([234])\s*d(?:\s*ai)?$/', $tok, $m)) {
+            // Ndai / Nd
+            if (preg_match('/^([234])d(ai)?$/', $tok, $m)) {
                 $count = (int)$m[1];
                 // nếu đang có group pending → flush trước khi chuyển ngữ cảnh
                 if ($isGroupPending($ctx)) {
@@ -641,16 +620,12 @@ class BettingMessageParser
                 $ctx['dai_count']            = $count;
                 $ctx['dai_capture_remaining']= $count;
                 $ctx['stations']             = []; // reset list để bắt mới
-                $ctx['last_numbers']         = []; // reset để không kế thừa số từ group cũ
                 $addEvent($events, 'dai_count_set', ['count'=>$count,'token'=>$tok]);
                 continue;
             }
     
             // số 2-4 chữ số (giữ leading zero)
             if (preg_match('/^\d{2,4}$/', $tok)) {
-                // Clear just_flushed_via_amount - nếu không gặp station token thì inherit stations
-                $ctx['just_flushed_via_amount'] = false;
-
                 // QUAN TRỌNG: Nếu đã có AMOUNT, group đã hoàn chỉnh (type + amount)
                 // → flush trước khi thêm số mới (số mới thuộc group tiếp theo)
                 if (!empty($ctx['amount']) && $isGroupPending($ctx)) {
@@ -699,36 +674,19 @@ class BettingMessageParser
                 continue;
             }
     
-            // Hỗ trợ số nguyên và số thập phân: 5n, 3.5n, 7.5n, 10,5n (dấu phẩy)
-            if (preg_match('/^(\d+(?:[.,]\d+)?)(n|k)$/i', $tok, $m)) {
-                // Normalize dấu phẩy thành dấu chấm
-                $amountStr = str_replace(',', '.', $m[1]);
-                $ctx['amount'] = (int)round((float)$amountStr * 1000);
+            // Hỗ trợ số nguyên và số thập phân: 5n, 3.5n, 7.5n
+            if (preg_match('/^(\d+(?:\.\d+)?)(n|k)$/', $tok, $m)) {
+                $ctx['amount'] = (int)round((float)$m[1] * 1000);
                 $addEvent($events, 'amount_loose', [
                     'token'=>$tok, 'type'=>$ctx['current_type'] ?? null, 'amount'=>$ctx['amount']
                 ]);
-
-                // Amount kết thúc phiếu → flush ngay nếu group pending
-                if ($isGroupPending($ctx)) {
-                    $flushGroup($outBets, $ctx, $events, 'amount_delimiter_flush');
-                    // ĐỪNG reset dai_count - để kế thừa cho implicit stations
-                    // Chỉ reset khi gặp station token hoặc Ndai directive mới
-                    $ctx['dai_capture_remaining'] = 0;  // Reset capture mode
-                    // Station token đầu tiên sau flush sẽ tự reset nếu cần
-                    $ctx['just_flushed_via_amount'] = true;
-                    $addEvent($events, 'after_amount_flush', ['dai_count_preserved' => $ctx['dai_count']]);
-                }
-
                 $ctx['just_saw_station'] = false;
                 continue;
             }
     
-            // Combo token với số thập phân: lo5n, dd3.5n, d7.5n, lo10,5n (dấu phẩy)
-            if (preg_match('/^(d|dd|lo)(\d+(?:[.,]\d+)?)(n|k)$/i', $tok, $m)) {
-                $code = $m[1];
-                // Normalize dấu phẩy thành dấu chấm
-                $amountStr = str_replace(',', '.', $m[2]);
-                $amt = (int)round((float)$amountStr * 1000);
+            // Combo token với số thập phân: lo5n, dd3.5n, d7.5n
+            if (preg_match('/^(d|dd|lo)(\d+(?:\.\d+)?)(n|k)$/', $tok, $m)) {
+                $code = $m[1]; $amt = (int)round((float)$m[2] * 1000);
 
                 if (($ctx['current_type'] ?? null) === 'xiu_chu') {
                     if ($code === 'dd') { $ctx['xc_dd_amount'] = $amt; $addEvent($events,'xc_pair_dd',['token'=>$tok,'amount'=>$amt]); }
@@ -743,7 +701,10 @@ class BettingMessageParser
                     $flushGroup($outBets, $ctx, $events, 'type_switch_flush');
                 }
 
-                // REMOVED: Inherit logic moved to flush time (chỉ inherit khi chưa có số mới)
+                if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers'])) {
+                    $ctx['numbers_group'] = $ctx['last_numbers'];
+                    $addEvent($events,'inherit_numbers_for_amount',['numbers'=>$ctx['numbers_group']]);
+                }
 
                 if ($targetType==='bao_lo') {
                     $ctx['current_type']='bao_lo';
@@ -767,14 +728,9 @@ class BettingMessageParser
                 // QUAN TRỌNG: Flush ngay sau combo token để không kéo số tiếp theo vào cùng group
                 if ($isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'combo_token_auto_flush');
-                    // ĐỪNG reset dai_count - để kế thừa cho implicit stations
-                    // Chỉ reset khi gặp station token hoặc Ndai directive mới
-                    $ctx['dai_capture_remaining'] = 0;  // Reset capture mode
-                    // Station token đầu tiên sau flush sẽ tự reset nếu cần
-                    $ctx['just_flushed_via_amount'] = true;
-                    $addEvent($events, 'after_combo_flush', ['dai_count_preserved' => $ctx['dai_count']]);
                 }
-                // Không clear last_numbers - cho phép kế thừa số sang phiếu tiếp theo nếu cần
+                // Clear last_numbers sau combo token để tránh kế thừa sang type khác
+                $ctx['last_numbers'] = [];
 
                 $ctx['just_saw_station'] = false;
                 continue;
@@ -795,7 +751,10 @@ class BettingMessageParser
                 if (($ctx['current_type'] ?? null) !== null && 'xien' !== $ctx['current_type'] && $isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'type_switch_flush');
                 }
-                // REMOVED: Inherit logic moved to flush time (chỉ inherit khi chưa có số mới)
+                if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers'])) {
+                    $ctx['numbers_group'] = $ctx['last_numbers'];
+                    $addEvent($events,'inherit_numbers_for_type',['type'=>'xien','numbers'=>$ctx['numbers_group']]);
+                }
                 $ctx['current_type']='xien';
                 $ctx['meta']['xien_size']=$size;
                 $ctx['just_saw_station']=false;
@@ -805,11 +764,8 @@ class BettingMessageParser
     
             // type rời (kéo/lo/dau/duoi/xc…)
             if (isset($typeAliases[$tok])) {
-                // Clear just_flushed_via_amount - nếu không gặp station token thì inherit stations
-                $ctx['just_flushed_via_amount'] = false;
-
                 $newType = $typeAliases[$tok];
-
+                
                 // Special handling for 'keo': pop số cuối TRƯỚC KHI flush
                 if ($newType === 'keo_hang_don_vi') {
                     $start = null;
@@ -838,7 +794,10 @@ class BettingMessageParser
                 if (($ctx['current_type'] ?? null) !== null && $newType !== $ctx['current_type'] && $isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'type_switch_flush');
                 }
-                // REMOVED: Inherit logic moved to flush time (chỉ inherit khi chưa có số mới)
+                if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers'])) {
+                    $ctx['numbers_group']=$ctx['last_numbers'];
+                    $addEvent($events,'inherit_numbers_for_type',['type'=>$newType,'numbers'=>$ctx['numbers_group']]);
+                }
                 $ctx['current_type']=$newType;
                 $ctx['just_saw_station']=false;
                 $addEvent($events, 'type_loose', ['token'=>$tok,'type'=>$ctx['current_type']]);
@@ -896,21 +855,10 @@ class BettingMessageParser
                 // - Nếu CHƯA có kiểu cược → coi là phase "khai báo đài", cộng dồn nhiều mã đài liên tiếp
                 //   (cho phép "14 27 72 tn bt dx" → 2 đài cho đá xiên)
                 if ($ctx['current_type'] === null) {
-                    // Nếu vừa flush qua amount/combo → station đầu tiên RESET stations cũ + dai_count
-                    if ($ctx['just_flushed_via_amount']) {
-                        $ctx['stations'] = [$name];
-                        $ctx['just_flushed_via_amount'] = false;
-                        // Reset dai_count - user khai báo explicit stations
-                        $ctx['dai_count'] = null;
-                        $ctx['dai_capture_remaining'] = 0;
-                        $addEvent($events, 'stations_reset_after_amount_flush', ['station' => $name, 'dai_count_reset' => true]);
-                    } else {
-                        // Khai báo đài bình thường → cộng dồn
-                        if (!in_array($name, $ctx['stations'], true)) {
-                            $ctx['stations'][] = $name;
-                        }
-                        $addEvent($events, 'stations', ['set' => array_values($ctx['stations'])]);
+                    if (!in_array($name, $ctx['stations'], true)) {
+                        $ctx['stations'][] = $name;
                     }
+                    $addEvent($events, 'stations', ['set' => array_values($ctx['stations'])]);
                     continue;
                 }
 
@@ -926,10 +874,7 @@ class BettingMessageParser
     
         // ---------- 5) final flush ----------
         $flushGroup($outBets, $ctx, $events, 'final_flush');
-        // Reset Ndai mode để clean state cho message tiếp theo
-        $ctx['dai_count'] = null;
-        $ctx['dai_capture_remaining'] = 0;
-
+    
         // Áp station cuối:
         // - Nếu đã chỉ rõ stations → lưu tạm vào meta
         // - Nếu CÓ Ndai nhưng KHÔNG chỉ rõ stations → Auto resolve theo lịch
