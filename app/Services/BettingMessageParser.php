@@ -1059,58 +1059,103 @@ class BettingMessageParser
     }
 
     /**
-     * Build highlighted message with skipped/unrecognized tokens marked in red.
+     * Build highlighted message with problematic tokens marked with appropriate colors and tooltips.
      *
      * @param string $originalMessage Original user input
      * @param array $tokens Parsed tokens
      * @param array $events Parse events
-     * @return string HTML string with highlighted skipped tokens
+     * @return string HTML string with highlighted problematic tokens
      */
     private function buildHighlightedMessage(string $originalMessage, array $tokens, array $events): string
     {
-        // Collect skipped tokens from events
-        $skippedTokens = [];
+        // Collect problematic tokens from events with their severity and reasons
+        $highlights = [];
+
         foreach ($events as $event) {
-            if (($event['kind'] ?? '') === 'skip') {
-                $skippedTokens[] = $event['token'] ?? '';
+            $kind = $event['kind'] ?? '';
+            $token = $event['token'] ?? null;
+
+            // Skip tokens (không nhận dạng)
+            if ($kind === 'skip' && $token !== null) {
+                $highlights[] = [
+                    'token' => $token,
+                    'severity' => 'error',
+                    'reason' => 'Token không được nhận dạng',
+                    'detail' => 'Từ khóa này không thuộc bất kỳ loại cược, đài, hoặc cú pháp nào hợp lệ.'
+                ];
+            }
+
+            // Error events
+            if (str_starts_with($kind, 'error_')) {
+                $detail = $this->buildErrorDetail($kind, $event);
+
+                // Try to extract token from event data
+                $errorToken = $this->extractTokenFromEvent($event, $tokens);
+
+                if ($errorToken !== null) {
+                    $highlights[] = [
+                        'token' => $errorToken,
+                        'severity' => 'error',
+                        'reason' => $this->formatEventKind($kind),
+                        'detail' => $detail
+                    ];
+                }
+            }
+
+            // Warning events
+            if (str_starts_with($kind, 'warning_')) {
+                $detail = $this->buildWarningDetail($kind, $event);
+                $warningToken = $this->extractTokenFromEvent($event, $tokens);
+
+                if ($warningToken !== null) {
+                    $highlights[] = [
+                        'token' => $warningToken,
+                        'severity' => 'warning',
+                        'reason' => $this->formatEventKind($kind),
+                        'detail' => $detail
+                    ];
+                }
+            }
+
+            // Block events (operations blocked for a reason)
+            if (str_starts_with($kind, 'block_')) {
+                $detail = $this->buildBlockDetail($kind, $event);
+                $blockToken = $this->extractTokenFromEvent($event, $tokens);
+
+                if ($blockToken !== null) {
+                    $highlights[] = [
+                        'token' => $blockToken,
+                        'severity' => 'block',
+                        'reason' => $this->formatEventKind($kind),
+                        'detail' => $detail
+                    ];
+                }
             }
         }
 
-        if (empty($skippedTokens)) {
-            // No skipped tokens, return original message as-is
+        if (empty($highlights)) {
+            // No issues, return original message as-is (HTML escaped)
             return htmlspecialchars($originalMessage, ENT_QUOTES, 'UTF-8');
         }
 
-        // Normalize message for matching (lowercase, remove accents)
-        $normalizedOriginal = mb_strtolower($originalMessage, 'UTF-8');
-        $replacements = [
-            'à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ' => 'a',
-            'è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ'             => 'e',
-            'ì|í|ị|ỉ|ĩ'                         => 'i',
-            'ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ' => 'o',
-            'ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ'             => 'u',
-            'ỳ|ý|ỵ|ỷ|ỹ'                         => 'y',
-            'đ'                                 => 'd',
-        ];
-        foreach ($replacements as $pattern => $replacement) {
-            $normalizedOriginal = preg_replace('/(' . $pattern . ')/u', $replacement, $normalizedOriginal);
-        }
+        // Normalize message for matching
+        $normalizedOriginal = $this->normalizeForMatching($originalMessage);
 
-        // Find all positions of skipped tokens in original message
+        // Find all positions of highlighted tokens in original message
         $positions = [];
-        foreach ($skippedTokens as $skippedToken) {
-            $normalizedToken = mb_strtolower($skippedToken, 'UTF-8');
-            foreach ($replacements as $pattern => $replacement) {
-                $normalizedToken = preg_replace('/(' . $pattern . ')/u', $replacement, $normalizedToken);
-            }
+        foreach ($highlights as $highlight) {
+            $normalizedToken = $this->normalizeForMatching($highlight['token']);
 
-            // Tìm tất cả vị trí của token trong message (có thể có nhiều lần)
+            // Find all occurrences of token in message
             $offset = 0;
             while (($pos = mb_strpos($normalizedOriginal, $normalizedToken, $offset)) !== false) {
                 $positions[] = [
                     'start' => $pos,
-                    'end' => $pos + mb_strlen($skippedToken),
-                    'token' => mb_substr($originalMessage, $pos, mb_strlen($skippedToken))
+                    'end' => $pos + mb_strlen($highlight['token']),
+                    'token' => mb_substr($originalMessage, $pos, mb_strlen($highlight['token'])),
+                    'severity' => $highlight['severity'],
+                    'reason' => $highlight['reason'],
+                    'detail' => $highlight['detail']
                 ];
                 $offset = $pos + 1; // Move past this match
             }
@@ -1123,11 +1168,16 @@ class BettingMessageParser
         // Sort positions by start index
         usort($positions, fn($a, $b) => $a['start'] <=> $b['start']);
 
-        // Remove overlapping positions (keep first occurrence)
+        // Remove overlapping positions (keep first occurrence with highest severity)
         $filteredPositions = [];
         $lastEnd = -1;
         foreach ($positions as $pos) {
             if ($pos['start'] >= $lastEnd) {
+                $filteredPositions[] = $pos;
+                $lastEnd = $pos['end'];
+            } elseif ($pos['severity'] === 'error' && end($filteredPositions)['severity'] !== 'error') {
+                // Replace last position if current is error and last is not
+                array_pop($filteredPositions);
                 $filteredPositions[] = $pos;
                 $lastEnd = $pos['end'];
             }
@@ -1142,10 +1192,22 @@ class BettingMessageParser
             $before = mb_substr($originalMessage, $lastIndex, $pos['start'] - $lastIndex);
             $highlightedMessage .= htmlspecialchars($before, ENT_QUOTES, 'UTF-8');
 
-            // Add highlighted token
-            $highlightedMessage .= '<span class="text-red-600 font-semibold" title="Token không được nhận dạng">' .
-                                   htmlspecialchars($pos['token'], ENT_QUOTES, 'UTF-8') .
-                                   '</span>';
+            // Add highlighted token with appropriate color and tooltip
+            $cssClass = match ($pos['severity']) {
+                'error' => 'text-red-600 font-semibold',
+                'warning' => 'text-yellow-600 font-semibold',
+                'block' => 'text-orange-600 font-semibold',
+                default => 'text-gray-600 font-semibold'
+            };
+
+            $title = htmlspecialchars($pos['reason'] . ': ' . $pos['detail'], ENT_QUOTES, 'UTF-8');
+
+            $highlightedMessage .= sprintf(
+                '<span class="%s" title="%s">%s</span>',
+                $cssClass,
+                $title,
+                htmlspecialchars($pos['token'], ENT_QUOTES, 'UTF-8')
+            );
 
             $lastIndex = $pos['end'];
         }
@@ -1157,6 +1219,119 @@ class BettingMessageParser
         }
 
         return $highlightedMessage;
+    }
+
+    /**
+     * Normalize string for token matching (lowercase + remove accents)
+     */
+    private function normalizeForMatching(string $s): string
+    {
+        $s = mb_strtolower($s, 'UTF-8');
+        $replacements = [
+            'à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ' => 'a',
+            'è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ'             => 'e',
+            'ì|í|ị|ỉ|ĩ'                         => 'i',
+            'ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ' => 'o',
+            'ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ'             => 'u',
+            'ỳ|ý|ỵ|ỷ|ỹ'                         => 'y',
+            'đ'                                 => 'd',
+        ];
+        foreach ($replacements as $pattern => $replacement) {
+            $s = preg_replace('/(' . $pattern . ')/u', $replacement, $s);
+        }
+        return $s;
+    }
+
+    /**
+     * Build detailed error message from event
+     */
+    private function buildErrorDetail(string $kind, array $event): string
+    {
+        return match ($kind) {
+            'error_xien_numbers_not_enough' => sprintf(
+                'Xiên %d yêu cầu tối thiểu %d số, nhưng chỉ có %d số.',
+                $event['need'] ?? 0,
+                $event['need'] ?? 0,
+                $event['have'] ?? 0
+            ),
+            'error_da_thang_wrong_station_count' => sprintf(
+                'Đá thẳng yêu cầu đúng 1 đài, nhưng có %d đài.',
+                $event['got'] ?? 0
+            ),
+            'error_da_xien_min_stations' => sprintf(
+                'Đá xiên yêu cầu tối thiểu 2 đài, nhưng chỉ có %d đài.',
+                $event['got'] ?? 0
+            ),
+            default => $event['message'] ?? 'Có lỗi xảy ra trong quá trình xử lý.'
+        };
+    }
+
+    /**
+     * Build detailed warning message from event
+     */
+    private function buildWarningDetail(string $kind, array $event): string
+    {
+        return match ($kind) {
+            'warning_da_thang_odd_numbers' => sprintf(
+                'Đá thẳng ghép cặp 2-2, số lẻ "%s" bị bỏ qua.',
+                $event['dropped'] ?? ''
+            ),
+            default => $event['message'] ?? 'Cảnh báo về cú pháp hoặc dữ liệu.'
+        };
+    }
+
+    /**
+     * Build detailed block message from event
+     */
+    private function buildBlockDetail(string $kind, array $event): string
+    {
+        return match ($kind) {
+            'block_emit_xien_wrong_region' => sprintf(
+                'Xiên chỉ áp dụng cho Miền Bắc. Khu vực hiện tại: %s.',
+                $event['region'] ?? 'không xác định'
+            ),
+            default => $event['message'] ?? 'Thao tác bị chặn.'
+        };
+    }
+
+    /**
+     * Format event kind to human-readable text
+     */
+    private function formatEventKind(string $kind): string
+    {
+        // Remove prefix
+        $kind = preg_replace('/^(error_|warning_|block_)/', '', $kind);
+
+        // Convert snake_case to Title Case
+        $kind = str_replace('_', ' ', $kind);
+        $kind = ucwords($kind);
+
+        return $kind;
+    }
+
+    /**
+     * Extract relevant token from event data
+     */
+    private function extractTokenFromEvent(array $event, array $allTokens): ?string
+    {
+        // Check if event has explicit token field
+        if (isset($event['token']) && is_string($event['token'])) {
+            return $event['token'];
+        }
+
+        // For xien errors, look for xien tokens
+        if (isset($event['xien_size'])) {
+            foreach ($allTokens as $tok) {
+                if (preg_match('/^xi(?:en)?([234])$/', $tok)) {
+                    return $tok;
+                }
+            }
+        }
+
+        // For station errors, return null (station context is complex)
+        // We don't want to highlight specific stations for multi-station errors
+
+        return null;
     }
 
     /* ========================= Normalize & Tokenize ========================= */
