@@ -700,6 +700,7 @@ class BettingMessageParser
                     // Ndai directive chỉ apply cho 1 cược duy nhất
                     $ctx['dai_count'] = null;
                     $ctx['dai_capture_remaining'] = 0;
+                    $ctx['stations'] = [];  // Reset stations để explicit stations tiếp theo không bị cộng dồn
                     $addEvent($events, 'ndai_mode_reset_after_amount_flush', []);
                 }
 
@@ -751,6 +752,7 @@ class BettingMessageParser
                     // Reset Ndai mode sau khi flush hoàn chỉnh
                     $ctx['dai_count'] = null;
                     $ctx['dai_capture_remaining'] = 0;
+                    $ctx['stations'] = [];  // Reset stations để explicit stations tiếp theo không bị cộng dồn
                     $addEvent($events, 'ndai_mode_reset_after_combo_flush', []);
                 }
                 // Không clear last_numbers - cho phép kế thừa số sang phiếu tiếp theo nếu cần
