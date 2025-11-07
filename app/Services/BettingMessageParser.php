@@ -74,6 +74,13 @@ class BettingMessageParser
         };
     
         $splitTokens = function(string $s): array {
+            // Normalize Ndai: "2 dai", "3 đ ai", "2 d" → "2dai", "3dai", "2d"
+            $s = preg_replace('/([234])\s*đ\s*(?:ai|ài)?/ui', '$1dai', $s);
+            $s = preg_replace('/([234])\s*d\s*(?:ai)?/i', '$1dai', $s);
+
+            // Normalize dấu phẩy trong amounts: "10,5n" → "10.5n"
+            $s = preg_replace('/(\d+),(\d+)([nk])/i', '$1.$2$3', $s);
+
             $s = preg_replace('/[^\w\.]/u', ' ', $s);
             $s = preg_replace('/\s+/',' ', $s);
 
@@ -623,8 +630,8 @@ class BettingMessageParser
         // ---------- 4) scan ----------
         foreach ($tokens as $tok) {
     
-            // Ndai / Nd
-            if (preg_match('/^([234])d(ai)?$/', $tok, $m)) {
+            // Ndai / Nd - hỗ trợ cả "2dai", "2 dai", "2d", "2 d"
+            if (preg_match('/^([234])\s*d(?:\s*ai)?$/', $tok, $m)) {
                 $count = (int)$m[1];
                 // nếu đang có group pending → flush trước khi chuyển ngữ cảnh
                 if ($isGroupPending($ctx)) {
@@ -692,9 +699,11 @@ class BettingMessageParser
                 continue;
             }
     
-            // Hỗ trợ số nguyên và số thập phân: 5n, 3.5n, 7.5n
-            if (preg_match('/^(\d+(?:\.\d+)?)(n|k)$/', $tok, $m)) {
-                $ctx['amount'] = (int)round((float)$m[1] * 1000);
+            // Hỗ trợ số nguyên và số thập phân: 5n, 3.5n, 7.5n, 10,5n (dấu phẩy)
+            if (preg_match('/^(\d+(?:[.,]\d+)?)(n|k)$/i', $tok, $m)) {
+                // Normalize dấu phẩy thành dấu chấm
+                $amountStr = str_replace(',', '.', $m[1]);
+                $ctx['amount'] = (int)round((float)$amountStr * 1000);
                 $addEvent($events, 'amount_loose', [
                     'token'=>$tok, 'type'=>$ctx['current_type'] ?? null, 'amount'=>$ctx['amount']
                 ]);
@@ -702,23 +711,24 @@ class BettingMessageParser
                 // Amount kết thúc phiếu → flush ngay nếu group pending
                 if ($isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'amount_delimiter_flush');
-                    // Reset Ndai mode sau khi flush hoàn chỉnh
-                    // Ndai directive chỉ apply cho 1 cược duy nhất
-                    $ctx['dai_count'] = null;
-                    $ctx['dai_capture_remaining'] = 0;
-                    // ĐỪNG reset stations - để kế thừa cho implicit stations
+                    // ĐỪNG reset dai_count - để kế thừa cho implicit stations
+                    // Chỉ reset khi gặp station token hoặc Ndai directive mới
+                    $ctx['dai_capture_remaining'] = 0;  // Reset capture mode
                     // Station token đầu tiên sau flush sẽ tự reset nếu cần
                     $ctx['just_flushed_via_amount'] = true;
-                    $addEvent($events, 'ndai_mode_reset_after_amount_flush', []);
+                    $addEvent($events, 'after_amount_flush', ['dai_count_preserved' => $ctx['dai_count']]);
                 }
 
                 $ctx['just_saw_station'] = false;
                 continue;
             }
     
-            // Combo token với số thập phân: lo5n, dd3.5n, d7.5n
-            if (preg_match('/^(d|dd|lo)(\d+(?:\.\d+)?)(n|k)$/', $tok, $m)) {
-                $code = $m[1]; $amt = (int)round((float)$m[2] * 1000);
+            // Combo token với số thập phân: lo5n, dd3.5n, d7.5n, lo10,5n (dấu phẩy)
+            if (preg_match('/^(d|dd|lo)(\d+(?:[.,]\d+)?)(n|k)$/i', $tok, $m)) {
+                $code = $m[1];
+                // Normalize dấu phẩy thành dấu chấm
+                $amountStr = str_replace(',', '.', $m[2]);
+                $amt = (int)round((float)$amountStr * 1000);
 
                 if (($ctx['current_type'] ?? null) === 'xiu_chu') {
                     if ($code === 'dd') { $ctx['xc_dd_amount'] = $amt; $addEvent($events,'xc_pair_dd',['token'=>$tok,'amount'=>$amt]); }
@@ -757,12 +767,12 @@ class BettingMessageParser
                 // QUAN TRỌNG: Flush ngay sau combo token để không kéo số tiếp theo vào cùng group
                 if ($isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'combo_token_auto_flush');
-                    // Reset Ndai mode sau khi flush hoàn chỉnh
-                    $ctx['dai_count'] = null;
-                    $ctx['dai_capture_remaining'] = 0;
-                    // ĐỪNG reset stations - để kế thừa cho implicit stations
+                    // ĐỪNG reset dai_count - để kế thừa cho implicit stations
+                    // Chỉ reset khi gặp station token hoặc Ndai directive mới
+                    $ctx['dai_capture_remaining'] = 0;  // Reset capture mode
+                    // Station token đầu tiên sau flush sẽ tự reset nếu cần
                     $ctx['just_flushed_via_amount'] = true;
-                    $addEvent($events, 'ndai_mode_reset_after_combo_flush', []);
+                    $addEvent($events, 'after_combo_flush', ['dai_count_preserved' => $ctx['dai_count']]);
                 }
                 // Không clear last_numbers - cho phép kế thừa số sang phiếu tiếp theo nếu cần
 
@@ -886,11 +896,14 @@ class BettingMessageParser
                 // - Nếu CHƯA có kiểu cược → coi là phase "khai báo đài", cộng dồn nhiều mã đài liên tiếp
                 //   (cho phép "14 27 72 tn bt dx" → 2 đài cho đá xiên)
                 if ($ctx['current_type'] === null) {
-                    // Nếu vừa flush qua amount/combo → station đầu tiên RESET stations cũ
+                    // Nếu vừa flush qua amount/combo → station đầu tiên RESET stations cũ + dai_count
                     if ($ctx['just_flushed_via_amount']) {
                         $ctx['stations'] = [$name];
                         $ctx['just_flushed_via_amount'] = false;
-                        $addEvent($events, 'stations_reset_after_amount_flush', ['station' => $name]);
+                        // Reset dai_count - user khai báo explicit stations
+                        $ctx['dai_count'] = null;
+                        $ctx['dai_capture_remaining'] = 0;
+                        $addEvent($events, 'stations_reset_after_amount_flush', ['station' => $name, 'dai_count_reset' => true]);
                     } else {
                         // Khai báo đài bình thường → cộng dồn
                         if (!in_array($name, $ctx['stations'], true)) {
