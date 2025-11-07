@@ -242,6 +242,16 @@ class BettingMessageParser
                 $ctx['last_numbers'] = $numbers;
             }
 
+            // RESET NDAI MODE sau khi flush hoàn chỉnh (có amount)
+            // Ndai directive chỉ apply cho 1 cược duy nhất
+            // Sau đó explicit stations sẽ không bị capture mode
+            $completeFlushReasons = ['amount_delimiter_flush', 'combo_token_auto_flush', 'final_flush', 'ndai_group_complete_flush'];
+            if (in_array($reason, $completeFlushReasons, true) && $amount > 0) {
+                $ctx['dai_count'] = null;
+                $ctx['dai_capture_remaining'] = 0;
+                $addEvent($events, 'ndai_mode_reset_after_flush', ['reason'=>$reason]);
+            }
+
             if (!$type) { $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; return; }
             if (!count($numbers) && !in_array($type, ['xiu_chu'], true)) {
                 $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
