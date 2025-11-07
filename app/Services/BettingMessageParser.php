@@ -683,6 +683,12 @@ class BettingMessageParser
                 $addEvent($events, 'amount_loose', [
                     'token'=>$tok, 'type'=>$ctx['current_type'] ?? null, 'amount'=>$ctx['amount']
                 ]);
+
+                // Amount kết thúc phiếu → flush ngay nếu group pending
+                if ($isGroupPending($ctx)) {
+                    $flushGroup($outBets, $ctx, $events, 'amount_delimiter_flush');
+                }
+
                 $ctx['just_saw_station'] = false;
                 continue;
             }
@@ -732,8 +738,7 @@ class BettingMessageParser
                 if ($isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'combo_token_auto_flush');
                 }
-                // Clear last_numbers sau combo token để tránh kế thừa sang type khác
-                $ctx['last_numbers'] = [];
+                // Không clear last_numbers - cho phép kế thừa số sang phiếu tiếp theo nếu cần
 
                 $ctx['just_saw_station'] = false;
                 continue;
