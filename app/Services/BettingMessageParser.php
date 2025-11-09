@@ -791,7 +791,8 @@ class BettingMessageParser
                 if (($ctx['current_type'] ?? null) !== null && 'xien' !== $ctx['current_type'] && $isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'type_switch_flush');
                 }
-                if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers'])) {
+                // KẾ THỪA SỐ CHỈ KHI không vừa mới thấy station
+                if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers']) && !($ctx['just_saw_station'] ?? false)) {
                     $ctx['numbers_group'] = $ctx['last_numbers'];
                     $addEvent($events,'inherit_numbers_for_type',['type'=>'xien','numbers'=>$ctx['numbers_group']]);
                 }
@@ -834,7 +835,15 @@ class BettingMessageParser
                 if (($ctx['current_type'] ?? null) !== null && $newType !== $ctx['current_type'] && $isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'type_switch_flush');
                 }
-                if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers'])) {
+
+                // KẾ THỪA SỐ CHỈ KHI:
+                // - numbers_group đang rỗng
+                // - có last_numbers
+                // - token trước KHÔNG phải là station (just_saw_station = false)
+                // Quy tắc: "Khi xuất hiện kiểu cược, xét phía trước kiểu cược là đài hay tiền cược"
+                // - Nếu trước là đài → KHÔNG kế thừa số
+                // - Nếu trước là tiền/số → kế thừa số
+                if (empty($ctx['numbers_group']) && !empty($ctx['last_numbers']) && !($ctx['just_saw_station'] ?? false)) {
                     $ctx['numbers_group']=$ctx['last_numbers'];
                     $addEvent($events,'inherit_numbers_for_type',['type'=>$newType,'numbers'=>$ctx['numbers_group']]);
                 }
@@ -863,6 +872,7 @@ class BettingMessageParser
                         $ctx['stations'] = []; // Clear stations list
                         // Bắt đầu group mới với station này
                         $ctx['stations'] = [$name];
+                        $ctx['just_saw_station'] = true; // SET FLAG
                         $addEvent($events, 'ndai_reset_new_station', ['new_station' => $name]);
                         continue;
                     }
@@ -888,6 +898,7 @@ class BettingMessageParser
                 if ($isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'station_switch_flush');
                     $ctx['stations'] = [$name];
+                    $ctx['just_saw_station'] = true; // SET FLAG
                     $addEvent($events, 'stations', ['set' => array_values($ctx['stations'])]);
                     continue;
                 }
@@ -898,12 +909,14 @@ class BettingMessageParser
                     if (!in_array($name, $ctx['stations'], true)) {
                         $ctx['stations'][] = $name;
                     }
+                    $ctx['just_saw_station'] = true; // SET FLAG
                     $addEvent($events, 'stations', ['set' => array_values($ctx['stations'])]);
                     continue;
                 }
 
                 // - Còn lại: đã có kiểu cược → bắt đầu bộ đài mới (không cộng dồn)
                 $ctx['stations'] = [$name];
+                $ctx['just_saw_station'] = true; // SET FLAG
                 $addEvent($events, 'stations', ['set' => array_values($ctx['stations'])]);
                 continue;
             }
