@@ -430,12 +430,12 @@
                                                                                             Trúng {{ $winCount }} lô
                                                                                         </span>
                                                                                     @endif
-                                                                                    @if($ticketProfit !== null)
+                                        @if($ticketProfit !== null)
                                                                                         <span class="font-semibold {{ $profitColor }}">
-                                                                                            {{ $ticketProfit >= 0 ? '+' : '' }}{{ number_format($ticketProfit / 1000, 1) }}k
+                                        {{ $ticketProfit >= 0 ? '+' : '' }}{{ number_format($ticketProfit / 1000, 1) }}k
                                                                                         </span>
-                                                                                    @endif
-                                                                                </div>
+                                        @endif
+                                    </div>
                                                                             </div>
                                                                             
                                                                             <!-- Action Buttons -->

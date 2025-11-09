@@ -8,111 +8,132 @@
   $globalRegion = session('global_region', 'bac');
 @endphp
 
-<div class="pb-4">
-  <!-- Sticky Header -->
-  <div class="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-200 mb-3">
-    <div class="px-3 py-2.5">
-      <div class="flex items-center justify-between">
-        <h1 class="text-lg font-bold text-gray-900">Thêm phiếu cược</h1>
-        <a href="{{ route('user.betting-tickets.index') }}" 
-           class="inline-flex items-center justify-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-          </svg>
-        </a>
-      </div>
-      <div class="text-xs text-gray-500 mt-1">
-        {{ \App\Support\Region::label($globalRegion) }} · {{ \Carbon\Carbon::parse($globalDate)->format('d/m/Y') }}
-      </div>
+<div class="pb-4 ios-fade-in">
+  <!-- iOS Style Header -->
+  <div class="mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold text-gray-900">Thêm phiếu cược</h1>
+      <a href="{{ route('user.betting-tickets.index') }}" 
+         class="p-2 -mr-2 active:opacity-50 transition-opacity">
+        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </a>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="px-3 py-1 bg-gray-200 rounded-full text-xs font-medium text-gray-700">{{ \App\Support\Region::label($globalRegion) }}</span>
+      <span class="px-3 py-1 bg-gray-200 rounded-full text-xs font-medium text-gray-700">{{ \Carbon\Carbon::parse($globalDate)->format('d/m/Y') }}</span>
     </div>
   </div>
 
-  <form method="POST" action="{{ route('user.betting-tickets.store') }}" id="betting-ticket-form" class="px-3 space-y-4">
+  <form method="POST" action="{{ route('user.betting-tickets.store') }}" id="betting-ticket-form" class="space-y-5">
     @csrf
     
-    <!-- Hidden fields for global date and region -->
+    <!-- Hidden fields -->
     <input type="hidden" name="betting_date" id="betting_date" value="{{ $globalDate }}">
     <input type="hidden" name="region" id="region" value="{{ $globalRegion }}">
     <input type="hidden" name="station" id="station" value="">
 
-    <!-- Customer Selection -->
-    <div class="bg-white rounded-lg border border-gray-200 p-3">
-      <label for="customer_id" class="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-        Khách hàng <span class="text-red-500">*</span>
-      </label>
-      <select id="customer_id" name="customer_id" 
-              class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('customer_id') border-red-500 @enderror"
-              required>
-        <option value="">Chọn khách hàng</option>
-        @foreach($customers as $customer)
-          <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>
-            {{ $customer->name }} ({{ $customer->phone }})
-          </option>
-        @endforeach
-      </select>
-      @error('customer_id')
-        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-      @enderror
+    <!-- Customer Selection - iOS Card -->
+    <div class="card ios-scale-in">
+      <div class="card-body">
+        <label for="customer_id" class="block text-sm font-semibold text-gray-900 mb-3">
+          Khách hàng <span class="text-red-500">*</span>
+        </label>
+        <select id="customer_id" name="customer_id" 
+                class="w-full text-base" required>
+          <option value="">Chọn khách hàng</option>
+          @foreach($customers as $customer)
+            <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>
+              {{ $customer->name }} ({{ $customer->phone }})
+            </option>
+          @endforeach
+        </select>
+        @error('customer_id')
+          <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
+        @enderror
+      </div>
     </div>
 
-    <!-- Message Input -->
-    <div class="bg-white rounded-lg border border-gray-200 p-3">
-      <label for="original_message" class="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-        Tin nhắn cược <span class="text-red-500">*</span>
-      </label>
-      <textarea id="original_message" name="original_message" rows="4"
-                class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('original_message') border-red-500 @enderror"
-                placeholder="Ví dụ: lo 12 34 56 100000&#10;bao 01 02 03 50000 2d&#10;da 12 34 200000 hcm"
-                required>{{ old('original_message') }}</textarea>
-      @error('original_message')
-        <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-      @enderror
-      <p class="mt-1.5 text-xs text-gray-500">
-        Hệ thống sẽ tự động phân tích và phát hiện đài từ tin nhắn
-      </p>
+    <!-- Message Input - iOS Card -->
+    <div class="card ios-scale-in">
+      <div class="card-body">
+        <label for="original_message" class="block text-sm font-semibold text-gray-900 mb-3">
+          Tin nhắn cược <span class="text-red-500">*</span>
+        </label>
+        <textarea id="original_message" name="original_message" rows="6"
+                  class="w-full text-base"
+                  placeholder="Ví dụ: lo 12 34 56 100000&#10;bao 01 02 03 50000 2d&#10;da 12 34 200000 hcm"
+                  required>{{ old('original_message') }}</textarea>
+        @error('original_message')
+          <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
+        @enderror
+        <p class="mt-3 text-xs text-gray-500">
+          Hệ thống sẽ tự động phân tích và phát hiện đài từ tin nhắn
+        </p>
+      </div>
     </div>
 
-    <!-- Parse Button -->
-    <div>
-      <button type="button" id="parse-btn" 
-              class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm">
-        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-        </svg>
-        Phân tích tin nhắn
-      </button>
-    </div>
+    <!-- Parse Button - iOS Style -->
+    <button type="button" id="parse-btn" 
+            class="btn-primary w-full">
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+      </svg>
+      Phân tích tin nhắn
+    </button>
 
-    <!-- Parse Result -->
-    <div id="parse-result" class="hidden">
-      <div class="bg-white rounded-lg border border-gray-200 p-3 space-y-3">
-        <!-- Preview Numbers với tổng tiền cược & xác - Đưa lên đầu -->
-        <div id="preview-numbers" class="hidden">
-          <h5 class="text-xs font-semibold text-gray-700 mb-2">📋 Preview số & Tổng tiền:</h5>
-          <div id="preview-numbers-content" class="text-xs text-gray-600"></div>
-        </div>
-        
-        <!-- Kết quả phân tích chi tiết -->
-        <div id="parse-details" class="hidden">
-          <div class="border-t border-gray-200 pt-3 mt-3">
-            <h4 class="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Kết quả phân tích:</h4>
-            <div id="parse-content" class="text-xs text-gray-600"></div>
+    <!-- Parse Result - iOS Card -->
+    <div id="parse-result" class="hidden ios-scale-in">
+      <div class="card">
+        <div class="card-body space-y-5">
+          <!-- Tổng tiền theo loại cược - iOS Table -->
+          <div id="total-summary-table" class="hidden">
+            <h3 class="text-base font-semibold text-gray-900 mb-4">Tổng tiền cược & xác</h3>
+            <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="bg-gray-50">
+                    <th class="px-4 py-3 text-left font-semibold text-gray-900">Loại cược</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-900">Tiền cược</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-900">Tiền xác</th>
+                  </tr>
+                </thead>
+                <tbody id="total-summary-table-body" class="divide-y divide-gray-100">
+                </tbody>
+                <tfoot id="total-summary-table-footer" class="bg-gray-50">
+                </tfoot>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Preview Numbers - iOS List -->
+          <div id="preview-numbers" class="hidden">
+            <h3 class="text-base font-semibold text-gray-900 mb-4">Preview số</h3>
+            <div id="preview-numbers-content" class="space-y-3"></div>
+          </div>
+          
+          <!-- Kết quả phân tích chi tiết -->
+          <div id="parse-details" class="hidden">
+            <div class="border-t border-gray-200 pt-5">
+              <h3 class="text-base font-semibold text-gray-900 mb-4">Kết quả phân tích</h3>
+              <div id="parse-content" class="text-sm text-gray-600"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Actions -->
-    <div class="pb-3 space-y-2">
-      <button type="submit" 
-              class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition shadow-sm">
-        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Actions - iOS Style -->
+    <div class="space-y-3 pb-6">
+      <button type="submit" class="btn-primary w-full">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
         </svg>
         Xử lý
       </button>
       <a href="{{ route('user.betting-tickets.index') }}" 
-         class="block w-full text-center px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
+         class="btn-secondary w-full text-center">
         Hủy
       </a>
     </div>
@@ -146,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show loading
     parseBtn.disabled = true;
-    parseBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Đang phân tích...';
+    parseBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Đang phân tích...';
     
     // Make AJAX request
     fetch('{{ route("user.betting-tickets.parse-message") }}', {
@@ -177,32 +198,91 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Display parse result
         if (data.multiple_bets && data.multiple_bets.length > 0) {
-          // Preview Numbers với tổng tiền cược & xác - Gộp lại
-          const previewNumbersDiv = document.getElementById('preview-numbers');
-          const previewNumbersContent = document.getElementById('preview-numbers-content');
-          const numbersByType = {};
-          const summaryByType = {};
+          // Tạo key unique cho từng loại cược chi tiết
+          function getDetailedTypeKey(bet) {
+            const typeCode = bet.type_code || 'unknown';
+            const meta = bet.meta || {};
+            
+            // Bao lô: phân theo digits (2, 3, 4)
+            if (typeCode === 'bao_lo') {
+              const digits = meta.digits || 2;
+              return `bao_lo_${digits}`;
+            }
+            
+            // Đá xiên: phân theo số đài (2, 3, 4)
+            if (typeCode === 'da_xien') {
+              const daiCount = meta.dai_count || 2;
+              return `da_xien_${daiCount}`;
+            }
+            
+            // Xiên: phân theo xien_size (2, 3, 4)
+            if (typeCode === 'xien') {
+              const xienSize = meta.xien_size || 2;
+              return `xien_${xienSize}`;
+            }
+            
+            // Các loại khác: dùng type_code
+            return typeCode;
+          }
+          
+          // Tạo label chi tiết
+          function getDetailedTypeLabel(bet) {
+            const typeCode = bet.type_code || 'unknown';
+            const meta = bet.meta || {};
+            
+            // Bao lô: đã có digits trong label từ controller
+            if (typeCode === 'bao_lo') {
+              const digits = meta.digits || 2;
+              return `Bao lô ${digits} số`;
+            }
+            
+            // Đá xiên: thêm số đài
+            if (typeCode === 'da_xien') {
+              const daiCount = meta.dai_count || 2;
+              return `Đá xiên ${daiCount} đài`;
+            }
+            
+            // Xiên: thêm size
+            if (typeCode === 'xien') {
+              const xienSize = meta.xien_size || 2;
+              return `Xiên ${xienSize}`;
+            }
+            
+            // Các loại khác: dùng label từ controller
+            return bet.type || typeCode;
+          }
+          
+          // Tổng tiền theo loại cược chi tiết
+          const summaryByDetailedType = {};
+          const numbersByDetailedType = {};
           let grandTotalAmount = 0;
           let grandTotalCostXac = 0;
           
           data.multiple_bets.forEach(bet => {
-            const typeCode = bet.type_code || 'unknown';
-            const typeLabel = bet.type || typeCode;
+            const detailedKey = getDetailedTypeKey(bet);
+            const detailedLabel = getDetailedTypeLabel(bet);
             const amount = bet.amount || 0;
             const costXac = bet.cost_xac || 0;
             const station = bet.station || '';
             
-            // Initialize type data
-            if (!numbersByType[typeCode]) {
-              numbersByType[typeCode] = {
-                type: typeLabel,
-                numbers: []
-              };
-              summaryByType[typeCode] = {
+            // Initialize summary
+            if (!summaryByDetailedType[detailedKey]) {
+              summaryByDetailedType[detailedKey] = {
+                label: detailedLabel,
                 totalAmount: 0,
                 totalCostXac: 0
               };
+              numbersByDetailedType[detailedKey] = {
+                label: detailedLabel,
+                numbers: []
+              };
             }
+            
+            // Tính tổng tiền
+            summaryByDetailedType[detailedKey].totalAmount += amount;
+            summaryByDetailedType[detailedKey].totalCostXac += costXac;
+            grandTotalAmount += amount;
+            grandTotalCostXac += costXac;
             
             // Collect numbers với station (giữ nguyên tất cả, không loại bỏ trùng lặp)
             if (bet.numbers && Array.isArray(bet.numbers)) {
@@ -216,75 +296,94 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Thêm station vào số
                 const stationLabel = station ? ` [${station}]` : '';
-                numbersByType[typeCode].numbers.push({
+                numbersByDetailedType[detailedKey].numbers.push({
                   number: numStr,
                   station: stationLabel
                 });
               });
             }
-            
-            // Tính tổng tiền
-            summaryByType[typeCode].totalAmount += amount;
-            summaryByType[typeCode].totalCostXac += costXac;
-            grandTotalAmount += amount;
-            grandTotalCostXac += costXac;
           });
           
-          let previewHtml = '';
-          Object.keys(numbersByType).forEach(typeCode => {
-            const typeData = numbersByType[typeCode];
-            const summaryData = summaryByType[typeCode];
+          // Hiển thị bảng tổng tiền - iOS Style
+          const totalSummaryTableDiv = document.getElementById('total-summary-table');
+          const totalSummaryTableBody = document.getElementById('total-summary-table-body');
+          const totalSummaryTableFooter = document.getElementById('total-summary-table-footer');
+          
+          let tableBodyHtml = '';
+          Object.keys(summaryByDetailedType).sort().forEach(key => {
+            const summaryData = summaryByDetailedType[key];
             const amountInK = (summaryData.totalAmount / 1000).toFixed(1);
             const costInK = (summaryData.totalCostXac / 1000).toFixed(1);
             
-            previewHtml += `<div class="mb-2 p-2 bg-blue-50 rounded border border-blue-200">
-              <div class="flex items-center justify-between mb-1.5">
-                <div class="font-semibold text-gray-800">${typeData.type}:</div>
-                <div class="text-xs text-gray-600">
-                  <span class="text-blue-700 font-semibold">${amountInK}k</span> / 
-                  <span class="text-green-700 font-semibold">${costInK}k</span>
+            tableBodyHtml += `<tr class="ios-list-item border-0">
+              <td class="px-4 py-3 text-gray-900">${summaryData.label}</td>
+              <td class="px-4 py-3 text-right text-blue-600 font-semibold">${amountInK}k</td>
+              <td class="px-4 py-3 text-right text-green-600 font-semibold">${costInK}k</td>
+            </tr>`;
+          });
+          
+          const grandAmountInK = (grandTotalAmount / 1000).toFixed(1);
+          const grandCostInK = (grandTotalCostXac / 1000).toFixed(1);
+          const tableFooterHtml = `<tr class="bg-gray-50">
+            <td class="px-4 py-3 text-gray-900 font-bold">Tổng cộng</td>
+            <td class="px-4 py-3 text-right text-blue-600 font-bold text-base">${grandAmountInK}k</td>
+            <td class="px-4 py-3 text-right text-green-600 font-bold text-base">${grandCostInK}k</td>
+          </tr>`;
+          
+          if (tableBodyHtml) {
+            totalSummaryTableBody.innerHTML = tableBodyHtml;
+            totalSummaryTableFooter.innerHTML = tableFooterHtml;
+            totalSummaryTableDiv.classList.remove('hidden');
+          } else {
+            totalSummaryTableDiv.classList.add('hidden');
+          }
+          
+          // Preview Numbers - iOS Style
+          const previewNumbersDiv = document.getElementById('preview-numbers');
+          const previewNumbersContent = document.getElementById('preview-numbers-content');
+          
+          let previewHtml = '';
+          Object.keys(numbersByDetailedType).sort().forEach(key => {
+            const typeData = numbersByDetailedType[key];
+            
+            previewHtml += `<div class="card">
+              <div class="card-body">
+                <div class="font-semibold text-gray-900 mb-3">${typeData.label}</div>
+                <div class="flex flex-wrap gap-2">
+                  ${typeData.numbers.map(item => `<span class="px-3 py-1.5 bg-gray-100 rounded-full text-sm text-gray-700">${item.number}${item.station}</span>`).join('')}
                 </div>
-              </div>
-              <div class="flex flex-wrap gap-1.5">
-                ${typeData.numbers.map(item => `<span class="px-2 py-0.5 bg-white border border-blue-200 rounded text-gray-700 text-xs">${item.number}${item.station}</span>`).join('')}
               </div>
             </div>`;
           });
           
-          // Thêm tổng cộng
           if (previewHtml) {
-            const grandAmountInK = (grandTotalAmount / 1000).toFixed(1);
-            const grandCostInK = (grandTotalCostXac / 1000).toFixed(1);
-            previewHtml += `<div class="mt-2 pt-2 border-t-2 border-gray-300 p-2 bg-gray-50 rounded">
-              <div class="flex items-center justify-between text-xs font-bold">
-                <span class="text-gray-900">Tổng cộng:</span>
-                <span class="text-blue-700">${grandAmountInK}k</span> / 
-                <span class="text-green-700">${grandCostInK}k</span>
-              </div>
-            </div>`;
             previewNumbersContent.innerHTML = previewHtml;
             previewNumbersDiv.classList.remove('hidden');
           } else {
             previewNumbersDiv.classList.add('hidden');
           }
           
-          // Parse Details - Hiển thị cuối cùng
+          // Parse Details - iOS Style
           const parseDetailsDiv = document.getElementById('parse-details');
-          let html = `<p class="text-green-600 font-medium mb-2">✓ Phân tích được ${data.multiple_bets.length} phiếu cược</p>`;
+          let html = `<p class="text-green-600 font-medium mb-3">✓ Phân tích được ${data.multiple_bets.length} phiếu cược</p>`;
           data.multiple_bets.forEach((bet, idx) => {
-            html += `<div class="text-xs mb-1 p-1.5 bg-gray-50 rounded">
-              <strong>${idx + 1}.</strong> ${bet.type || 'N/A'} - ${bet.station || '-'} - ${(bet.amount || 0).toLocaleString()}đ
+            html += `<div class="ios-list-item border-0 mb-2 rounded-2xl">
+              <div>
+                <div class="font-medium text-gray-900">${bet.type || 'N/A'}</div>
+                <div class="text-sm text-gray-500 mt-1">${bet.station || '-'} • ${(bet.amount || 0).toLocaleString()}đ</div>
+              </div>
             </div>`;
           });
           parseContent.innerHTML = html;
           parseDetailsDiv.classList.remove('hidden');
         } else {
-          // Single bet - không hiển thị preview
+          // Single bet
+          document.getElementById('total-summary-table').classList.add('hidden');
           document.getElementById('preview-numbers').classList.add('hidden');
           document.getElementById('parse-details').classList.add('hidden');
           
           parseContent.innerHTML = `
-            <div class="space-y-1 text-xs">
+            <div class="space-y-2 text-sm">
               <p><strong>Loại:</strong> ${data.betting_type?.name || 'N/A'}</p>
               <p><strong>Số:</strong> ${data.numbers?.join(', ') || 'N/A'}</p>
               <p><strong>Tiền:</strong> ${(data.amount || 0).toLocaleString()}đ</p>
@@ -295,13 +394,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         parseResult.classList.remove('hidden');
       } else {
-        // Hide preview sections on error
+        // Error
+        document.getElementById('total-summary-table').classList.add('hidden');
         document.getElementById('preview-numbers').classList.add('hidden');
         document.getElementById('parse-details').classList.add('hidden');
         
         parseContent.innerHTML = `
-          <p class="text-red-600 font-medium mb-1">✗ Tin nhắn không hợp lệ</p>
-          <ul class="text-xs text-red-600 list-disc list-inside">
+          <p class="text-red-500 font-medium mb-2">✗ Tin nhắn không hợp lệ</p>
+          <ul class="text-sm text-red-500 list-disc list-inside">
             ${(data.errors || []).map(e => `<li>${e}</li>`).join('')}
           </ul>
         `;
@@ -311,12 +411,14 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
       console.error('Error:', error);
-      parseContent.innerHTML = '<p class="text-red-600 text-xs">Có lỗi xảy ra khi phân tích</p>';
+      parseContent.innerHTML = '<p class="text-red-500 text-sm">Có lỗi xảy ra khi phân tích</p>';
       parseResult.classList.remove('hidden');
     })
     .finally(() => {
       parseBtn.disabled = false;
-      parseBtn.innerHTML = '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>Phân tích tin nhắn';
+      parseBtn.innerHTML = `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+      </svg>Phân tích tin nhắn`;
     });
   });
 });

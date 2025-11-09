@@ -7,7 +7,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#F2F2F7">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     
     <title>@yield('title', 'Keki SaaS')</title>
     
@@ -17,9 +18,7 @@
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="/images/icon-192x192.png">
     
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
+    <!-- iOS System Fonts - No external fonts needed -->
     
     <!-- Scripts -->
     @php
@@ -144,70 +143,59 @@
             }
         }
         
-        /* Bottom Navigation Styles */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            top:auto;
-            left: 0;
-            right: 0;
-            background: white;
-            border-top: 1px solid #e5e7eb;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-            z-index: 50;
-            padding-bottom: env(safe-area-inset-bottom);
+        /* iOS Tab Bar Active State */
+        .ios-tab-active {
+            color: #007AFF;
         }
         
-        .bottom-nav-item {
-            transition: all 0.2s ease;
+        .ios-tab-active svg {
+            stroke-width: 2.5;
         }
         
-        .bottom-nav-item.active {
-            color: #4f46e5;
+        /* iOS Date/Region Selector */
+        .ios-date-region-selector {
+            @apply px-3 py-1.5 rounded-full text-xs font-medium;
+            @apply bg-gray-100 text-gray-700;
+            @apply border-0;
+            -webkit-appearance: none;
+            appearance: none;
         }
         
-        .bottom-nav-item:active {
-            transform: scale(0.95);
+        /* iOS Flash Messages */
+        .ios-alert {
+            @apply rounded-2xl px-4 py-3 mb-4;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
         }
         
-        /* Slide up animation */
-        @keyframes slideUp {
-            from {
-                transform: translateY(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+        .ios-alert-success {
+            @apply bg-green-50 text-green-900 border border-green-200;
         }
         
-        .slide-up {
-            animation: slideUp 0.3s ease-out;
+        .ios-alert-error {
+            @apply bg-red-50 text-red-900 border border-red-200;
         }
         
-        /* Compact header on mobile */
-        @media (max-width: 768px) {
-            nav {
-                position: sticky;
-                top: 0;
-                z-index: 40;
-            }
+        .ios-alert-warning {
+            @apply bg-yellow-50 text-yellow-900 border border-yellow-200;
+        }
+        
+        .ios-alert-info {
+            @apply bg-blue-50 text-blue-900 border border-blue-200;
         }
     </style>
     
     @stack('styles')
 </head>
-<body class="h-full bg-gray-50 font-sans antialiased @auth @if(!auth()->user()->isAdmin()) has-bottom-nav @endif @endauth">
-    <div class="min-h-full pb-20 md:pb-6">
-        <!-- Navigation -->
-        <nav class="bg-white shadow-sm border-b border-gray-200">
-            <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-14 md:h-16">
-                    <div class="flex items-center space-x-4">
+<body class="h-full bg-gray-100 font-sans antialiased @auth @if(!auth()->user()->isAdmin()) has-bottom-nav @endif @endauth" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+    <div class="min-h-full pb-20 safe-area-bottom">
+        <!-- iOS Navigation Bar -->
+        <nav class="ios-blur border-b border-gray-200/30 sticky top-0 z-50 safe-area-top">
+            <div class="max-w-full mx-auto px-4">
+                <div class="flex justify-between items-center h-14">
+                    <div class="flex items-center space-x-3">
                         <!-- Logo -->
                         <div class="flex-shrink-0">
-                            <a href="{{ route('user.dashboard') }}" class="text-xl md:text-2xl font-bold text-indigo-600">
+                            <a href="{{ route('user.dashboard') }}" class="text-xl font-bold text-gray-900">
                                 Keki
                             </a>
                         </div>
@@ -493,7 +481,7 @@
         </nav>
         
         <!-- Main content -->
-        <main class="max-w-7xl mx-auto py-3 md:py-6 px-3 md:px-4 sm:px-6 lg:px-8 pb-20 md:pb-6">
+        <main class="max-w-full mx-auto py-4 px-4 pb-24 ios-fade-in">
             <!-- Flash Messages -->
             <!-- @if(session('success'))
                 <div class="mb-4 rounded-md bg-green-50 p-4">
@@ -575,45 +563,45 @@
             @yield('content')
         </main>
         
-        <!-- Bottom Navigation (Mobile Only) -->
+        <!-- iOS Tab Bar -->
         @auth
         @if(!auth()->user()->isAdmin())
-        <nav class="bottom-nav md:hidden slide-up">
-            <div class="flex justify-around items-center px-2 py-2">
+        <nav class="fixed bottom-0 left-0 right-0 ios-blur border-t border-gray-200/30 safe-area-bottom z-50">
+            <div class="flex justify-around items-center h-16 px-2">
                 <!-- Dashboard -->
                 <a href="{{ route('user.dashboard') }}" 
-                   class="bottom-nav-item flex flex-col items-center justify-center flex-1 py-2 {{ request()->routeIs('user.dashboard') ? 'active' : 'text-gray-600' }}">
-                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                   class="flex flex-col items-center justify-center flex-1 py-1.5 {{ request()->routeIs('user.dashboard') ? 'text-blue-500' : 'text-gray-500' }} transition-colors duration-200">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.dashboard') ? '2.5' : '2' }}">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                     </svg>
-                    <span class="text-xs font-medium">Trang chủ</span>
+                    <span class="text-[10px] font-medium">Trang chủ</span>
                 </a>
                 
                 <!-- Khách hàng -->
                 <a href="{{ route('user.customers.index') }}" 
-                   class="bottom-nav-item flex flex-col items-center justify-center flex-1 py-2 {{ request()->routeIs('user.customers*') ? 'active' : 'text-gray-600' }}">
-                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                   class="flex flex-col items-center justify-center flex-1 py-1.5 {{ request()->routeIs('user.customers*') ? 'text-blue-500' : 'text-gray-500' }} transition-colors duration-200">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.customers*') ? '2.5' : '2' }}">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
-                    <span class="text-xs font-medium">Khách hàng</span>
+                    <span class="text-[10px] font-medium">Khách hàng</span>
                 </a>
                 
                 <!-- Phiếu cược -->
                 <a href="{{ route('user.betting-tickets.index') }}" 
-                   class="bottom-nav-item flex flex-col items-center justify-center flex-1 py-2 {{ request()->routeIs('user.betting-tickets*') ? 'active' : 'text-gray-600' }}">
-                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                   class="flex flex-col items-center justify-center flex-1 py-1.5 {{ request()->routeIs('user.betting-tickets*') ? 'text-blue-500' : 'text-gray-500' }} transition-colors duration-200">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.betting-tickets*') ? '2.5' : '2' }}">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <span class="text-xs font-medium">Thống kê</span>
+                    <span class="text-[10px] font-medium">Thống kê</span>
                 </a>
                 
                 <!-- KQXS -->
                 <a href="{{ route('user.kqxs') }}" 
-                   class="bottom-nav-item flex flex-col items-center justify-center flex-1 py-2 {{ request()->routeIs('user.kqxs*') ? 'active' : 'text-gray-600' }}">
-                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                   class="flex flex-col items-center justify-center flex-1 py-1.5 {{ request()->routeIs('user.kqxs*') ? 'text-blue-500' : 'text-gray-500' }} transition-colors duration-200">
+                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.kqxs*') ? '2.5' : '2' }}">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
-                    <span class="text-xs font-medium">KQXS</span>
+                    <span class="text-[10px] font-medium">KQXS</span>
                 </a>
                 
                 <!-- More/Menu -->
