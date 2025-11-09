@@ -243,7 +243,7 @@ class BettingSettlementService
     }
 
     /**
-     * Match Đầu: Trúng khi match 2 số đầu giải đặc biệt
+     * Match Đầu: Trúng khi match 2 số cuối giải 8
      */
     protected function matchDau(array $numbers, array $results, float $amount, array $meta, BettingTicket $ticket): array
     {
@@ -259,7 +259,8 @@ class BettingSettlementService
                     $winDetails[] = [
                         'number' => $num2,
                         'station' => $result->station,
-                        'matched' => $result->db_first2,
+                        'matched' => $result->getG8Last2(),
+                        'prize' => 'G8',
                     ];
                 }
             }
@@ -318,6 +319,7 @@ class BettingSettlementService
                         'number' => $num2,
                         'station' => $result->station,
                         'matched' => $result->db_last2,
+                        'prize' => 'GDB',
                     ];
                 }
             }

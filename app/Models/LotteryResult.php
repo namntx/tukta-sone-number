@@ -76,7 +76,27 @@ class LotteryResult extends Model
 
     public function matchDau(string $n2): bool {
         $n2 = str_pad(preg_replace('/\D/','',$n2), 2, '0', STR_PAD_LEFT);
-        return $this->db_first2 === $n2;
+        // Cược đầu tính 2 số cuối của giải 8
+        $g8Last2 = $this->getG8Last2();
+        return $g8Last2 === $n2;
+    }
+
+    /**
+     * Lấy 2 số cuối của giải 8
+     * @return string|null
+     */
+    public function getG8Last2(): ?string {
+        $prizes = $this->prizes ?? [];
+        $g8 = $prizes['g8'] ?? [];
+
+        if (empty($g8) || !isset($g8[0])) {
+            return null;
+        }
+
+        $g8Number = (string)$g8[0];
+        // Giải 8 thường là 2 số, lấy 2 số cuối (đảm bảo padding nếu cần)
+        $g8Number = str_pad(preg_replace('/\D/','',$g8Number), 2, '0', STR_PAD_LEFT);
+        return substr($g8Number, -2);
     }
 
     public function matchDuoi(string $n2): bool {
