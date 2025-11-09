@@ -752,24 +752,25 @@ class BettingMessageParser
                     $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'dau_duoi','amount'=>$amt]);
                 }
                 else {
+                    // Đặc biệt cho d...n: KHÔNG flush ngay để cho phép nhận cả 2 d tokens (đầu + đuôi)
                     $ctx['current_type']='dau';
                     $ctx['pair_d_dau'][]=$amt;
                     $ctx['last_token_type'] = 'd';
-                    $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'dau','amount'=>$amt]);
+                    $addEvent($events,'pair_combo',['token'=>$tok,'type'=>'dau','amount'=>$amt,'pair_d_count'=>count($ctx['pair_d_dau'])]);
                 }
 
                 // QUAN TRỌNG: Flush ngay sau combo token để không kéo số tiếp theo vào cùng group
-                if ($isGroupPending($ctx)) {
+                // NGOẠI LỆ: Với d...n token, KHÔNG flush ngay để cho phép thu thập cả đầu và đuôi
+                if ($isGroupPending($ctx) && $targetType !== 'dau') {
                     $flushGroup($outBets, $ctx, $events, 'combo_token_auto_flush');
+                    // Clear last_numbers sau combo token để tránh kế thừa sang type khác
+                    $ctx['last_numbers'] = [];
+                    // CRITICAL: Reset dai_count after combo token flush
+                    // Nếu có 2dai, sau khi flush combo token (vd: "2dai 28 dau 125n")
+                    // thì reset dai_count để không apply cho group tiếp theo
+                    $ctx['dai_count'] = null;
+                    $ctx['dai_capture_remaining'] = 0;
                 }
-                // Clear last_numbers sau combo token để tránh kế thừa sang type khác
-                $ctx['last_numbers'] = [];
-
-                // CRITICAL: Reset dai_count after combo token flush
-                // Nếu có 2dai, sau khi flush combo token (vd: "2dai 28 dau 125n")
-                // thì reset dai_count để không apply cho group tiếp theo
-                $ctx['dai_count'] = null;
-                $ctx['dai_capture_remaining'] = 0;
 
                 $ctx['just_saw_station'] = false;
                 continue;
