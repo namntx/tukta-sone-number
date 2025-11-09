@@ -290,7 +290,8 @@ class BettingMessageParser
                 $ctx['meta']          = [];
                 $ctx['xc_d_list']     = [];
                 $ctx['xc_dd_amount']  = null;
-                $ctx['current_type']  = null;
+                // KHÔNG clear current_type để cho phép tiếp tục nhận số xc tiếp theo
+                // $ctx['current_type']  = null;
                 return;
             }
     
@@ -709,7 +710,16 @@ class BettingMessageParser
     
             // Hỗ trợ số nguyên và số thập phân: 5n, 3.5n, 7.5n
             if (preg_match('/^(\d+(?:\.\d+)?)(n|k)$/', $tok, $m)) {
-                $ctx['amount'] = (int)round((float)$m[1] * 1000);
+                $newAmount = (int)round((float)$m[1] * 1000);
+
+                // QUAN TRỌNG: Flush nếu đã có amount cũ và group pending
+                // Để tránh amount mới ghi đè amount cũ trước khi flush
+                // VD: "xc 816 150n 633 40n" → flush [633] với 40n trước khi gặp amount mới
+                if (!empty($ctx['amount']) && $isGroupPending($ctx)) {
+                    $flushGroup($outBets, $ctx, $events, 'amount_token_auto_flush');
+                }
+
+                $ctx['amount'] = $newAmount;
                 $addEvent($events, 'amount_loose', [
                     'token'=>$tok, 'type'=>$ctx['current_type'] ?? null, 'amount'=>$ctx['amount']
                 ]);
