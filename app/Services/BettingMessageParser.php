@@ -695,14 +695,15 @@ class BettingMessageParser
                 if ($isGroupPending($ctx)) $flushGroup($outBets, $ctx, $events, 'dot_flush_or_hold');
                 else $addEvent($events, 'dot_flush_or_hold');
 
-                // CRITICAL: Reset dai_count, stations, last_numbers, and last_type after period (end of betting slip)
-                // Quy tắc: Sau khi kết thúc phiếu cược gặp đài mới phải flush hết để nhận đài mới
-                // last_numbers và last_type cũng phải reset để tránh kế thừa từ phiếu cược trước sang phiếu mới
+                // CRITICAL: Reset ALL context after period (end of betting slip)
+                // Dấu chấm (.) là boundary rõ ràng giữa các phiếu cược
+                // Sau dấu chấm, context phải reset hoàn toàn để tránh contamination
                 $ctx['dai_count'] = null;
                 $ctx['dai_capture_remaining'] = 0;
                 $ctx['stations'] = []; // Reset stations to accept new station after period
                 $ctx['last_numbers'] = []; // Reset last_numbers to prevent inheritance across betting slips
                 $ctx['last_type'] = null; // Reset last_type to prevent type inheritance across betting slips
+                $ctx['current_type'] = null; // Reset current_type to prevent type contamination (e.g., xc bleeding into dd)
 
                 $ctx['just_saw_station'] = false;
                 continue;
