@@ -69,6 +69,9 @@ class BettingMessageParser
             }
             $s = str_replace(['t,pho','tphố','tpho','tp.hcm','tphcm','tp ho chi minh'], 'hcm', $s);
             $s = str_replace(['t,ninh','t ninh','tninh'], 'tn', $s);
+            // Hỗ trợ viết tắt có dấu phẩy: T,Giang → tg, K,Giang → kg
+            $s = str_replace(['t,giang','t giang','tgiang','tien giang'], 'tg', $s);
+            $s = str_replace(['k,giang','k giang','kgiang','kien giang'], 'kg', $s);
             $s = preg_replace('/[,]+/u',' ', $s) ?? $s;
             return trim($s);
         };
@@ -234,12 +237,24 @@ class BettingMessageParser
                 $ctx['last_numbers'] = $numbers;
             }
 
+            // KẾ THỪA KIỂU CƯỢC: Nếu không có type nhưng có last_type → dùng last_type
+            // Quy tắc: "nếu k có kiểu cược thì lấy kiểu trước đó"
+            if (!$type && !empty($ctx['last_type']) && !empty($numbers) && $amount > 0) {
+                $type = $ctx['last_type'];
+                $ctx['current_type'] = $type;
+                $addEvent($events, 'inherit_type', ['type' => $type, 'from_last_type' => true]);
+            }
+
             if (!$type) { $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; return; }
             if (!count($numbers) && !in_array($type, ['xiu_chu'], true)) {
                 $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
                 return;
             }
-    
+
+            // LƯU KIỂU CƯỢC trước khi emit để có thể kế thừa cho group tiếp theo
+            // Quy tắc: "nếu k có kiểu cược thì lấy kiểu trước đó"
+            $ctx['last_type'] = $type;
+
             if ($type === 'bao_lo') {
                 $emitBaoLoOneByOne($outBets, $ctx);
                 $ctx['numbers_group']=[]; $ctx['amount']=null; $ctx['meta']=[]; $ctx['current_type']=null;
@@ -555,6 +570,7 @@ class BettingMessageParser
             'xc_d_list'           => [],
             'xc_dd_amount'        => null,
             'last_numbers'        => [],
+            'last_type'           => null,  // track kiểu cược trước để kế thừa
             'just_saw_station'    => false,
             'last_token_type'     => null,  // track loại token trước: 'number', 'd', 'dd', etc.
 
@@ -678,11 +694,14 @@ class BettingMessageParser
                 if ($isGroupPending($ctx)) $flushGroup($outBets, $ctx, $events, 'dot_flush_or_hold');
                 else $addEvent($events, 'dot_flush_or_hold');
 
-                // CRITICAL: Reset dai_count and stations after period (end of betting slip)
+                // CRITICAL: Reset dai_count, stations, last_numbers, and last_type after period (end of betting slip)
                 // Quy tắc: Sau khi kết thúc phiếu cược gặp đài mới phải flush hết để nhận đài mới
+                // last_numbers và last_type cũng phải reset để tránh kế thừa từ phiếu cược trước sang phiếu mới
                 $ctx['dai_count'] = null;
                 $ctx['dai_capture_remaining'] = 0;
                 $ctx['stations'] = []; // Reset stations to accept new station after period
+                $ctx['last_numbers'] = []; // Reset last_numbers to prevent inheritance across betting slips
+                $ctx['last_type'] = null; // Reset last_type to prevent type inheritance across betting slips
 
                 $ctx['just_saw_station'] = false;
                 continue;
