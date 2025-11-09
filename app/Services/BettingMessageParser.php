@@ -631,12 +631,18 @@ class BettingMessageParser
                 // → flush trước khi thêm số mới (số mới thuộc group tiếp theo)
                 if (!empty($ctx['amount']) && $isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'amount_complete_auto_flush');
+                    // Reset dai_count after auto flush (similar to combo token)
+                    $ctx['dai_count'] = null;
+                    $ctx['dai_capture_remaining'] = 0;
                 }
 
                 // Nếu token trước là 'd' và đang có group pending với pair_d_dau
                 // → flush group cũ trước khi bắt đầu nhóm số mới
                 if ($ctx['last_token_type'] === 'd' && !empty($ctx['pair_d_dau']) && $isGroupPending($ctx)) {
                     $flushGroup($outBets, $ctx, $events, 'd_then_number_flush');
+                    // Reset dai_count after flush
+                    $ctx['dai_count'] = null;
+                    $ctx['dai_capture_remaining'] = 0;
                 }
 
                 // nếu đang ở 'kéo' và có start → expand
@@ -671,6 +677,13 @@ class BettingMessageParser
             if ($tok === '.') {
                 if ($isGroupPending($ctx)) $flushGroup($outBets, $ctx, $events, 'dot_flush_or_hold');
                 else $addEvent($events, 'dot_flush_or_hold');
+
+                // CRITICAL: Reset dai_count and stations after period (end of betting slip)
+                // Quy tắc: Sau khi kết thúc phiếu cược gặp đài mới phải flush hết để nhận đài mới
+                $ctx['dai_count'] = null;
+                $ctx['dai_capture_remaining'] = 0;
+                $ctx['stations'] = []; // Reset stations to accept new station after period
+
                 $ctx['just_saw_station'] = false;
                 continue;
             }
@@ -732,6 +745,12 @@ class BettingMessageParser
                 }
                 // Clear last_numbers sau combo token để tránh kế thừa sang type khác
                 $ctx['last_numbers'] = [];
+
+                // CRITICAL: Reset dai_count after combo token flush
+                // Nếu có 2dai, sau khi flush combo token (vd: "2dai 28 dau 125n")
+                // thì reset dai_count để không apply cho group tiếp theo
+                $ctx['dai_count'] = null;
+                $ctx['dai_capture_remaining'] = 0;
 
                 $ctx['just_saw_station'] = false;
                 continue;
