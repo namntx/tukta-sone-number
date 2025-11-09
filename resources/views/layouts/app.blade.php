@@ -186,36 +186,35 @@
     
     @stack('styles')
 </head>
-<body class="h-full bg-gray-100 font-sans antialiased @auth @if(!auth()->user()->isAdmin()) has-bottom-nav @endif @endauth" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;">
-    <div class="min-h-full pb-20 safe-area-bottom">
-        <!-- iOS Navigation Bar -->
-        <nav class="ios-blur border-b border-gray-200/30 sticky top-0 z-50 safe-area-top">
+<body class="h-full font-sans antialiased @auth @if(!auth()->user()->isAdmin()) has-bottom-nav @endif @endauth">
+    <div class="min-h-full pb-20 safe-area-bottom bg-neutral-100">
+        <!-- iOS Navigation Bar - Premium -->
+        <nav class="ios-blur sticky top-0 z-50 safe-area-top" style="border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);">
             <div class="max-w-full mx-auto px-4">
-                <div class="flex justify-between items-center h-14">
+                <div class="flex justify-between items-center h-16">
                     <div class="flex items-center space-x-3">
-                        <!-- Logo -->
+                        <!-- Logo - Premium -->
                         <div class="flex-shrink-0">
-                            <a href="{{ route('user.dashboard') }}" class="text-xl font-bold text-gray-900">
+                            <a href="{{ route('user.dashboard') }}" class="text-xl font-bold bg-gradient-blue bg-clip-text text-transparent tracking-tight">
                                 Keki
                             </a>
                         </div>
-                        
-                        <!-- Mobile Date/Region (Compact) -->
+
+                        <!-- Mobile Date/Region (Compact) - iOS Style -->
                         @auth
                         @if(!auth()->user()->isAdmin())
-                            <!-- Global Date and Region Selectors -->
-                            <div class="flex items-center gap-1.5 flex-1 min-w-0 ml-2">
-                                <form method="POST" action="{{ route('global-filters.update') }}" class="flex items-center gap-1.5 flex-1 min-w-0" id="global-filters-form">
+                            <div class="flex items-center gap-2 flex-1 min-w-0 ml-2">
+                                <form method="POST" action="{{ route('global-filters.update') }}" class="flex items-center gap-2 flex-1 min-w-0" id="global-filters-form">
                                     @csrf
-                                    <input type="date" 
-                                            id="global_date" 
-                                            name="global_date" 
+                                    <input type="date"
+                                            id="global_date"
+                                            name="global_date"
                                             value="{{ $global_date }}"
-                                            class="flex-1 text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                            class="input-sm flex-1 min-w-0"
                                             onchange="updateGlobalFilters()">
-                                    <select id="global_region" 
-                                            name="global_region" 
-                                            class="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 flex-shrink-0"
+                                    <select id="global_region"
+                                            name="global_region"
+                                            class="input-sm flex-shrink-0"
                                             onchange="updateGlobalFilters()">
                                         <option value="bac" {{ $global_region == 'bac' ? 'selected' : '' }}>Bắc</option>
                                         <option value="trung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
@@ -279,35 +278,33 @@
                                 @endphp
                                 
                                 @if($subscription && $status === 'active')
-                                    <!-- Days Remaining Badge -->
+                                    <!-- Days Remaining Badge - Desktop -->
                                     <div class="hidden md:flex items-center space-x-2">
-                                        <div class="subscription-timer flex items-center space-x-1 bg-gradient-to-r from-indigo-50 to-blue-50 px-3 py-1.5 rounded-full border border-indigo-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div class="ios-badge ios-badge-blue flex items-center gap-1.5">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
-                                            <span class="text-sm font-semibold text-indigo-800">
+                                            <span class="font-semibold">
                                                 {{ $daysRemaining }} ngày
                                             </span>
                                         </div>
-                                        
+
                                         @if($daysRemaining <= 7)
-                                        <div class="pulse-warning flex items-center space-x-1 bg-gradient-to-r from-yellow-50 to-orange-50 px-3 py-1.5 rounded-full border border-yellow-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div class="ios-badge ios-badge-yellow pulse-soft flex items-center gap-1.5">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                                             </svg>
-                                            <span class="text-sm font-semibold text-yellow-800">
+                                            <span class="font-semibold">
                                                 Sắp hết hạn
                                             </span>
                                         </div>
                                         @endif
                                     </div>
-                                    
+
                                     <!-- Mobile Timer (Compact) -->
                                     <div class="md:hidden">
-                                        <div class="flex items-center space-x-1 bg-gradient-to-r from-indigo-50 to-blue-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                                            <span class="text-xs font-semibold text-indigo-800">
-                                                {{ $daysRemaining }} ngày
-                                            </span>
+                                        <div class="ios-badge ios-badge-blue text-xs">
+                                            {{ $daysRemaining }}d
                                         </div>
                                     </div>
                                 @else
@@ -481,34 +478,17 @@
         </nav>
         
         <!-- Main content -->
-        <main class="max-w-full mx-auto py-4 px-4 pb-24 ios-fade-in">
-            <!-- Flash Messages -->
-            <!-- @if(session('success'))
-                <div class="mb-4 rounded-md bg-green-50 p-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-medium text-green-800">{{ session('success') }}</p>
-                        </div>
-                    </div>
-                </div>
-            @endif -->
-            
-            
-            <!-- Flash Messages -->
+        <main class="max-w-full mx-auto py-6 px-4 pb-24 ios-fade-in">
+            <!-- Flash Messages - iOS Style -->
             @if(session('success'))
-                <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md mx-4 mt-4" role="alert">
-                    <div class="flex">
+                <div class="ios-alert ios-alert-success" role="alert">
+                    <div class="flex items-start gap-3">
                         <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
                         </div>
-                        <div class="ml-3">
+                        <div class="flex-1">
                             <p class="text-sm font-medium">{{ session('success') }}</p>
                         </div>
                     </div>
@@ -516,14 +496,14 @@
             @endif
 
             @if(session('error'))
-                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mx-4 mt-4" role="alert">
-                    <div class="flex">
+                <div class="ios-alert ios-alert-error" role="alert">
+                    <div class="flex items-start gap-3">
                         <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                            <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
                         </div>
-                        <div class="ml-3">
+                        <div class="flex-1">
                             <p class="text-sm font-medium">{{ session('error') }}</p>
                         </div>
                     </div>
@@ -531,14 +511,14 @@
             @endif
 
             @if(session('warning'))
-                <div class="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-md mx-4 mt-4" role="alert">
-                    <div class="flex">
+                <div class="ios-alert ios-alert-warning" role="alert">
+                    <div class="flex items-start gap-3">
                         <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                            <svg class="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
                             </svg>
                         </div>
-                        <div class="ml-3">
+                        <div class="flex-1">
                             <p class="text-sm font-medium">{{ session('warning') }}</p>
                         </div>
                     </div>
@@ -546,14 +526,14 @@
             @endif
 
             @if(session('info'))
-                <div class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md mx-4 mt-4" role="alert">
-                    <div class="flex">
+                <div class="ios-alert ios-alert-info" role="alert">
+                    <div class="flex items-start gap-3">
                         <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                            <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                             </svg>
                         </div>
-                        <div class="ml-3">
+                        <div class="flex-1">
                             <p class="text-sm font-medium">{{ session('info') }}</p>
                         </div>
                     </div>
@@ -563,55 +543,46 @@
             @yield('content')
         </main>
         
-        <!-- iOS Tab Bar -->
+        <!-- iOS Tab Bar - Premium -->
         @auth
         @if(!auth()->user()->isAdmin())
-        <nav class="fixed bottom-0 left-0 right-0 ios-blur border-t border-gray-200/30 safe-area-bottom z-50">
-            <div class="flex justify-around items-center h-16 px-2">
+        <nav class="fixed bottom-0 left-0 right-0 ios-blur safe-area-bottom z-50" style="border-top: 0.5px solid rgba(0, 0, 0, 0.08);">
+            <div class="flex justify-around items-center h-20 px-4">
                 <!-- Dashboard -->
-                <a href="{{ route('user.dashboard') }}" 
-                   class="flex flex-col items-center justify-center flex-1 py-1.5 {{ request()->routeIs('user.dashboard') ? 'text-blue-500' : 'text-gray-500' }} transition-colors duration-200">
-                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.dashboard') ? '2.5' : '2' }}">
+                <a href="{{ route('user.dashboard') }}"
+                   class="flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 {{ request()->routeIs('user.dashboard') ? 'text-blue-500 scale-105' : 'text-neutral-500 active:scale-95' }}">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.dashboard') ? '2.5' : '2' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                     </svg>
-                    <span class="text-[10px] font-medium">Trang chủ</span>
+                    <span class="text-[11px] font-semibold tracking-tight">Trang chủ</span>
                 </a>
-                
+
                 <!-- Khách hàng -->
-                <a href="{{ route('user.customers.index') }}" 
-                   class="flex flex-col items-center justify-center flex-1 py-1.5 {{ request()->routeIs('user.customers*') ? 'text-blue-500' : 'text-gray-500' }} transition-colors duration-200">
-                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.customers*') ? '2.5' : '2' }}">
+                <a href="{{ route('user.customers.index') }}"
+                   class="flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 {{ request()->routeIs('user.customers*') ? 'text-blue-500 scale-105' : 'text-neutral-500 active:scale-95' }}">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.customers*') ? '2.5' : '2' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
-                    <span class="text-[10px] font-medium">Khách hàng</span>
+                    <span class="text-[11px] font-semibold tracking-tight">Khách hàng</span>
                 </a>
-                
+
                 <!-- Phiếu cược -->
-                <a href="{{ route('user.betting-tickets.index') }}" 
-                   class="flex flex-col items-center justify-center flex-1 py-1.5 {{ request()->routeIs('user.betting-tickets*') ? 'text-blue-500' : 'text-gray-500' }} transition-colors duration-200">
-                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.betting-tickets*') ? '2.5' : '2' }}">
+                <a href="{{ route('user.betting-tickets.index') }}"
+                   class="flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 {{ request()->routeIs('user.betting-tickets*') ? 'text-blue-500 scale-105' : 'text-neutral-500 active:scale-95' }}">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.betting-tickets*') ? '2.5' : '2' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <span class="text-[10px] font-medium">Thống kê</span>
+                    <span class="text-[11px] font-semibold tracking-tight">Thống kê</span>
                 </a>
-                
+
                 <!-- KQXS -->
-                <a href="{{ route('user.kqxs') }}" 
-                   class="flex flex-col items-center justify-center flex-1 py-1.5 {{ request()->routeIs('user.kqxs*') ? 'text-blue-500' : 'text-gray-500' }} transition-colors duration-200">
-                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.kqxs*') ? '2.5' : '2' }}">
+                <a href="{{ route('user.kqxs') }}"
+                   class="flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 {{ request()->routeIs('user.kqxs*') ? 'text-blue-500 scale-105' : 'text-neutral-500 active:scale-95' }}">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.kqxs*') ? '2.5' : '2' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
-                    <span class="text-[10px] font-medium">KQXS</span>
+                    <span class="text-[11px] font-semibold tracking-tight">KQXS</span>
                 </a>
-                
-                <!-- More/Menu -->
-                <!-- <button type="button" onclick="toggleMobileMenu()" 
-                        class="bottom-nav-item flex flex-col items-center justify-center flex-1 py-2 text-gray-600">
-                    <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                    <span class="text-xs font-medium">Menu</span>
-                </button> -->
             </div>
         </nav>
         @endif
