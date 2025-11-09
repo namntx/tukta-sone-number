@@ -86,16 +86,10 @@
     <!-- Parse Result -->
     <div id="parse-result" class="hidden">
       <div class="bg-white rounded-lg border border-gray-200 p-3 space-y-3">
-        <!-- Preview Numbers - Đưa lên đầu -->
+        <!-- Preview Numbers với tổng tiền cược & xác - Đưa lên đầu -->
         <div id="preview-numbers" class="hidden">
-          <h5 class="text-xs font-semibold text-gray-700 mb-2">📋 Preview số:</h5>
+          <h5 class="text-xs font-semibold text-gray-700 mb-2">📋 Preview số & Tổng tiền:</h5>
           <div id="preview-numbers-content" class="text-xs text-gray-600"></div>
-        </div>
-        
-        <!-- Total Amount and Cost Xac by Type - Đưa lên đầu -->
-        <div id="total-summary" class="hidden">
-          <h5 class="text-xs font-semibold text-gray-700 mb-2">💰 Tổng tiền cược & xác theo loại cược:</h5>
-          <div id="total-summary-content" class="text-xs text-gray-600"></div>
         </div>
         
         <!-- Kết quả phân tích chi tiết -->
@@ -183,54 +177,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Display parse result
         if (data.multiple_bets && data.multiple_bets.length > 0) {
-          // Preview Numbers - Hiển thị đầu tiên
+          // Preview Numbers với tổng tiền cược & xác - Gộp lại
           const previewNumbersDiv = document.getElementById('preview-numbers');
           const previewNumbersContent = document.getElementById('preview-numbers-content');
           const numbersByType = {};
-          
-          data.multiple_bets.forEach(bet => {
-            const typeCode = bet.type_code || 'unknown';
-            if (!numbersByType[typeCode]) {
-              numbersByType[typeCode] = {
-                type: bet.type || typeCode,
-                numbers: []
-              };
-            }
-            
-            // Collect numbers
-            if (bet.numbers && Array.isArray(bet.numbers)) {
-              bet.numbers.forEach(num => {
-                if (Array.isArray(num)) {
-                  numbersByType[typeCode].numbers.push(num.join('-'));
-                } else {
-                  numbersByType[typeCode].numbers.push(num);
-                }
-              });
-            }
-          });
-          
-          let previewHtml = '';
-          Object.keys(numbersByType).forEach(typeCode => {
-            const typeData = numbersByType[typeCode];
-            const uniqueNumbers = [...new Set(typeData.numbers)];
-            previewHtml += `<div class="mb-2 p-2 bg-blue-50 rounded">
-              <div class="font-semibold text-gray-800 mb-1">${typeData.type}:</div>
-              <div class="flex flex-wrap gap-1.5">
-                ${uniqueNumbers.map(num => `<span class="px-2 py-0.5 bg-white border border-blue-200 rounded text-gray-700">${num}</span>`).join('')}
-              </div>
-            </div>`;
-          });
-          
-          if (previewHtml) {
-            previewNumbersContent.innerHTML = previewHtml;
-            previewNumbersDiv.classList.remove('hidden');
-          } else {
-            previewNumbersDiv.classList.add('hidden');
-          }
-          
-          // Total Amount and Cost Xac by Type - Hiển thị thứ hai
-          const totalSummaryDiv = document.getElementById('total-summary');
-          const totalSummaryContent = document.getElementById('total-summary-content');
           const summaryByType = {};
           let grandTotalAmount = 0;
           let grandTotalCostXac = 0;
@@ -240,56 +190,82 @@ document.addEventListener('DOMContentLoaded', function() {
             const typeLabel = bet.type || typeCode;
             const amount = bet.amount || 0;
             const costXac = bet.cost_xac || 0;
+            const station = bet.station || '';
             
-            if (!summaryByType[typeCode]) {
-              summaryByType[typeCode] = {
+            // Initialize type data
+            if (!numbersByType[typeCode]) {
+              numbersByType[typeCode] = {
                 type: typeLabel,
+                numbers: []
+              };
+              summaryByType[typeCode] = {
                 totalAmount: 0,
                 totalCostXac: 0
               };
             }
             
+            // Collect numbers với station (giữ nguyên tất cả, không loại bỏ trùng lặp)
+            if (bet.numbers && Array.isArray(bet.numbers)) {
+              bet.numbers.forEach(num => {
+                let numStr = '';
+                if (Array.isArray(num)) {
+                  numStr = num.join('-');
+                } else {
+                  numStr = num.toString();
+                }
+                
+                // Thêm station vào số
+                const stationLabel = station ? ` [${station}]` : '';
+                numbersByType[typeCode].numbers.push({
+                  number: numStr,
+                  station: stationLabel
+                });
+              });
+            }
+            
+            // Tính tổng tiền
             summaryByType[typeCode].totalAmount += amount;
             summaryByType[typeCode].totalCostXac += costXac;
             grandTotalAmount += amount;
             grandTotalCostXac += costXac;
           });
           
-          let summaryHtml = '';
-          Object.keys(summaryByType).forEach(typeCode => {
-            const typeData = summaryByType[typeCode];
-            const amountInK = (typeData.totalAmount / 1000).toFixed(1);
-            const costInK = (typeData.totalCostXac / 1000).toFixed(1);
-            summaryHtml += `<div class="mb-2 p-2 bg-green-50 rounded border border-green-200">
-              <div class="font-semibold text-gray-800 mb-1.5">${typeData.type}:</div>
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-gray-600">Tiền cược:</span>
-                <span class="font-semibold text-blue-700">${amountInK}k</span>
+          let previewHtml = '';
+          Object.keys(numbersByType).forEach(typeCode => {
+            const typeData = numbersByType[typeCode];
+            const summaryData = summaryByType[typeCode];
+            const amountInK = (summaryData.totalAmount / 1000).toFixed(1);
+            const costInK = (summaryData.totalCostXac / 1000).toFixed(1);
+            
+            previewHtml += `<div class="mb-2 p-2 bg-blue-50 rounded border border-blue-200">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="font-semibold text-gray-800">${typeData.type}:</div>
+                <div class="text-xs text-gray-600">
+                  <span class="text-blue-700 font-semibold">${amountInK}k</span> / 
+                  <span class="text-green-700 font-semibold">${costInK}k</span>
+                </div>
               </div>
-              <div class="flex items-center justify-between text-xs mt-1">
-                <span class="text-gray-600">Tiền xác:</span>
-                <span class="font-semibold text-green-700">${costInK}k</span>
+              <div class="flex flex-wrap gap-1.5">
+                ${typeData.numbers.map(item => `<span class="px-2 py-0.5 bg-white border border-blue-200 rounded text-gray-700 text-xs">${item.number}${item.station}</span>`).join('')}
               </div>
             </div>`;
           });
           
-          if (summaryHtml) {
+          // Thêm tổng cộng
+          if (previewHtml) {
             const grandAmountInK = (grandTotalAmount / 1000).toFixed(1);
             const grandCostInK = (grandTotalCostXac / 1000).toFixed(1);
-            summaryHtml += `<div class="mt-2 pt-2 border-t-2 border-gray-300 p-2 bg-gray-50 rounded">
-              <div class="flex items-center justify-between text-xs font-bold mb-1">
-                <span class="text-gray-900">Tổng tiền cược:</span>
-                <span class="text-blue-700">${grandAmountInK}k</span>
-              </div>
+            previewHtml += `<div class="mt-2 pt-2 border-t-2 border-gray-300 p-2 bg-gray-50 rounded">
               <div class="flex items-center justify-between text-xs font-bold">
-                <span class="text-gray-900">Tổng tiền xác:</span>
+                <span class="text-gray-900">Tổng cộng:</span>
+                <span class="text-blue-700">${grandAmountInK}k</span> / 
                 <span class="text-green-700">${grandCostInK}k</span>
               </div>
             </div>`;
-            totalSummaryContent.innerHTML = summaryHtml;
-            totalSummaryDiv.classList.remove('hidden');
+            previewNumbersContent.innerHTML = previewHtml;
+            previewNumbersDiv.classList.remove('hidden');
           } else {
-            totalSummaryDiv.classList.add('hidden');
+            previewNumbersDiv.classList.add('hidden');
           }
           
           // Parse Details - Hiển thị cuối cùng
@@ -303,9 +279,8 @@ document.addEventListener('DOMContentLoaded', function() {
           parseContent.innerHTML = html;
           parseDetailsDiv.classList.remove('hidden');
         } else {
-          // Single bet - không hiển thị preview và summary
+          // Single bet - không hiển thị preview
           document.getElementById('preview-numbers').classList.add('hidden');
-          document.getElementById('total-summary').classList.add('hidden');
           document.getElementById('parse-details').classList.add('hidden');
           
           parseContent.innerHTML = `
@@ -322,7 +297,6 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         // Hide preview sections on error
         document.getElementById('preview-numbers').classList.add('hidden');
-        document.getElementById('total-summary').classList.add('hidden');
         document.getElementById('parse-details').classList.add('hidden');
         
         parseContent.innerHTML = `
