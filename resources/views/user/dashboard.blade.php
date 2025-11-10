@@ -3,28 +3,18 @@
 @section('title', 'Dashboard - Keki SaaS')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-4">
     @if($subscriptionStatus === 'active')
     <!-- Betting Form Card -->
-    <div class="card card-elevated">
+    <div class="card">
         <div class="card-header">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center flex-shrink-0">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"></path>
-                    </svg>
-                </div>
-                <div>
-                    <h2 class="text-title text-gray-900">Phân tích tin nhắn cược</h2>
-                    <p class="text-caption text-gray-500">Nhập tin nhắn để tạo phiếu cược</p>
-                </div>
-            </div>
+            <h2 class="text-base font-semibold text-gray-900">Tạo phiếu cược</h2>
         </div>
-        
+
         <div class="card-body">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <!-- Input Form -->
-                <div class="space-y-5">
+                <div class="space-y-3">
                     <form id="betting-form" action="{{ route('user.betting-tickets.store') }}" method="POST">
                         @csrf
                         <!-- Hidden fields for global date and region -->
@@ -32,12 +22,9 @@
                         <input type="hidden" name="region" id="region" value="{{ $globalRegion }}">
                         <input type="hidden" name="station" id="station" value="">
 
-                        <div class="space-y-4">
-                            <div class="form-group">
-                                <label for="customer_id" class="form-label flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                    </svg>
+                        <div class="space-y-3">
+                            <div>
+                                <label for="customer_id" class="block text-sm font-medium text-gray-700 mb-1">
                                     Khách hàng
                                 </label>
                                 <select name="customer_id" id="customer_id" class="w-full" required>
@@ -48,55 +35,43 @@
                                 </select>
                             </div>
 
-                            <div class="form-group">
-                                <label for="original_message" class="form-label flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-                                    </svg>
+                            <div>
+                                <label for="original_message" class="block text-sm font-medium text-gray-700 mb-1">
                                     Tin nhắn cược
                                 </label>
-                            
+
                                 <!-- Syntax Guide -->
-                                <details class="group mb-3">
-                                    <summary class="badge badge-primary cursor-pointer inline-flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        Hướng dẫn cú pháp
+                                <details class="group mb-2">
+                                    <summary class="text-xs text-primary cursor-pointer inline-flex items-center gap-1">
+                                        Hướng dẫn
                                         <svg class="w-3 h-3 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                         </svg>
                                     </summary>
-                                    <div class="mt-3 p-4 bg-gray-50 rounded-xl border-2 border-gray-200 space-y-3">
-                                        <div class="flex items-start gap-2">
-                                            <span class="text-xl">✅</span>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-semibold text-gray-900 mb-1">Đúng:</p>
-                                                <code class="block bg-white px-3 py-2 rounded-lg text-green-600 font-mono text-sm">vt bt 22,29 đax 1.4n</code>
-                                            </div>
+                                    <div class="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2 text-xs">
+                                        <div>
+                                            <p class="font-medium text-gray-900 mb-1">✓ Đúng:</p>
+                                            <code class="block bg-white px-2 py-1 rounded text-green-600">vt bt 22,29 đax 1.4n</code>
                                         </div>
-                                        <div class="flex items-start gap-2">
-                                            <span class="text-xl">❌</span>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-semibold text-gray-900 mb-1">Sai:</p>
-                                                <code class="block bg-white px-3 py-2 rounded-lg text-red-600 font-mono text-sm">22,29 đax 1.4n vt và bt</code>
-                                            </div>
+                                        <div>
+                                            <p class="font-medium text-gray-900 mb-1">✗ Sai:</p>
+                                            <code class="block bg-white px-2 py-1 rounded text-red-600">22,29 đax 1.4n vt và bt</code>
                                         </div>
                                     </div>
                                 </details>
 
-                                <textarea name="original_message" id="original_message" rows="6" placeholder="Ví dụ: vt bt 22,29 đax 1.4n&#10;vt bl 79,29 đáx 0.7n&#10;hcm 12 34 56 lo 100000" class="w-full" required></textarea>
+                                <textarea name="original_message" id="original_message" rows="5" placeholder="Ví dụ: vt bt 22,29 đax 1.4n&#10;vt bl 79,29 đáx 0.7n&#10;hcm 12 34 56 lo 100000" class="w-full" required></textarea>
                             </div>
 
-                            <div class="flex gap-3">
+                            <div class="flex gap-2">
                                 <button type="button" id="parse-btn" class="btn btn-success flex-1">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                     </svg>
                                     Xử lý
                                 </button>
                                 <button type="button" id="clear-btn" class="btn btn-secondary btn-icon">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                     </svg>
                                 </button>
