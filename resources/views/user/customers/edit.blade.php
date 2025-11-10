@@ -124,9 +124,9 @@
                   @foreach($pairs as $betKey => $label)
                     @if($rKey==='bac' && in_array($betKey, ['baylo_2','baylo_3'], true)) @continue @endif
                     @php
-                      $rate = $customer->rates->where('region', $rKey)->where('bet_type', $betKey)->first();
-                      $commission = $rate->commission ?? null;
-                      $payout = $rate->payout_times ?? null;
+                      $rate = $customer->rates ? $customer->rates->where('region', $rKey)->where('bet_type', $betKey)->first() : null;
+                      $commission = $rate?->commission ?? null;
+                      $payout = $rate?->payout_times ?? null;
                     @endphp
                     <div class="flex items-end gap-1.5 bg-gray-50 rounded-lg p-2">
                       <div class="flex-1">
