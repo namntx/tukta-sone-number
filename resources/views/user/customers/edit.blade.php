@@ -123,23 +123,13 @@
                 <div class="space-y-1.5">
                   @foreach($pairs as $betKey => $label)
                     @if($rKey==='bac' && in_array($betKey, ['baylo_2','baylo_3'], true)) @continue @endif
-                    @php
-                      // Parse from betting_rates JSON column (already decoded by Laravel)
-                      $bettingRates = $customer->betting_rates ?? [];
-
-                      // Convert bet_type format: 'dau' -> 'bac:dau', 'xien_x2' -> 'bac:xien:x2'
-                      $jsonKey = $rKey . ':' . str_replace('_', ':', $betKey);
-                      $rateData = $bettingRates[$jsonKey] ?? null;
-
-                      $commission = $rateData['buy_rate'] ?? null;
-                      $payout = $rateData['payout'] ?? null;
-                    @endphp
+                    @php $val = $initialRates[$rKey][$betKey] ?? ['commission'=>null,'payout_times'=>null]; @endphp
                     <div class="flex items-end gap-1.5 bg-gray-50 rounded-lg p-2">
                       <div class="flex-1">
                         <label class="block text-xs text-gray-600 mb-0.5">{{ $label }}</label>
                         <input type="number" step="any" min="0"
                                name="rates[{{ $rKey }}][{{ $betKey }}][commission]"
-                               value="{{ old("rates.$rKey.$betKey.commission", $commission) }}"
+                               value="{{ old("rates.$rKey.$betKey.commission", $val['commission']) }}"
                                placeholder="Giá"
                                class="w-full input-sm">
                       </div>
@@ -147,7 +137,7 @@
                         <label class="block text-xs text-gray-600 mb-0.5">&nbsp;</label>
                         <input type="number" min="0"
                                name="rates[{{ $rKey }}][{{ $betKey }}][payout_times]"
-                               value="{{ old("rates.$rKey.$betKey.payout_times", $payout) }}"
+                               value="{{ old("rates.$rKey.$betKey.payout_times", $val['payout_times']) }}"
                                placeholder="Lần ăn"
                                class="w-full input-sm">
                       </div>
