@@ -62,7 +62,7 @@
         <label for="original_message" class="block text-sm font-semibold text-gray-900 mb-3">
           Tin nhắn cược <span class="text-red-500">*</span>
         </label>
-        <textarea id="original_message" name="original_message" rows="6"
+        <textarea id="original_message" name="original_message" rows="15"
                   class="w-full text-base"
                   placeholder="Ví dụ: lo 12 34 56 100000&#10;bao 01 02 03 50000 2d&#10;da 12 34 200000 hcm"
                   required>{{ old('original_message', $originalMessage) }}</textarea>
