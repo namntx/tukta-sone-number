@@ -124,9 +124,15 @@
                   @foreach($pairs as $betKey => $label)
                     @if($rKey==='bac' && in_array($betKey, ['baylo_2','baylo_3'], true)) @continue @endif
                     @php
-                      $rate = $customer->rates ? $customer->rates->where('region', $rKey)->where('bet_type', $betKey)->first() : null;
-                      $commission = $rate?->commission ?? null;
-                      $payout = $rate?->payout_times ?? null;
+                      // Parse from betting_rates JSON column
+                      $bettingRates = $customer->betting_rates ? json_decode($customer->betting_rates, true) : [];
+
+                      // Convert bet_type format: 'dau' -> 'bac:dau', 'xien_x2' -> 'bac:xien:x2'
+                      $jsonKey = $rKey . ':' . str_replace('_', ':', $betKey);
+                      $rateData = $bettingRates[$jsonKey] ?? null;
+
+                      $commission = $rateData['buy_rate'] ?? null;
+                      $payout = $rateData['payout'] ?? null;
                     @endphp
                     <div class="flex items-end gap-1.5 bg-gray-50 rounded-lg p-2">
                       <div class="flex-1">
