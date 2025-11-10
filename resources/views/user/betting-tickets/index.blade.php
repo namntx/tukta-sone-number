@@ -141,11 +141,17 @@
                     <!-- Messages List - Ẩn mặc định -->
                     <div id="customer-{{ $customerId }}" class="hidden" style="display: none;">
                         @php
-                            $ticketsByMessage = $customerTickets->groupBy('original_message');
+                            // Group tickets by original_message và sắp xếp theo created_at từ cũ đến mới
+                            $ticketsByMessage = $customerTickets->groupBy('original_message')
+                                ->sortBy(function($group) {
+                                    return $group->first()->created_at ?? now();
+                                })
+                                ->values();
                         @endphp
                         
-                        @foreach($ticketsByMessage as $originalMessage => $messageTickets)
+                        @foreach($ticketsByMessage as $messageTickets)
                             @php
+                                $originalMessage = $messageTickets->first()->original_message ?? '';
                                 $messageId = md5($customerId . '_' . $originalMessage);
                                 $messageCount = $messageTickets->count();
                             @endphp
@@ -165,9 +171,6 @@
                                         <div class="flex-1 min-w-0">
                                             <div class="text-xs sm:text-sm font-medium text-gray-900 break-words">
                                                 {{ Str::limit($originalMessage, 100) }}
-                                            </div>
-                                            <div class="text-xs text-gray-500 mt-0.5">
-                                                {{ $messageCount }} phiếu
                                             </div>
                                         </div>
                                     </button>

@@ -363,11 +363,188 @@ class CustomerController extends Controller
     /**
      * Display the specified customer
      */
-    public function show(Customer $customer)
+    public function show(Request $request, Customer $customer)
     {
         $this->authorize('view', $customer);
 
-        return view('user.customers.show', compact('customer'));
+        // Lấy ngày và miền từ request hoặc session
+        $reportDate = $request->filled('date') 
+            ? $request->date 
+            : session('global_date', today());
+        
+        $region = $request->filled('region')
+            ? \App\Support\Region::normalizeKey($request->region)
+            : session('global_region', 'nam');
+
+        // Lấy tất cả tickets của customer cho ngày và miền này, sắp xếp theo thứ tự nhập (created_at ASC)
+        $tickets = $customer->bettingTickets()
+            ->whereDate('betting_date', $reportDate)
+            ->where('region', $region)
+            ->with('bettingType')
+            ->orderBy('created_at', 'asc') // Thứ tự user nhập
+            ->get();
+
+        // Group tickets theo loại cược (giống betting-tickets.index)
+        // Tách riêng bao lô 2, 3, 4 số
+        $ticketsByType = $tickets->groupBy(function($ticket) {
+            $bettingType = $ticket->bettingType;
+            $typeId = $ticket->betting_type_id;
+            
+            // Nếu là bao lô, thêm digits vào key để tách riêng
+            if ($bettingType && $bettingType->code === 'bao_lo') {
+                $bettingData = $ticket->betting_data ?? [];
+                $digits = null;
+                
+                // Tìm digits trong betting_data
+                if (is_array($bettingData)) {
+                    if (isset($bettingData[0]) && is_array($bettingData[0])) {
+                        $digits = $bettingData[0]['meta']['digits'] ?? null;
+                    } elseif (isset($bettingData['meta']['digits'])) {
+                        $digits = $bettingData['meta']['digits'];
+                    }
+                }
+                
+                $digits = $digits ?? 2;
+                return $typeId . '_bao_lo_' . $digits;
+            }
+            
+            return $typeId;
+        });
+
+        // Tính toán theo từng loại cược
+        $statsByType = [];
+        foreach ($ticketsByType as $groupKey => $typeTickets) {
+            $bettingType = $typeTickets->first()->bettingType;
+            $rawBetAmount = $typeTickets->sum('bet_amount');
+            
+            // Tính tiền cược đã nhân cho đá xiên (2 đài: * 1, 3 đài: * 3, 4 đài: * 6)
+            $typeBetAmount = $rawBetAmount;
+            if ($bettingType && $bettingType->code === 'da_xien') {
+                $typeBetAmount = $typeTickets->sum(function($ticket) {
+                    $bettingData = $ticket->betting_data ?? [];
+                    $meta = [];
+                    
+                    if (is_array($bettingData) && isset($bettingData[0]) && is_array($bettingData[0])) {
+                        $meta = $bettingData[0]['meta'] ?? [];
+                    } elseif (isset($bettingData['meta'])) {
+                        $meta = $bettingData['meta'];
+                    }
+                    
+                    $stationCount = (int)($meta['dai_count'] ?? 0);
+                    if (!$stationCount && !empty($meta['station_pairs']) && is_array($meta['station_pairs'])) {
+                        $names = [];
+                        foreach ($meta['station_pairs'] as $p) {
+                            if (is_array($p) && count($p) === 2) {
+                                $names[$p[0]] = true; $names[$p[1]] = true;
+                            }
+                        }
+                        $stationCount = count($names);
+                    }
+                    
+                    $multiplier = match($stationCount) {
+                        2 => 1,
+                        3 => 3,
+                        4 => 6,
+                        default => 1,
+                    };
+                    
+                    return ($ticket->bet_amount ?? 0) * $multiplier;
+                });
+            }
+            
+            $typeWinAmount = $typeTickets->where('result', 'win')->sum('win_amount');
+            $typePayoutAmount = $typeTickets->where('result', 'win')->sum('payout_amount');
+            $typeXacAmount = $typeTickets->sum(function($ticket) {
+                return $ticket->betting_data['total_cost_xac'] ?? 0;
+            });
+            
+            // Tính Ăn/Thua: nếu có payout thì = payout - xac, nếu không thì = -xac
+            if ($typePayoutAmount > 0) {
+                $typeEatThua = $typePayoutAmount - $typeXacAmount;
+            } else {
+                $typeEatThua = -$typeXacAmount;
+            }
+            
+            // Tạo label cho loại cược
+            $label = $this->getBettingTypeLabel($bettingType, $typeTickets->first());
+            
+            $statsByType[$groupKey] = [
+                'label' => $label,
+                'tien_cuoc' => $typeBetAmount,
+                'cuoc_an' => $typeWinAmount,
+                'xac' => $typeXacAmount,
+                'an_thua' => $typeEatThua,
+                'an_thua_color' => $typeEatThua >= 0 ? 'text-green-700' : 'text-red-700',
+            ];
+        }
+
+        // Tổng kết - tính bằng cách cộng từng loại cược (giống betting-tickets.index)
+        $totalTienCuoc = array_sum(array_column($statsByType, 'tien_cuoc'));
+        $totalCuocAn = array_sum(array_column($statsByType, 'cuoc_an'));
+        $totalXac = array_sum(array_column($statsByType, 'xac'));
+        $totalAnThua = array_sum(array_column($statsByType, 'an_thua'));
+
+        // Group tickets theo original_message (mỗi original_message là 1 input cược)
+        // Giữ thứ tự theo created_at của ticket đầu tiên trong mỗi group
+        $ticketsByMessage = $tickets->groupBy('original_message')
+            ->sortBy(function($group) {
+                return $group->first()->created_at ?? now();
+            })
+            ->values();
+
+        return view('user.customers.show', compact(
+            'customer',
+            'tickets',
+            'ticketsByMessage',
+            'statsByType',
+            'totalTienCuoc',
+            'totalCuocAn',
+            'totalXac',
+            'totalAnThua',
+            'reportDate',
+            'region'
+        ));
+    }
+
+    /**
+     * Get betting type label (giống betting-tickets.index)
+     */
+    private function getBettingTypeLabel($bettingType, $ticket): string
+    {
+        if (!$bettingType) {
+            return 'Không xác định';
+        }
+
+        $code = $bettingType->code;
+        $bettingData = $ticket->betting_data ?? [];
+        $meta = [];
+
+        if (is_array($bettingData) && isset($bettingData[0]) && is_array($bettingData[0])) {
+            $meta = $bettingData[0]['meta'] ?? [];
+        } elseif (isset($bettingData['meta'])) {
+            $meta = $bettingData['meta'];
+        }
+
+        // Bao lô: thêm số chữ số
+        if ($code === 'bao_lo') {
+            $digits = $meta['digits'] ?? 2;
+            return "Bao lô {$digits} số";
+        }
+
+        // Đá xiên: thêm số đài
+        if ($code === 'da_xien') {
+            $daiCount = $meta['dai_count'] ?? 2;
+            return "Đá xiên {$daiCount} đài";
+        }
+
+        // Xiên: thêm size
+        if ($code === 'xien') {
+            $xienSize = $meta['xien_size'] ?? 2;
+            return "Xiên {$xienSize}";
+        }
+
+        // Các loại khác: dùng name từ BettingType
+        return $bettingType->name ?? $code;
     }
 
     // ====== EDIT (đã sửa) ======
@@ -533,24 +710,22 @@ class CustomerController extends Controller
     }
 
     /**
-     * Remove the specified customer (toggle active status)
+     * Remove the specified customer
      */
     public function destroy(Customer $customer)
     {
         $this->authorize('delete', $customer);
 
         try {
-            $newStatus = !$customer->is_active;
-            $customer->update(['is_active' => $newStatus]);
+            $customerName = $customer->name;
+            $customer->delete();
 
-            $message = $newStatus ? 'Khách hàng đã được kích hoạt.' : 'Khách hàng đã được vô hiệu hóa.';
-            
             return redirect()->route('user.customers.index')
-                ->with('success', $message);
+                ->with('success', "Đã xóa khách hàng '{$customerName}' thành công.");
 
         } catch (\Exception $e) {
             return redirect()->route('user.customers.index')
-                ->with('error', 'Có lỗi xảy ra khi cập nhật trạng thái khách hàng: ' . $e->getMessage());
+                ->with('error', 'Có lỗi xảy ra khi xóa khách hàng: ' . $e->getMessage());
         }
     }
 

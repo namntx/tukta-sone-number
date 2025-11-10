@@ -124,9 +124,55 @@
                   @foreach($pairs as $betKey => $label)
                     @if($rKey==='bac' && in_array($betKey, ['baylo_2','baylo_3'], true)) @continue @endif
                     @php
-                      $rate = $customer->rates->where('region', $rKey)->where('bet_type', $betKey)->first();
-                      $commission = $rate->commission ?? null;
-                      $payout = $rate->payout_times ?? null;
+                      // Map betKey to type_code and meta (same logic as controller)
+                      $betKeyMap = match ($betKey) {
+                          'de_dau'        => ['type_code' => 'dau',         'meta' => []],
+                          'de_duoi'       => ['type_code' => 'duoi',        'meta' => []],
+                          'de_duoi_4so'   => ['type_code' => 'duoi',        'meta' => ['digits' => 4]],
+                          'bao_lo_2'      => ['type_code' => 'bao_lo',      'meta' => ['digits'=>2]],
+                          'bao_lo_3'      => ['type_code' => 'bao_lo',      'meta' => ['digits'=>3]],
+                          'bao_lo_4'      => ['type_code' => 'bao_lo',      'meta' => ['digits'=>4]],
+                          'da_thang_1dai' => ['type_code' => 'da_thang',    'meta' => ['dai_count'=>1]],
+                          'da_cheo_2dai'  => ['type_code' => 'da_xien',     'meta' => ['dai_count'=>2]],
+                          'xien_2'        => ['type_code' => 'xien',        'meta' => ['xien_size'=>2]],
+                          'xien_3'        => ['type_code' => 'xien',        'meta' => ['xien_size'=>3]],
+                          'xien_4'        => ['type_code' => 'xien',        'meta' => ['xien_size'=>4]],
+                          'xiu_chu'       => ['type_code' => 'xiu_chu',     'meta' => []],
+                          'baylo_2'       => ['type_code' => 'bay_lo',      'meta' => ['digits'=>2]],
+                          'baylo_3'       => ['type_code' => 'bay_lo',      'meta' => ['digits'=>3]],
+                          default         => ['type_code' => null,          'meta' => []],
+                      };
+                      
+                      // Build JSON key: "region:type_code[:d2][:x3][:c4]"
+                      $bettingRates = $customer->betting_rates ?? [];
+                      $jsonKey = null;
+                      $commission = null;
+                      $payout = null;
+                      
+                      if ($betKeyMap['type_code']) {
+                          $keyParts = [$rKey, $betKeyMap['type_code']];
+                          $meta = $betKeyMap['meta'];
+                          if (isset($meta['digits']) && $meta['digits'] !== null) {
+                              $keyParts[] = "d{$meta['digits']}";
+                          }
+                          if (isset($meta['xien_size']) && $meta['xien_size'] !== null) {
+                              $keyParts[] = "x{$meta['xien_size']}";
+                          }
+                          if (isset($meta['dai_count']) && $meta['dai_count'] !== null) {
+                              $keyParts[] = "c{$meta['dai_count']}";
+                          }
+                          $jsonKey = implode(':', $keyParts);
+                          $commission = $bettingRates[$jsonKey]['buy_rate'] ?? null;
+                          $payout = $bettingRates[$jsonKey]['payout'] ?? null;
+                          
+                          // Fallback to initialRates (resolved rates from controller) if JSON doesn't have value
+                          if ($commission === null) {
+                              $commission = $initialRates[$rKey][$betKey]['commission'] ?? null;
+                          }
+                          if ($payout === null) {
+                              $payout = $initialRates[$rKey][$betKey]['payout_times'] ?? null;
+                          }
+                      }
                     @endphp
                     <div class="flex items-end gap-1.5 bg-gray-50 rounded-lg p-2">
                       <div class="flex-1">

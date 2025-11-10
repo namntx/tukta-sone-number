@@ -473,6 +473,197 @@ class BettingTicketController extends Controller
     }
 
     /**
+     * Show form to edit betting message
+     */
+    public function editMessage(BettingTicket $bettingTicket)
+    {
+        $this->authorize('update', $bettingTicket);
+
+        // Get the original message from the ticket
+        $originalMessage = $bettingTicket->original_message ?? '';
+        
+        // Get all tickets with the same original_message to show count
+        $ticketsWithSameMessage = Auth::user()->bettingTickets()
+            ->where('original_message', $originalMessage)
+            ->count();
+
+        return view('user.betting-tickets.edit-message', compact('bettingTicket', 'originalMessage', 'ticketsWithSameMessage'));
+    }
+
+    /**
+     * Update betting message - delete old tickets and create new ones from new message
+     */
+    public function updateMessage(Request $request, BettingTicket $bettingTicket)
+    {
+        $this->authorize('update', $bettingTicket);
+
+        $request->validate([
+            'original_message' => 'required|string|max:1000',
+            'betting_date' => 'nullable|date',
+            'region' => 'nullable|in:bac,trung,nam',
+        ]);
+
+        $oldOriginalMessage = $bettingTicket->original_message;
+        $newOriginalMessage = $request->original_message;
+
+        // If message hasn't changed, just redirect back
+        if ($oldOriginalMessage === $newOriginalMessage) {
+            return redirect()->back()
+                ->with('info', 'Tin nhắn không thay đổi.');
+        }
+
+        // Get customer, date, and region from the ticket
+        $customerId = $bettingTicket->customer_id;
+        $bettingDate = $request->betting_date ?? $bettingTicket->betting_date;
+        $region = $request->region ?? $bettingTicket->region;
+
+        // Normalize region
+        $regionMap = ['bắc' => 'bac', 'trung' => 'trung', 'nam' => 'nam'];
+        $normalizedRegion = $regionMap[strtolower($region)] ?? $region;
+
+        // Parse the new betting message
+        $parseResult = $this->messageParser->parseMessage($newOriginalMessage, [
+            'region' => $normalizedRegion,
+            'date' => $bettingDate,
+        ]);
+
+        if (!$parseResult['is_valid']) {
+            return back()->withErrors(['original_message' => implode(', ', $parseResult['errors'])])
+                        ->withInput();
+        }
+
+        DB::beginTransaction();
+        try {
+            // Find all tickets with the same original_message
+            $ticketsToDelete = Auth::user()->bettingTickets()
+                ->where('original_message', $oldOriginalMessage)
+                ->get();
+
+            // Reverse customer statistics for all tickets that have results
+            foreach ($ticketsToDelete as $ticket) {
+                if ($ticket->result !== 'pending') {
+                    $this->reverseCustomerStats($ticket);
+                }
+            }
+
+            // Delete all old tickets
+            Auth::user()->bettingTickets()
+                ->where('original_message', $oldOriginalMessage)
+                ->delete();
+
+            // Create new tickets from parsed message
+            $createdTickets = [];
+            $totalCostXac = 0;
+
+            // Handle new parser format with multiple bets
+            if (isset($parseResult['multiple_bets']) && count($parseResult['multiple_bets']) > 0) {
+                foreach ($parseResult['multiple_bets'] as $bet) {
+                    // Find betting type by code
+                    $bettingType = BettingType::where('code', $bet['type'])->first();
+                    if (!$bettingType) {
+                        throw new \Exception("Không tìm thấy loại cược: {$bet['type']}");
+                    }
+
+                    // Use station from bet or from old ticket
+                    $stationName = $bet['station'] ?: $bettingTicket->station;
+
+                    // Calculate cost_xac using BetPricingService
+                    $costXac = $this->calculateCostXac($bet, $normalizedRegion, $customerId);
+                    $totalCostXac += $costXac;
+
+                    $ticket = Auth::user()->bettingTickets()->create([
+                        'customer_id' => $customerId,
+                        'betting_type_id' => $bettingType->id,
+                        'betting_date' => $bettingDate,
+                        'region' => $normalizedRegion,
+                        'station' => $stationName,
+                        'original_message' => $newOriginalMessage,
+                        'parsed_message' => $parseResult['parsed_message'],
+                        'betting_data' => [
+                            'numbers' => $bet['numbers'],
+                            'betting_type' => $bettingType->name,
+                            'betting_type_code' => $bettingType->code,
+                            'meta' => $bet['meta'] ?? [],
+                            'total_cost_xac' => $costXac,
+                        ],
+                        'bet_amount' => $bet['amount'],
+                        'win_amount' => 0,
+                        'payout_amount' => 0,
+                    ]);
+
+                    $createdTickets[] = $ticket;
+                }
+            } else {
+                // Handle legacy single bet format
+                $bettingType = $parseResult['betting_type'];
+                $numbers = $parseResult['numbers'];
+                $amount = $parseResult['amount'];
+                $station = $parseResult['station'];
+                $stations = $parseResult['stations'];
+
+                // Use station from parser if found, otherwise use from old ticket
+                $stationName = $station ? $station->name : $bettingTicket->station;
+
+                // Build bet array for calculateCostXac
+                $bet = [
+                    'type' => $bettingType->code ?? $bettingType,
+                    'amount' => $amount,
+                    'numbers' => $numbers,
+                    'meta' => [],
+                ];
+
+                // Calculate cost_xac using BetPricingService
+                $costXac = $this->calculateCostXac($bet, $normalizedRegion, $customerId);
+                $totalCostXac = $costXac;
+
+                $ticket = Auth::user()->bettingTickets()->create([
+                    'customer_id' => $customerId,
+                    'betting_type_id' => $bettingType->id,
+                    'betting_date' => $bettingDate,
+                    'region' => $normalizedRegion,
+                    'station' => $stationName,
+                    'original_message' => $newOriginalMessage,
+                    'parsed_message' => $parseResult['parsed_message'],
+                    'betting_data' => [
+                        'numbers' => $numbers,
+                        'betting_type' => $bettingType->name,
+                        'betting_type_code' => $bettingType->code,
+                        'stations' => $stations,
+                        'total_cost_xac' => $costXac,
+                    ],
+                    'bet_amount' => $amount,
+                    'win_amount' => 0,
+                    'payout_amount' => 0,
+                ]);
+
+                $createdTickets[] = $ticket;
+            }
+
+            DB::commit();
+
+            $successMessage = "Đã cập nhật thành công " . count($createdTickets) . " phiếu cược với tổng tiền xác " . number_format($totalCostXac, 0, ',', '.') . " VNĐ";
+
+            // Redirect back to customer show page if coming from there
+            if ($request->has('return_to') && $request->return_to === 'customer') {
+                return redirect()->route('user.customers.show', [
+                    'customer' => $customerId,
+                    'date' => $bettingDate,
+                    'region' => $normalizedRegion,
+                ])->with('success', $successMessage);
+            }
+
+            return redirect()->route('user.betting-tickets.index')
+                ->with('success', $successMessage);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            
+            return back()->withErrors(['error' => 'Có lỗi xảy ra khi cập nhật tin nhắn: ' . $e->getMessage()])
+                        ->withInput();
+        }
+    }
+
+    /**
      * Parse betting message via AJAX
      */
     public function parseMessage(Request $request, BettingMessageParser $parser, BetPricingService $pricing)

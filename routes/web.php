@@ -100,6 +100,14 @@ Route::middleware(['auth'])->group(function () {
         // Custom routes after resource to avoid conflicts
         Route::post('/betting-tickets/{bettingTicket}/settle', [UserBettingTicketController::class, 'settle'])->name('betting-tickets.settle');
         Route::delete('/betting-tickets/{bettingTicket}/delete-by-message', [UserBettingTicketController::class, 'destroyByMessage'])->name('betting-tickets.destroy-by-message');
+        Route::get('/betting-tickets/{bettingTicket}/edit-message', [UserBettingTicketController::class, 'editMessage'])->name('betting-tickets.edit-message');
+        Route::put('/betting-tickets/{bettingTicket}/update-message', [UserBettingTicketController::class, 'updateMessage'])->name('betting-tickets.update-message');
+        
+        // Backup & Restore routes
+        Route::get('/backup-restore', [\App\Http\Controllers\User\BackupRestoreController::class, 'index'])->name('backup-restore.index');
+        Route::post('/backup-restore/backup', [\App\Http\Controllers\User\BackupRestoreController::class, 'backup'])->name('backup-restore.backup');
+        Route::get('/backup-restore/restore', [\App\Http\Controllers\User\BackupRestoreController::class, 'restoreForm'])->name('backup-restore.restore-form');
+        Route::post('/backup-restore/restore', [\App\Http\Controllers\User\BackupRestoreController::class, 'restore'])->name('backup-restore.restore');
     });
     
     // Protected routes (cần subscription active)

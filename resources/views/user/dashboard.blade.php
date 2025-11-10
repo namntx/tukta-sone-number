@@ -60,7 +60,7 @@
                                     </div>
                                 </details>
 
-                                <textarea name="original_message" id="original_message" rows="5" placeholder="Ví dụ: vt bt 22,29 đax 1.4n&#10;vt bl 79,29 đáx 0.7n&#10;hcm 12 34 56 lo 100000" class="w-full" required></textarea>
+                                <textarea name="original_message" id="original_message" rows="15" placeholder="Ví dụ: vt bt 22,29 đax 1.4n&#10;vt bl 79,29 đáx 0.7n&#10;hcm 12 34 56 lo 100000" class="w-full" required></textarea>
                             </div>
 
                             <div class="flex gap-2">

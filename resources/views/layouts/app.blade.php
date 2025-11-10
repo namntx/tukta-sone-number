@@ -91,11 +91,9 @@
                                             id="global_date"
                                             name="global_date"
                                             value="{{ $global_date }}"
-                                            class="input-sm flex-1 text-xs"
                                             onchange="updateGlobalFilters()">
                                     <select id="global_region"
                                             name="global_region"
-                                            class="input-sm flex-shrink-0 text-xs"
                                             onchange="updateGlobalFilters()">
                                         <option value="bac" {{ $global_region == 'bac' ? 'selected' : '' }}>Bắc</option>
                                         <option value="trung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
