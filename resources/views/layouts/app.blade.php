@@ -67,7 +67,7 @@
     
     @stack('styles')
 </head>
-<body class="h-full font-sans antialiased @auth @if(!auth()->user()->isAdmin()) pb-16 @endif @endauth">
+<body class="h-full font-sans antialiased @auth @if(!auth()->user()->isAdmin()) pb-16 md:pb-0 @endif @endauth">
     <div class="min-h-full safe-bottom">
         <!-- Navigation Bar -->
         <nav class="bg-white sticky top-0 z-50 safe-top border-b border-gray-200">
@@ -122,6 +122,23 @@
                                 <a href="{{ route('admin.plans.index') }}"
                                    class="inline-flex items-center px-1 pt-1 text-xs font-medium text-gray-600 hover:text-gray-900">
                                     Plans
+                                </a>
+                            @else
+                                <a href="{{ route('user.dashboard') }}"
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.dashboard') ? 'text-primary' : 'text-gray-600 hover:text-gray-900' }}">
+                                    Trang chủ
+                                </a>
+                                <a href="{{ route('user.customers.index') }}"
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.customers*') ? 'text-primary' : 'text-gray-600 hover:text-gray-900' }}">
+                                    Khách hàng
+                                </a>
+                                <a href="{{ route('user.betting-tickets.index') }}"
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.betting-tickets*') ? 'text-primary' : 'text-gray-600 hover:text-gray-900' }}">
+                                    Thống kê
+                                </a>
+                                <a href="{{ route('user.kqxs') }}"
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.kqxs*') ? 'text-primary' : 'text-gray-600 hover:text-gray-900' }}">
+                                    KQXS
                                 </a>
                             @endif
                         </div>
@@ -203,10 +220,10 @@
             @yield('content')
         </main>
         
-        <!-- Bottom Navigation -->
+        <!-- Bottom Navigation (Mobile/Tablet Only) -->
         @auth
         @if(!auth()->user()->isAdmin())
-        <nav class="fixed bottom-0 left-0 right-0 bg-white safe-bottom z-50 border-t border-gray-200 no-print">
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white safe-bottom z-50 border-t border-gray-200 no-print">
             <div class="flex justify-around items-center h-16 px-1">
                 <!-- Dashboard -->
                 <a href="{{ route('user.dashboard') }}"
