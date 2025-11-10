@@ -4,33 +4,30 @@
 
 @section('content')
 <div class="pb-4">
-    <!-- Sticky Header -->
-    <div class="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-200 mb-3">
-        <div class="px-3 py-2.5">
-            <div class="flex items-center justify-between mb-2">
-                <div class="flex-1 min-w-0">
-                    <h1 class="text-lg font-bold text-gray-900">Phiếu cược</h1>
-                    <p class="text-xs text-gray-500 mt-0.5">
-                        {{ \App\Support\Region::label($filterRegion ?? $globalRegion) }} · {{ \Carbon\Carbon::parse($filterDate ?? $globalDate)->format('d/m/Y') }}
-                    </p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <a href="{{ route('user.betting-tickets.report') }}" 
-                       class="inline-flex items-center justify-center px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
-                        Báo cáo
-                    </a>
-                    <button type="button" id="settle-tickets-btn" 
-                            class="inline-flex items-center justify-center px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-5m-3 5h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                        </svg>
-                        Tính tiền
-                    </button>
-                </div>
+    <!-- Header -->
+    <div class="sticky top-14 z-10 bg-gray-50 border-b border-gray-200 -mx-3 px-3 py-2 mb-3">
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex-1 min-w-0">
+                <h1 class="text-base font-semibold text-gray-900">Phiếu cược</h1>
+                <p class="text-xs text-gray-500">
+                    {{ \App\Support\Region::label($filterRegion ?? $globalRegion) }} · {{ \Carbon\Carbon::parse($filterDate ?? $globalDate)->format('d/m/Y') }}
+                </p>
             </div>
+            <div class="flex items-center gap-1.5">
+                <a href="{{ route('user.betting-tickets.report') }}" class="btn btn-primary btn-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    Báo cáo
+                </a>
+                <button type="button" id="settle-tickets-btn" class="btn btn-success btn-sm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-5m-3 5h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    </svg>
+                    Tính tiền
+                </button>
+            </div>
+        </div>
             
             <!-- Quick Filters - Compact -->
             <!-- <form method="GET" action="{{ route('user.betting-tickets.index') }}" class="space-y-2">
