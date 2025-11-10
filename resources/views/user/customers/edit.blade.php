@@ -124,8 +124,8 @@
                   @foreach($pairs as $betKey => $label)
                     @if($rKey==='bac' && in_array($betKey, ['baylo_2','baylo_3'], true)) @continue @endif
                     @php
-                      // Parse from betting_rates JSON column
-                      $bettingRates = $customer->betting_rates ? json_decode($customer->betting_rates, true) : [];
+                      // Parse from betting_rates JSON column (already decoded by Laravel)
+                      $bettingRates = $customer->betting_rates ?? [];
 
                       // Convert bet_type format: 'dau' -> 'bac:dau', 'xien_x2' -> 'bac:xien:x2'
                       $jsonKey = $rKey . ':' . str_replace('_', ':', $betKey);
