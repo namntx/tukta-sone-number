@@ -4,38 +4,34 @@
 
 @section('content')
 <div class="pb-4">
-  <!-- Sticky Header -->
-  <div class="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-200 mb-3">
-    <div class="px-3 py-2.5">
-      <div class="flex items-center justify-between">
-        <div class="flex-1 min-w-0">
-          <h1 class="text-lg font-bold text-gray-900">Sửa phiếu #{{ $bettingTicket->id }}</h1>
-          <p class="text-xs text-gray-500 mt-0.5">{{ $bettingTicket->customer->name }}</p>
-        </div>
-        <a href="{{ route('user.betting-tickets.index') }}" 
-           class="inline-flex items-center justify-center p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition ml-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-          </svg>
-        </a>
+  <!-- Header -->
+  <div class="sticky top-14 z-10 bg-gray-50 border-b border-gray-200 -mx-3 px-3 py-2 mb-3">
+    <div class="flex items-center justify-between">
+      <div class="flex-1 min-w-0">
+        <h1 class="text-base font-semibold text-gray-900">Sửa phiếu #{{ $bettingTicket->id }}</h1>
+        <p class="text-xs text-gray-500 mt-0.5">{{ $bettingTicket->customer->name }}</p>
       </div>
+      <a href="{{ route('user.betting-tickets.index') }}" class="btn btn-secondary btn-sm btn-icon">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+      </a>
     </div>
   </div>
 
-  <form method="POST" action="{{ route('user.betting-tickets.update', $bettingTicket) }}" class="px-3 space-y-4">
+  <form method="POST" action="{{ route('user.betting-tickets.update', $bettingTicket) }}" class="space-y-3">
     @csrf
     @method('PUT')
-    
+
     <!-- Basic Info Card -->
-    <div class="bg-white rounded-lg border border-gray-200 p-3">
-      <h3 class="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wide">Thông tin cơ bản</h3>
-      
-      <div class="space-y-3">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="text-sm font-semibold text-gray-900">Thông tin cơ bản</h3>
+      </div>
+      <div class="card-body space-y-2.5">
         <div>
-          <label for="customer_id" class="block text-xs font-medium text-gray-600 mb-1">Khách hàng <span class="text-red-500">*</span></label>
-          <select id="customer_id" name="customer_id" 
-                  class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('customer_id') border-red-500 @enderror"
-                  required>
+          <label for="customer_id" class="block text-xs font-medium text-gray-700 mb-1">Khách hàng <span class="text-red-500">*</span></label>
+          <select id="customer_id" name="customer_id" required>
             <option value="">Chọn khách hàng</option>
             @foreach($customers as $customer)
               <option value="{{ $customer->id }}" {{ old('customer_id', $bettingTicket->customer_id) == $customer->id ? 'selected' : '' }}>
@@ -44,72 +40,68 @@
             @endforeach
           </select>
           @error('customer_id')
-            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
           @enderror
         </div>
         
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-2 gap-2.5">
           <div>
-            <label for="betting_date" class="block text-xs font-medium text-gray-600 mb-1">Ngày cược <span class="text-red-500">*</span></label>
-            <input type="date" id="betting_date" name="betting_date" 
+            <label for="betting_date" class="block text-xs font-medium text-gray-700 mb-1">Ngày cược <span class="text-red-500">*</span></label>
+            <input type="date" id="betting_date" name="betting_date"
                    value="{{ old('betting_date', $bettingTicket->betting_date->format('Y-m-d')) }}"
-                   class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('betting_date') border-red-500 @enderror"
                    required>
             @error('betting_date')
-              <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+              <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
             @enderror
           </div>
-          
+
           <div>
-            <label for="region" class="block text-xs font-medium text-gray-600 mb-1">Miền <span class="text-red-500">*</span></label>
-            <select id="region" name="region" 
-                    class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('region') border-red-500 @enderror"
-                    required>
+            <label for="region" class="block text-xs font-medium text-gray-700 mb-1">Miền <span class="text-red-500">*</span></label>
+            <select id="region" name="region" required>
               <option value="">Chọn miền</option>
               <option value="bac" {{ old('region', $bettingTicket->region) == 'bac' ? 'selected' : '' }}>Bắc</option>
               <option value="trung" {{ old('region', $bettingTicket->region) == 'trung' ? 'selected' : '' }}>Trung</option>
               <option value="nam" {{ old('region', $bettingTicket->region) == 'nam' ? 'selected' : '' }}>Nam</option>
             </select>
             @error('region')
-              <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+              <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
             @enderror
           </div>
         </div>
-        
+
         <div>
-          <label for="station" class="block text-xs font-medium text-gray-600 mb-1">Đài <span class="text-red-500">*</span></label>
-          <input type="text" id="station" name="station" 
+          <label for="station" class="block text-xs font-medium text-gray-700 mb-1">Đài <span class="text-red-500">*</span></label>
+          <input type="text" id="station" name="station"
                  value="{{ old('station', $bettingTicket->station) }}"
-                 class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('station') border-red-500 @enderror"
                  placeholder="Nhập tên đài"
                  required>
           @error('station')
-            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
           @enderror
         </div>
       </div>
     </div>
 
     <!-- Betting Info Card -->
-    <div class="bg-white rounded-lg border border-gray-200 p-3">
-      <h3 class="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wide">Thông tin cược</h3>
-      
-      <div class="space-y-3">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="text-sm font-semibold text-gray-900">Thông tin cược</h3>
+      </div>
+      <div class="card-body space-y-2.5">
         <div>
-          <label for="original_message" class="block text-xs font-medium text-gray-600 mb-1">Tin nhắn gốc <span class="text-red-500">*</span></label>
+          <label for="original_message" class="block text-xs font-medium text-gray-700 mb-1">Tin nhắn gốc <span class="text-red-500">*</span></label>
           <textarea id="original_message" name="original_message" rows="3"
-                    class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('original_message') border-red-500 @enderror"
                     placeholder="Nhập tin nhắn cược"
                     required>{{ old('original_message', $bettingTicket->original_message) }}</textarea>
           @error('original_message')
-            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
           @enderror
-          <button type="button" id="parse-message-btn" 
-                  class="mt-2 inline-flex items-center px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition">
-            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button type="button" id="parse-message-btn"
+                  class="mt-2 btn btn-secondary btn-sm">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
-            Parse lại tin nhắn
+            Parse lại
           </button>
         </div>
         
@@ -119,10 +111,8 @@
         </div>
         
         <div>
-          <label for="betting_type_id" class="block text-xs font-medium text-gray-600 mb-1">Loại cược <span class="text-red-500">*</span></label>
-          <select id="betting_type_id" name="betting_type_id" 
-                  class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('betting_type_id') border-red-500 @enderror"
-                  required>
+          <label for="betting_type_id" class="block text-xs font-medium text-gray-700 mb-1">Loại cược <span class="text-red-500">*</span></label>
+          <select id="betting_type_id" name="betting_type_id" required>
             <option value="">Chọn loại cược</option>
             @foreach($bettingTypes as $type)
               <option value="{{ $type->id }}" {{ old('betting_type_id', $bettingTicket->betting_type_id) == $type->id ? 'selected' : '' }}>
@@ -131,77 +121,73 @@
             @endforeach
           </select>
           @error('betting_type_id')
-            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
           @enderror
         </div>
-        
+
         <div>
-          <label for="bet_amount" class="block text-xs font-medium text-gray-600 mb-1">Tiền cược (VNĐ) <span class="text-red-500">*</span></label>
-          <input type="number" id="bet_amount" name="bet_amount" 
+          <label for="bet_amount" class="block text-xs font-medium text-gray-700 mb-1">Tiền cược (VNĐ) <span class="text-red-500">*</span></label>
+          <input type="number" id="bet_amount" name="bet_amount"
                  value="{{ old('bet_amount', $bettingTicket->bet_amount) }}"
                  min="0" step="1000"
-                 class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('bet_amount') border-red-500 @enderror"
                  placeholder="Nhập số tiền cược"
                  required>
           @error('bet_amount')
-            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
           @enderror
         </div>
-        
+
         <div>
-          <label for="betting_numbers" class="block text-xs font-medium text-gray-600 mb-1">Số cược (cách nhau bởi dấu phẩy hoặc khoảng trắng)</label>
-          <input type="text" id="betting_numbers" name="betting_numbers" 
+          <label for="betting_numbers" class="block text-xs font-medium text-gray-700 mb-1">Số cược</label>
+          <input type="text" id="betting_numbers" name="betting_numbers"
                  value="{{ old('betting_numbers', is_array($bettingTicket->betting_data['numbers'] ?? []) ? implode(' ', $bettingTicket->betting_data['numbers']) : '') }}"
-                 class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('betting_numbers') border-red-500 @enderror"
                  placeholder="Ví dụ: 12 34 56 hoặc 12,34,56">
           @error('betting_numbers')
-            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
           @enderror
           <p class="mt-1 text-xs text-gray-500">Các số cược, cách nhau bởi dấu phẩy hoặc khoảng trắng</p>
         </div>
         
         <div class="flex justify-between items-center py-1.5 border-t border-gray-200 pt-2">
-          <span class="text-gray-500 text-sm">Tiền trúng</span>
-          <span class="font-medium text-green-600 text-sm">{{ number_format($bettingTicket->win_amount / 1000, 1) }}k</span>
+          <span class="text-gray-500 text-xs">Tiền trúng</span>
+          <span class="font-medium text-green-600 text-xs">{{ number_format($bettingTicket->win_amount / 1000, 1) }}k</span>
         </div>
-        
+
         @if($bettingTicket->parsed_message)
-        <div class="pt-2 space-y-1.5">
-          <div class="text-xs text-gray-500">Tin nhắn đã phân tích (chỉ xem)</div>
-          <div class="text-xs text-gray-900 bg-gray-50 rounded p-2 break-words">{{ $bettingTicket->parsed_message }}</div>
+        <div class="pt-2 space-y-1">
+          <div class="text-xs text-gray-500">Tin nhắn đã phân tích</div>
+          <div class="text-xs text-gray-900 bg-gray-50 rounded-lg p-2 break-words">{{ $bettingTicket->parsed_message }}</div>
         </div>
         @endif
       </div>
     </div>
 
     <!-- Result Card -->
-    <div class="bg-white rounded-lg border border-gray-200 p-3">
-      <h3 class="text-xs font-semibold text-gray-700 mb-3 uppercase tracking-wide">Kết quả cược</h3>
-      
-      <div class="space-y-3">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="text-sm font-semibold text-gray-900">Kết quả cược</h3>
+      </div>
+      <div class="card-body space-y-2.5">
         <div>
-          <label for="result" class="block text-xs font-medium text-gray-600 mb-1">Kết quả <span class="text-red-500">*</span></label>
-          <select id="result" name="result" 
-                  class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('result') border-red-500 @enderror"
-                  required>
+          <label for="result" class="block text-xs font-medium text-gray-700 mb-1">Kết quả <span class="text-red-500">*</span></label>
+          <select id="result" name="result" required>
             <option value="pending" {{ old('result', $bettingTicket->result) == 'pending' ? 'selected' : '' }}>Chờ kết quả</option>
             <option value="win" {{ old('result', $bettingTicket->result) == 'win' ? 'selected' : '' }}>Ăn</option>
             <option value="lose" {{ old('result', $bettingTicket->result) == 'lose' ? 'selected' : '' }}>Thua</option>
           </select>
           @error('result')
-            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
           @enderror
         </div>
-        
+
         <div>
-          <label for="payout_amount" class="block text-xs font-medium text-gray-600 mb-1">Tiền trả thực tế</label>
-          <input type="number" id="payout_amount" name="payout_amount" 
+          <label for="payout_amount" class="block text-xs font-medium text-gray-700 mb-1">Tiền trả thực tế</label>
+          <input type="number" id="payout_amount" name="payout_amount"
                  value="{{ old('payout_amount', $bettingTicket->payout_amount) }}"
                  min="0" step="1000"
-                 class="w-full text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 @error('payout_amount') border-red-500 @enderror"
                  placeholder="Nhập số tiền trả">
           @error('payout_amount')
-            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
           @enderror
           <p class="mt-1 text-xs text-gray-500">Số tiền thực tế đã trả cho khách hàng</p>
         </div>
@@ -209,17 +195,13 @@
     </div>
 
     <!-- Actions -->
-    <div class="pb-3 space-y-2">
-      <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition shadow-sm">
-        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="pb-3">
+      <button type="submit" class="btn btn-primary w-full">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
         </svg>
         Cập nhật phiếu cược
       </button>
-      <a href="{{ route('user.betting-tickets.index') }}" 
-         class="block w-full text-center px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
-        Hủy
-      </a>
     </div>
   </form>
 </div>

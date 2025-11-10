@@ -8,40 +8,40 @@
   $globalRegion = session('global_region', 'bac');
 @endphp
 
-<div class="pb-4 ios-fade-in">
-  <!-- iOS Style Header -->
-  <div class="mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <h1 class="text-2xl font-bold text-gray-900">Thêm phiếu cược</h1>
-      <a href="{{ route('user.betting-tickets.index') }}" 
-         class="p-2 -mr-2 active:opacity-50 transition-opacity">
-        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+<div class="pb-4">
+  <!-- Header -->
+  <div class="sticky top-14 z-10 bg-gray-50 border-b border-gray-200 -mx-3 px-3 py-2 mb-3">
+    <div class="flex items-center justify-between mb-2">
+      <div class="flex-1 min-w-0">
+        <h1 class="text-base font-semibold text-gray-900">Thêm phiếu cược</h1>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="badge badge-gray">{{ \App\Support\Region::label($globalRegion) }}</span>
+          <span class="badge badge-gray">{{ \Carbon\Carbon::parse($globalDate)->format('d/m/Y') }}</span>
+        </div>
+      </div>
+      <a href="{{ route('user.betting-tickets.index') }}" class="btn btn-secondary btn-sm btn-icon">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
         </svg>
       </a>
     </div>
-    <div class="flex items-center gap-2">
-      <span class="px-3 py-1 bg-gray-200 rounded-full text-xs font-medium text-gray-700">{{ \App\Support\Region::label($globalRegion) }}</span>
-      <span class="px-3 py-1 bg-gray-200 rounded-full text-xs font-medium text-gray-700">{{ \Carbon\Carbon::parse($globalDate)->format('d/m/Y') }}</span>
-    </div>
   </div>
 
-  <form method="POST" action="{{ route('user.betting-tickets.store') }}" id="betting-ticket-form" class="space-y-5">
+  <form method="POST" action="{{ route('user.betting-tickets.store') }}" id="betting-ticket-form" class="space-y-3">
     @csrf
-    
+
     <!-- Hidden fields -->
     <input type="hidden" name="betting_date" id="betting_date" value="{{ $globalDate }}">
     <input type="hidden" name="region" id="region" value="{{ $globalRegion }}">
     <input type="hidden" name="station" id="station" value="">
 
-    <!-- Customer Selection - iOS Card -->
-    <div class="card ios-scale-in">
+    <!-- Customer Selection -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="text-sm font-semibold text-gray-900">Khách hàng</h3>
+      </div>
       <div class="card-body">
-        <label for="customer_id" class="block text-sm font-semibold text-gray-900 mb-3">
-          Khách hàng <span class="text-red-500">*</span>
-        </label>
-        <select id="customer_id" name="customer_id" 
-                class="w-full text-base" required>
+        <select id="customer_id" name="customer_id" required>
           <option value="">Chọn khách hàng</option>
           @foreach($customers as $customer)
             <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>
@@ -50,53 +50,51 @@
           @endforeach
         </select>
         @error('customer_id')
-          <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
+          <p class="mt-2 text-xs text-red-500">{{ $message }}</p>
         @enderror
       </div>
     </div>
 
-    <!-- Message Input - iOS Card -->
-    <div class="card ios-scale-in">
-      <div class="card-body">
-        <label for="original_message" class="block text-sm font-semibold text-gray-900 mb-3">
-          Tin nhắn cược <span class="text-red-500">*</span>
-        </label>
+    <!-- Message Input -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="text-sm font-semibold text-gray-900">Tin nhắn cược</h3>
+      </div>
+      <div class="card-body space-y-2.5">
         <textarea id="original_message" name="original_message" rows="6"
-                  class="w-full text-base"
                   placeholder="Ví dụ: lo 12 34 56 100000&#10;bao 01 02 03 50000 2d&#10;da 12 34 200000 hcm"
                   required>{{ old('original_message') }}</textarea>
         @error('original_message')
-          <p class="mt-2 text-sm text-red-500">{{ $message }}</p>
+          <p class="text-xs text-red-500">{{ $message }}</p>
         @enderror
-        <p class="mt-3 text-xs text-gray-500">
+        <p class="text-xs text-gray-500">
           Hệ thống sẽ tự động phân tích và phát hiện đài từ tin nhắn
         </p>
       </div>
     </div>
 
-    <!-- Parse Button - iOS Style -->
-    <button type="button" id="parse-btn" 
-            class="btn-primary w-full">
-      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Parse Button -->
+    <button type="button" id="parse-btn" class="btn btn-primary w-full">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
       </svg>
       Phân tích tin nhắn
     </button>
 
-    <!-- Parse Result - iOS Card -->
-    <div id="parse-result" class="hidden ios-scale-in">
+    <!-- Parse Result -->
+    <div id="parse-result" class="hidden">
       <div class="card">
-        <div class="card-body space-y-5">
-          <!-- Tổng tiền theo loại cược - iOS Table -->
+        <div class="card-body space-y-3">
+          <!-- Tổng tiền cược & xác -->
           <div id="total-summary-table" class="hidden">
-            <h3 class="text-base font-semibold text-gray-900 mb-4">Tổng tiền cược & xác</h3>
-            <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-              <table class="w-full text-sm">
+            <h3 class="text-sm font-semibold text-gray-900 mb-2">Tổng tiền cược & xác</h3>
+            <div class="overflow-hidden rounded-lg border border-gray-200 bg-white">
+              <table class="w-full text-xs">
                 <thead>
                   <tr class="bg-gray-50">
-                    <th class="px-4 py-3 text-left font-semibold text-gray-900">Loại cược</th>
-                    <th class="px-4 py-3 text-right font-semibold text-gray-900">Tiền cược</th>
-                    <th class="px-4 py-3 text-right font-semibold text-gray-900">Tiền xác</th>
+                    <th class="px-3 py-2 text-left font-semibold text-gray-900">Loại cược</th>
+                    <th class="px-3 py-2 text-right font-semibold text-gray-900">Tiền cược</th>
+                    <th class="px-3 py-2 text-right font-semibold text-gray-900">Tiền xác</th>
                   </tr>
                 </thead>
                 <tbody id="total-summary-table-body" class="divide-y divide-gray-100">
@@ -107,35 +105,31 @@
             </div>
           </div>
           
-          <!-- Preview Numbers - iOS List -->
+          <!-- Preview Numbers -->
           <div id="preview-numbers" class="hidden">
-            <h3 class="text-base font-semibold text-gray-900 mb-4">Preview số</h3>
-            <div id="preview-numbers-content" class="space-y-3"></div>
+            <h3 class="text-sm font-semibold text-gray-900 mb-2">Preview số</h3>
+            <div id="preview-numbers-content" class="space-y-2"></div>
           </div>
-          
+
           <!-- Kết quả phân tích chi tiết -->
           <div id="parse-details" class="hidden">
-            <div class="border-t border-gray-200 pt-5">
-              <h3 class="text-base font-semibold text-gray-900 mb-4">Kết quả phân tích</h3>
-              <div id="parse-content" class="text-sm text-gray-600"></div>
+            <div class="border-t border-gray-200 pt-3">
+              <h3 class="text-sm font-semibold text-gray-900 mb-2">Kết quả phân tích</h3>
+              <div id="parse-content" class="text-xs text-gray-600"></div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Actions - iOS Style -->
-    <div class="space-y-3 pb-6">
-      <button type="submit" class="btn-primary w-full">
-        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Actions -->
+    <div class="pb-3">
+      <button type="submit" class="btn btn-primary w-full">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
         </svg>
         Xử lý
       </button>
-      <a href="{{ route('user.betting-tickets.index') }}" 
-         class="btn-secondary w-full text-center">
-        Hủy
-      </a>
     </div>
   </form>
 </div>
@@ -315,19 +309,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const amountInK = (summaryData.totalAmount / 1000).toFixed(1);
             const costInK = (summaryData.totalCostXac / 1000).toFixed(1);
             
-            tableBodyHtml += `<tr class="ios-list-item border-0">
-              <td class="px-4 py-3 text-gray-900">${summaryData.label}</td>
-              <td class="px-4 py-3 text-right text-blue-600 font-semibold">${amountInK}k</td>
-              <td class="px-4 py-3 text-right text-green-600 font-semibold">${costInK}k</td>
+            tableBodyHtml += `<tr>
+              <td class="px-3 py-2 text-gray-900">${summaryData.label}</td>
+              <td class="px-3 py-2 text-right text-blue-600 font-semibold">${amountInK}k</td>
+              <td class="px-3 py-2 text-right text-green-600 font-semibold">${costInK}k</td>
             </tr>`;
           });
           
           const grandAmountInK = (grandTotalAmount / 1000).toFixed(1);
           const grandCostInK = (grandTotalCostXac / 1000).toFixed(1);
           const tableFooterHtml = `<tr class="bg-gray-50">
-            <td class="px-4 py-3 text-gray-900 font-bold">Tổng cộng</td>
-            <td class="px-4 py-3 text-right text-blue-600 font-bold text-base">${grandAmountInK}k</td>
-            <td class="px-4 py-3 text-right text-green-600 font-bold text-base">${grandCostInK}k</td>
+            <td class="px-3 py-2 text-gray-900 font-bold">Tổng cộng</td>
+            <td class="px-3 py-2 text-right text-blue-600 font-bold text-sm">${grandAmountInK}k</td>
+            <td class="px-3 py-2 text-right text-green-600 font-bold text-sm">${grandCostInK}k</td>
           </tr>`;
           
           if (tableBodyHtml) {
@@ -338,20 +332,18 @@ document.addEventListener('DOMContentLoaded', function() {
             totalSummaryTableDiv.classList.add('hidden');
           }
           
-          // Preview Numbers - iOS Style
+          // Preview Numbers
           const previewNumbersDiv = document.getElementById('preview-numbers');
           const previewNumbersContent = document.getElementById('preview-numbers-content');
-          
+
           let previewHtml = '';
           Object.keys(numbersByDetailedType).sort().forEach(key => {
             const typeData = numbersByDetailedType[key];
-            
-            previewHtml += `<div class="card">
-              <div class="card-body">
-                <div class="font-semibold text-gray-900 mb-3">${typeData.label}</div>
-                <div class="flex flex-wrap gap-2">
-                  ${typeData.numbers.map(item => `<span class="px-3 py-1.5 bg-gray-100 rounded-full text-sm text-gray-700">${item.number}${item.station}</span>`).join('')}
-                </div>
+
+            previewHtml += `<div class="bg-gray-50 rounded-lg p-2.5">
+              <div class="text-xs font-semibold text-gray-900 mb-1.5">${typeData.label}</div>
+              <div class="flex flex-wrap gap-1.5">
+                ${typeData.numbers.map(item => `<span class="badge badge-gray">${item.number}${item.station}</span>`).join('')}
               </div>
             </div>`;
           });
@@ -363,15 +355,13 @@ document.addEventListener('DOMContentLoaded', function() {
             previewNumbersDiv.classList.add('hidden');
           }
           
-          // Parse Details - iOS Style
+          // Parse Details
           const parseDetailsDiv = document.getElementById('parse-details');
-          let html = `<p class="text-green-600 font-medium mb-3">✓ Phân tích được ${data.multiple_bets.length} phiếu cược</p>`;
+          let html = `<p class="text-green-600 font-medium mb-2 text-xs">✓ Phân tích được ${data.multiple_bets.length} phiếu cược</p>`;
           data.multiple_bets.forEach((bet, idx) => {
-            html += `<div class="ios-list-item border-0 mb-2 rounded-2xl">
-              <div>
-                <div class="font-medium text-gray-900">${bet.type || 'N/A'}</div>
-                <div class="text-sm text-gray-500 mt-1">${bet.station || '-'} • ${(bet.amount || 0).toLocaleString()}đ</div>
-              </div>
+            html += `<div class="bg-gray-50 p-2 mb-1.5 rounded-lg">
+              <div class="font-medium text-gray-900 text-xs">${bet.type || 'N/A'}</div>
+              <div class="text-xs text-gray-500 mt-0.5">${bet.station || '-'} • ${(bet.amount || 0).toLocaleString()}đ</div>
             </div>`;
           });
           parseContent.innerHTML = html;
@@ -383,7 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
           document.getElementById('parse-details').classList.add('hidden');
           
           parseContent.innerHTML = `
-            <div class="space-y-2 text-sm">
+            <div class="space-y-1.5 text-xs">
               <p><strong>Loại:</strong> ${data.betting_type?.name || 'N/A'}</p>
               <p><strong>Số:</strong> ${data.numbers?.join(', ') || 'N/A'}</p>
               <p><strong>Tiền:</strong> ${(data.amount || 0).toLocaleString()}đ</p>
@@ -400,8 +390,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('parse-details').classList.add('hidden');
         
         parseContent.innerHTML = `
-          <p class="text-red-500 font-medium mb-2">✗ Tin nhắn không hợp lệ</p>
-          <ul class="text-sm text-red-500 list-disc list-inside">
+          <p class="text-red-500 font-medium mb-1.5 text-xs">✗ Tin nhắn không hợp lệ</p>
+          <ul class="text-xs text-red-500 list-disc list-inside">
             ${(data.errors || []).map(e => `<li>${e}</li>`).join('')}
           </ul>
         `;
@@ -411,12 +401,12 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(error => {
       console.error('Error:', error);
-      parseContent.innerHTML = '<p class="text-red-500 text-sm">Có lỗi xảy ra khi phân tích</p>';
+      parseContent.innerHTML = '<p class="text-red-500 text-xs">Có lỗi xảy ra khi phân tích</p>';
       parseResult.classList.remove('hidden');
     })
     .finally(() => {
       parseBtn.disabled = false;
-      parseBtn.innerHTML = `<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      parseBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
       </svg>Phân tích tin nhắn`;
     });
