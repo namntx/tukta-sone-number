@@ -186,31 +186,31 @@
     
     @stack('styles')
 </head>
-<body class="h-full font-sans antialiased @auth @if(!auth()->user()->isAdmin()) has-bottom-nav @endif @endauth">
-    <div class="min-h-full pb-20 safe-area-bottom bg-neutral-100">
-        <!-- iOS Navigation Bar - Premium -->
-        <nav class="ios-blur sticky top-0 z-50 safe-area-top" style="border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);">
-            <div class="max-w-full mx-auto px-4">
+<body class="h-full font-sans antialiased @auth @if(!auth()->user()->isAdmin()) pb-24 @endif @endauth">
+    <div class="min-h-full safe-bottom">
+        <!-- Premium Navigation Bar -->
+        <nav class="glass sticky top-0 z-50 safe-top border-b-2 border-gray-100">
+            <div class="max-w-7xl mx-auto px-4">
                 <div class="flex justify-between items-center h-16">
                     <div class="flex items-center space-x-3">
-                        <!-- Logo - Premium -->
+                        <!-- Logo -->
                         <div class="flex-shrink-0">
-                            <a href="{{ route('user.dashboard') }}" class="text-xl font-bold bg-gradient-blue bg-clip-text text-transparent tracking-tight">
+                            <a href="{{ route('user.dashboard') }}" class="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
                                 Keki
                             </a>
                         </div>
 
-                        <!-- Mobile Date/Region (Compact) - iOS Style -->
+                        <!-- Date/Region Filters (Mobile) -->
                         @auth
                         @if(!auth()->user()->isAdmin())
-                            <div class="flex items-center gap-2 flex-1 min-w-0 ml-2">
+                            <div class="flex items-center gap-2 flex-1 min-w-0 ml-3">
                                 <form method="POST" action="{{ route('global-filters.update') }}" class="flex items-center gap-2 flex-1 min-w-0" id="global-filters-form">
                                     @csrf
                                     <input type="date"
                                             id="global_date"
                                             name="global_date"
                                             value="{{ $global_date }}"
-                                            class="input-sm flex-1 min-w-0"
+                                            class="input-sm flex-1"
                                             onchange="updateGlobalFilters()">
                                     <select id="global_region"
                                             name="global_region"
@@ -278,32 +278,28 @@
                                 @endphp
                                 
                                 @if($subscription && $status === 'active')
-                                    <!-- Days Remaining Badge - Desktop -->
-                                    <div class="hidden md:flex items-center space-x-2">
-                                        <div class="ios-badge ios-badge-blue flex items-center gap-1.5">
+                                    <!-- Subscription Badge (Desktop) -->
+                                    <div class="hidden md:flex items-center gap-2">
+                                        <div class="badge badge-primary">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
-                                            <span class="font-semibold">
-                                                {{ $daysRemaining }} ngày
-                                            </span>
+                                            {{ $daysRemaining }} ngày
                                         </div>
 
                                         @if($daysRemaining <= 7)
-                                        <div class="ios-badge ios-badge-yellow pulse-soft flex items-center gap-1.5">
+                                        <div class="badge badge-warning animate-pulse">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"></path>
                                             </svg>
-                                            <span class="font-semibold">
-                                                Sắp hết hạn
-                                            </span>
+                                            Sắp hết
                                         </div>
                                         @endif
                                     </div>
 
-                                    <!-- Mobile Timer (Compact) -->
+                                    <!-- Subscription Badge (Mobile) -->
                                     <div class="md:hidden">
-                                        <div class="ios-badge ios-badge-blue text-xs">
+                                        <div class="badge badge-primary">
                                             {{ $daysRemaining }}d
                                         </div>
                                     </div>
@@ -478,110 +474,86 @@
         </nav>
         
         <!-- Main content -->
-        <main class="max-w-full mx-auto py-6 px-4 pb-24 ios-fade-in">
-            <!-- Flash Messages - iOS Style -->
+        <main class="max-w-7xl mx-auto py-6 px-4 animate-fade-in">
+            <!-- Flash Messages -->
             @if(session('success'))
-                <div class="ios-alert ios-alert-success" role="alert">
-                    <div class="flex items-start gap-3">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium">{{ session('success') }}</p>
-                        </div>
-                    </div>
+                <div class="alert alert-success mb-6" role="alert">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-sm font-medium">{{ session('success') }}</p>
                 </div>
             @endif
 
             @if(session('error'))
-                <div class="ios-alert ios-alert-error" role="alert">
-                    <div class="flex items-start gap-3">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium">{{ session('error') }}</p>
-                        </div>
-                    </div>
+                <div class="alert alert-error mb-6" role="alert">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-sm font-medium">{{ session('error') }}</p>
                 </div>
             @endif
 
             @if(session('warning'))
-                <div class="ios-alert ios-alert-warning" role="alert">
-                    <div class="flex items-start gap-3">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium">{{ session('warning') }}</p>
-                        </div>
-                    </div>
+                <div class="alert alert-warning mb-6" role="alert">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                    <p class="text-sm font-medium">{{ session('warning') }}</p>
                 </div>
             @endif
 
             @if(session('info'))
-                <div class="ios-alert ios-alert-info" role="alert">
-                    <div class="flex items-start gap-3">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium">{{ session('info') }}</p>
-                        </div>
-                    </div>
+                <div class="alert alert-info mb-6" role="alert">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-sm font-medium">{{ session('info') }}</p>
                 </div>
             @endif
             
             @yield('content')
         </main>
         
-        <!-- iOS Tab Bar - Premium -->
+        <!-- Bottom Navigation -->
         @auth
         @if(!auth()->user()->isAdmin())
-        <nav class="fixed bottom-0 left-0 right-0 ios-blur safe-area-bottom z-50" style="border-top: 0.5px solid rgba(0, 0, 0, 0.08);">
-            <div class="flex justify-around items-center h-20 px-4">
+        <nav class="fixed bottom-0 left-0 right-0 glass safe-bottom z-50 border-t-2 border-gray-100 no-print">
+            <div class="flex justify-around items-center h-20 px-2">
                 <!-- Dashboard -->
                 <a href="{{ route('user.dashboard') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 {{ request()->routeIs('user.dashboard') ? 'text-blue-500 scale-105' : 'text-neutral-500 active:scale-95' }}">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.dashboard') ? '2.5' : '2' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-all duration-200 {{ request()->routeIs('user.dashboard') ? 'text-primary' : 'text-gray-500 active:scale-95' }}">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.dashboard') ? '2.5' : '2' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                     </svg>
-                    <span class="text-[11px] font-semibold tracking-tight">Trang chủ</span>
+                    <span class="text-[10px] font-semibold">Trang chủ</span>
                 </a>
 
-                <!-- Khách hàng -->
+                <!-- Customers -->
                 <a href="{{ route('user.customers.index') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 {{ request()->routeIs('user.customers*') ? 'text-blue-500 scale-105' : 'text-neutral-500 active:scale-95' }}">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.customers*') ? '2.5' : '2' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-all duration-200 {{ request()->routeIs('user.customers*') ? 'text-primary' : 'text-gray-500 active:scale-95' }}">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.customers*') ? '2.5' : '2' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
-                    <span class="text-[11px] font-semibold tracking-tight">Khách hàng</span>
+                    <span class="text-[10px] font-semibold">Khách hàng</span>
                 </a>
 
-                <!-- Phiếu cược -->
+                <!-- Betting Tickets -->
                 <a href="{{ route('user.betting-tickets.index') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 {{ request()->routeIs('user.betting-tickets*') ? 'text-blue-500 scale-105' : 'text-neutral-500 active:scale-95' }}">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.betting-tickets*') ? '2.5' : '2' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-all duration-200 {{ request()->routeIs('user.betting-tickets*') ? 'text-primary' : 'text-gray-500 active:scale-95' }}">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.betting-tickets*') ? '2.5' : '2' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <span class="text-[11px] font-semibold tracking-tight">Thống kê</span>
+                    <span class="text-[10px] font-semibold">Thống kê</span>
                 </a>
 
                 <!-- KQXS -->
                 <a href="{{ route('user.kqxs') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-300 {{ request()->routeIs('user.kqxs*') ? 'text-blue-500 scale-105' : 'text-neutral-500 active:scale-95' }}">
-                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.kqxs*') ? '2.5' : '2' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-all duration-200 {{ request()->routeIs('user.kqxs*') ? 'text-primary' : 'text-gray-500 active:scale-95' }}">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.kqxs*') ? '2.5' : '2' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
-                    <span class="text-[11px] font-semibold tracking-tight">KQXS</span>
+                    <span class="text-[10px] font-semibold">KQXS</span>
                 </a>
             </div>
         </nav>
