@@ -64,157 +64,38 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     @endif
     
-    <!-- Custom Scrollbar Styles -->
-    <style>
-        .scrollbar-thin {
-            scrollbar-width: thin;
-        }
-        .scrollbar-thin::-webkit-scrollbar {
-            height: 8px;
-        }
-        .scrollbar-thin::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 4px;
-        }
-        .scrollbar-thin::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-        
-        /* Custom Loading Animations */
-        @keyframes shimmer {
-            0% {
-                transform: translateX(-100%);
-            }
-            100% {
-                transform: translateX(100%);
-            }
-        }
-        
-        @keyframes float {
-            0%, 100% {
-                transform: translateY(0px);
-            }
-            50% {
-                transform: translateY(-2px);
-            }
-        }
-        
-        .shimmer-effect {
-            animation: shimmer 2s infinite;
-        }
-        
-        .float-animation {
-            animation: float 2s ease-in-out infinite;
-        }
-        
-        .loading-dots {
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-        
-        /* Mobile Optimizations */
-        @media (max-width: 768px) {
-            body {
-                -webkit-tap-highlight-color: transparent;
-                touch-action: manipulation;
-            }
-            
-            /* Smooth scrolling on mobile */
-            html {
-                -webkit-overflow-scrolling: touch;
-            }
-            
-            /* Better touch targets */
-            button, a, input, select, textarea {
-                min-height: 44px;
-                min-width: 44px;
-            }
-            
-            /* Hide scrollbars on mobile for cleaner look */
-            .hide-scrollbar::-webkit-scrollbar {
-                display: none;
-            }
-            .hide-scrollbar {
-                -ms-overflow-style: none;
-                scrollbar-width: none;
-            }
-        }
-        
-        /* iOS Tab Bar Active State */
-        .ios-tab-active {
-            color: #007AFF;
-        }
-        
-        .ios-tab-active svg {
-            stroke-width: 2.5;
-        }
-        
-        /* iOS Date/Region Selector */
-        .ios-date-region-selector {
-            @apply px-3 py-1.5 rounded-full text-xs font-medium;
-            @apply bg-gray-100 text-gray-700;
-            @apply border-0;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-        
-        /* iOS Flash Messages */
-        .ios-alert {
-            @apply rounded-2xl px-4 py-3 mb-4;
-            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
-        }
-        
-        .ios-alert-success {
-            @apply bg-green-50 text-green-900 border border-green-200;
-        }
-        
-        .ios-alert-error {
-            @apply bg-red-50 text-red-900 border border-red-200;
-        }
-        
-        .ios-alert-warning {
-            @apply bg-yellow-50 text-yellow-900 border border-yellow-200;
-        }
-        
-        .ios-alert-info {
-            @apply bg-blue-50 text-blue-900 border border-blue-200;
-        }
-    </style>
     
     @stack('styles')
 </head>
-<body class="h-full font-sans antialiased @auth @if(!auth()->user()->isAdmin()) pb-24 @endif @endauth">
+<body class="h-full font-sans antialiased @auth @if(!auth()->user()->isAdmin()) pb-16 @endif @endauth">
     <div class="min-h-full safe-bottom">
-        <!-- Premium Navigation Bar -->
-        <nav class="glass sticky top-0 z-50 safe-top border-b-2 border-gray-100">
-            <div class="max-w-7xl mx-auto px-4">
-                <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center space-x-3">
+        <!-- Navigation Bar -->
+        <nav class="bg-white sticky top-0 z-50 safe-top border-b border-gray-200">
+            <div class="max-w-7xl mx-auto px-3">
+                <div class="flex justify-between items-center h-14">
+                    <div class="flex items-center space-x-2">
                         <!-- Logo -->
                         <div class="flex-shrink-0">
-                            <a href="{{ route('user.dashboard') }}" class="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
+                            <a href="{{ route('user.dashboard') }}" class="text-lg font-bold text-primary">
                                 Keki
                             </a>
                         </div>
 
-                        <!-- Date/Region Filters (Mobile) -->
+                        <!-- Date/Region Filters -->
                         @auth
                         @if(!auth()->user()->isAdmin())
-                            <div class="flex items-center gap-2 flex-1 min-w-0 ml-3">
-                                <form method="POST" action="{{ route('global-filters.update') }}" class="flex items-center gap-2 flex-1 min-w-0" id="global-filters-form">
+                            <div class="flex items-center gap-1.5 flex-1 min-w-0 ml-2">
+                                <form method="POST" action="{{ route('global-filters.update') }}" class="flex items-center gap-1.5 flex-1 min-w-0" id="global-filters-form">
                                     @csrf
                                     <input type="date"
                                             id="global_date"
                                             name="global_date"
                                             value="{{ $global_date }}"
-                                            class="input-sm flex-1"
+                                            class="input-sm flex-1 text-xs"
                                             onchange="updateGlobalFilters()">
                                     <select id="global_region"
                                             name="global_region"
-                                            class="input-sm flex-shrink-0"
+                                            class="input-sm flex-shrink-0 text-xs"
                                             onchange="updateGlobalFilters()">
                                         <option value="bac" {{ $global_region == 'bac' ? 'selected' : '' }}>Bắc</option>
                                         <option value="trung" {{ $global_region == 'trung' ? 'selected' : '' }}>Trung</option>
@@ -226,289 +107,96 @@
                         @endauth
                     </div>
                         
-                        <!-- Navigation Links -->
+                        <!-- Navigation Links (Desktop only) -->
                         @auth
-                        <div class="hidden md:ml-6 md:flex md:space-x-8">
+                        <div class="hidden md:ml-4 md:flex md:space-x-4">
                             @if(auth()->user()->isAdmin())
-                                <a href="{{ route('admin.dashboard') }}" 
-                                   class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors duration-200">
-                                    Admin Dashboard
+                                <a href="{{ route('admin.dashboard') }}"
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium text-gray-600 hover:text-gray-900">
+                                    Admin
                                 </a>
-                                <a href="{{ route('admin.users.index') }}" 
-                                   class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors duration-200">
-                                    Quản lý User
+                                <a href="{{ route('admin.users.index') }}"
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium text-gray-600 hover:text-gray-900">
+                                    Users
                                 </a>
-                                <a href="{{ route('admin.plans.index') }}" 
-                                   class="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors duration-200">
-                                    Quản lý Gói
-                                </a>
-                            @else
-                                <a href="{{ route('user.dashboard') }}" 
-                                   class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('user.dashboard') ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} text-sm font-medium transition-colors duration-200">
-                                    Dashboard
-                                </a>
-                                <a href="{{ route('user.customers.index') }}" 
-                                   class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('user.customers*') ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} text-sm font-medium transition-colors duration-200">
-                                    Khách hàng
-                                </a>
-                                <a href="{{ route('user.betting-tickets.index') }}" 
-                                   class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('user.betting-tickets*') ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} text-sm font-medium transition-colors duration-200">
-                                   Thống kê
-                                </a>
-                                <a href="{{ route('user.kqxs') }}" 
-                                   class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('user.kqxs*') ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} text-sm font-medium transition-colors duration-200">
-                                    KQXS
-                                </a>
-                                <a href="{{ route('user.subscription') }}" 
-                                   class="inline-flex items-center px-1 pt-1 border-b-2 {{ request()->routeIs('user.subscription*') ? 'border-indigo-500 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} text-sm font-medium transition-colors duration-200">
-                                    Subscription
+                                <a href="{{ route('admin.plans.index') }}"
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium text-gray-600 hover:text-gray-900">
+                                    Plans
                                 </a>
                             @endif
                         </div>
                         @endauth                    
                     <!-- Right side -->
-                    <div class="flex items-center space-x-1 md:space-x-2">
+                    <div class="flex items-center space-x-1.5">
                         @auth
-                            <!-- Subscription Timer (for users only) -->
+                            <!-- Subscription Badge -->
                             @if(!auth()->user()->isAdmin())
                                 @php
                                     $subscription = auth()->user()->activeSubscription;
                                     $daysRemaining = auth()->user()->getSubscriptionDaysRemaining();
                                     $status = auth()->user()->getSubscriptionStatus();
                                 @endphp
-                                
+
                                 @if($subscription && $status === 'active')
-                                    <!-- Subscription Badge (Desktop) -->
-                                    <div class="hidden md:flex items-center gap-2">
-                                        <div class="badge badge-primary">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                            {{ $daysRemaining }} ngày
-                                        </div>
-
-                                        @if($daysRemaining <= 7)
-                                        <div class="badge badge-warning animate-pulse">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"></path>
-                                            </svg>
-                                            Sắp hết
-                                        </div>
-                                        @endif
-                                    </div>
-
-                                    <!-- Subscription Badge (Mobile) -->
-                                    <div class="md:hidden">
-                                        <div class="badge badge-primary">
-                                            {{ $daysRemaining }}d
-                                        </div>
-                                    </div>
-                                @else
-                                    <!-- No Active Subscription -->
-                                    <div class="hidden sm:flex items-center space-x-1 bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-1.5 rounded-full border border-gray-200">
-                                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                                        </svg>
-                                        <span class="text-sm font-semibold text-gray-700">
-                                            Chưa có gói
-                                        </span>
+                                    <div class="badge {{ $daysRemaining <= 7 ? 'badge-warning' : 'badge-primary' }} text-[10px]">
+                                        {{ $daysRemaining }}d
                                     </div>
                                 @endif
                             @endif
-                            
-                            <!-- User Info -->
-                            <div class="flex items-center space-x-1 md:space-x-2">
-                                <!-- User name (hidden on mobile) -->
-                                <span class="hidden lg:block text-sm font-medium text-gray-700">
-                                    {{ auth()->user()->name }}
-                                </span>
-                                
-                                <!-- Mobile Menu Button
-                                <button type="button" class="md:hidden inline-flex items-center justify-center p-1.5 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none" onclick="toggleMobileMenu()">
-                                    <span class="sr-only">Mở menu</span>
-                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                                    </svg>
+
+                            <!-- Logout -->
+                            <form method="POST" action="{{ route('logout') }}" class="hidden md:inline">
+                                @csrf
+                                <button type="submit" class="text-xs text-gray-600 hover:text-gray-900">
+                                    Thoát
                                 </button>
-                                 -->
-                                <!-- Desktop Logout -->
-                                <form method="POST" action="{{ route('logout') }}" class="hidden md:inline">
-                                    @csrf
-                                    <button type="submit" 
-                                            class="text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200">
-                                        Đăng xuất
-                                    </button>
-                                </form>
-                            </div>
+                            </form>
                         @else
-                            <a href="{{ route('login') }}" 
-                               class="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200">
+                            <a href="{{ route('login') }}" class="text-xs font-medium text-primary hover:text-primary-dark">
                                 Đăng nhập
                             </a>
                         @endauth
                     </div>
                 </div>
             </div>
-            
-            <!-- Mobile menu -->
-            @auth
-            <div id="mobile-menu" class="md:hidden hidden">
-                <div class="pt-2 pb-3 space-y-1">
-                    <!-- User Info in Mobile -->
-                    <div class="px-4 py-3 border-b border-gray-200">
-                        <div class="flex items-center space-x-3">
-                            <div class="flex-shrink-0">
-                                <div class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                                    <span class="text-sm font-medium text-indigo-600">
-                                        {{ substr(auth()->user()->name, 0, 1) }}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-900 truncate">
-                                    {{ auth()->user()->name }}
-                                </p>
-                                <p class="text-sm text-gray-500 truncate">
-                                    {{ auth()->user()->email }}
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <!-- Mobile Subscription Status -->
-                        @if(!auth()->user()->isAdmin())
-                            @php
-                                $subscription = auth()->user()->activeSubscription;
-                                $daysRemaining = auth()->user()->getSubscriptionDaysRemaining();
-                                $status = auth()->user()->getSubscriptionStatus();
-                            @endphp
-                            
-                            <div class="mt-3">
-                                @if($subscription && $status === 'active')
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center space-x-2">
-                                            <div class="flex items-center space-x-1 bg-gradient-to-r from-indigo-50 to-blue-50 px-2 py-1 rounded-full border border-indigo-200">
-                                                <svg class="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                                </svg>
-                                                <span class="text-xs font-semibold text-indigo-800">
-                                                    {{ $daysRemaining }} ngày còn lại
-                                                </span>
-                                            </div>
-                                            
-                                            @if($daysRemaining <= 7)
-                                            <div class="flex items-center space-x-1 bg-gradient-to-r from-yellow-50 to-orange-50 px-2 py-1 rounded-full border border-yellow-200">
-                                                <svg class="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                                                </svg>
-                                                <span class="text-xs font-semibold text-yellow-800">
-                                                    Sắp hết hạn
-                                                </span>
-                                            </div>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @else
-                                    <div class="flex items-center space-x-1 bg-gradient-to-r from-gray-50 to-gray-100 px-2 py-1 rounded-full border border-gray-200 w-fit">
-                                        <svg class="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                                        </svg>
-                                        <span class="text-xs font-semibold text-gray-700">
-                                            Chưa có gói
-                                        </span>
-                                    </div>
-                                @endif
-                            </div>
-                        @endif
-                    </div>
-                    
-                    <!-- Navigation Links -->
-                    @if(auth()->user()->isAdmin())
-                        <a href="{{ route('admin.dashboard') }}" 
-                           class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors duration-200">
-                            Admin Dashboard
-                        </a>
-                        <a href="{{ route('admin.users.index') }}" 
-                           class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors duration-200">
-                            Quản lý User
-                        </a>
-                        <a href="{{ route('admin.plans.index') }}" 
-                           class="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors duration-200">
-                            Quản lý Gói
-                        </a>
-                    @else
-                        <a href="{{ route('user.dashboard') }}" 
-                           class="block pl-3 pr-4 py-2 border-l-4 {{ request()->routeIs('user.dashboard') ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300' }} text-base font-medium transition-colors duration-200">
-                            Dashboard
-                        </a>
-                        <a href="{{ route('user.customers.index') }}" 
-                           class="block pl-3 pr-4 py-2 border-l-4 {{ request()->routeIs('user.customers*') ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300' }} text-base font-medium transition-colors duration-200">
-                            Khách hàng
-                        </a>
-                        <a href="{{ route('user.betting-tickets.index') }}" 
-                           class="block pl-3 pr-4 py-2 border-l-4 {{ request()->routeIs('user.betting-tickets*') ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300' }} text-base font-medium transition-colors duration-200">
-                            Thống kê
-                        </a>
-                        <a href="{{ route('user.subscription') }}" 
-                           class="block pl-3 pr-4 py-2 border-l-4 {{ request()->routeIs('user.subscription*') ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300' }} text-base font-medium transition-colors duration-200">
-                            Subscription
-                        </a>
-                        <a href="{{ route('user.profile') }}" 
-                           class="block pl-3 pr-4 py-2 border-l-4 {{ request()->routeIs('user.profile') ? 'border-indigo-500 text-indigo-700 bg-indigo-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-300' }} text-base font-medium transition-colors duration-200">
-                            Profile
-                        </a>
-                    @endif
-                    
-                    <!-- Mobile Logout -->
-                    <div class="border-t border-gray-200 pt-3">
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" 
-                                    class="block w-full text-left pl-3 pr-4 py-2 text-base font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors duration-200">
-                                Đăng xuất
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            @endauth
         </nav>
-        
+
         <!-- Main content -->
-        <main class="max-w-7xl mx-auto py-6 px-4 animate-fade-in">
+        <main class="max-w-7xl mx-auto py-4 px-3 animate-fade-in">
             <!-- Flash Messages -->
             @if(session('success'))
-                <div class="alert alert-success mb-6" role="alert">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <div class="alert alert-success mb-4" role="alert">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                    <p class="text-sm font-medium">{{ session('success') }}</p>
+                    <p class="text-sm">{{ session('success') }}</p>
                 </div>
             @endif
 
             @if(session('error'))
-                <div class="alert alert-error mb-6" role="alert">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <div class="alert alert-error mb-4" role="alert">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
-                    <p class="text-sm font-medium">{{ session('error') }}</p>
+                    <p class="text-sm">{{ session('error') }}</p>
                 </div>
             @endif
 
             @if(session('warning'))
-                <div class="alert alert-warning mb-6" role="alert">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                <div class="alert alert-warning mb-4" role="alert">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"></path>
                     </svg>
-                    <p class="text-sm font-medium">{{ session('warning') }}</p>
+                    <p class="text-sm">{{ session('warning') }}</p>
                 </div>
             @endif
 
             @if(session('info'))
-                <div class="alert alert-info mb-6" role="alert">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <div class="alert alert-info mb-4" role="alert">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01"></path>
                     </svg>
-                    <p class="text-sm font-medium">{{ session('info') }}</p>
+                    <p class="text-sm">{{ session('info') }}</p>
                 </div>
             @endif
             
@@ -518,42 +206,42 @@
         <!-- Bottom Navigation -->
         @auth
         @if(!auth()->user()->isAdmin())
-        <nav class="fixed bottom-0 left-0 right-0 glass safe-bottom z-50 border-t-2 border-gray-100 no-print">
-            <div class="flex justify-around items-center h-20 px-2">
+        <nav class="fixed bottom-0 left-0 right-0 bg-white safe-bottom z-50 border-t border-gray-200 no-print">
+            <div class="flex justify-around items-center h-16 px-1">
                 <!-- Dashboard -->
                 <a href="{{ route('user.dashboard') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-all duration-200 {{ request()->routeIs('user.dashboard') ? 'text-primary' : 'text-gray-500 active:scale-95' }}">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.dashboard') ? '2.5' : '2' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.dashboard') ? 'text-primary' : 'text-gray-500' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.dashboard') ? '2' : '1.5' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                     </svg>
-                    <span class="text-[10px] font-semibold">Trang chủ</span>
+                    <span class="text-[10px] font-medium">Trang chủ</span>
                 </a>
 
                 <!-- Customers -->
                 <a href="{{ route('user.customers.index') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-all duration-200 {{ request()->routeIs('user.customers*') ? 'text-primary' : 'text-gray-500 active:scale-95' }}">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.customers*') ? '2.5' : '2' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.customers*') ? 'text-primary' : 'text-gray-500' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.customers*') ? '2' : '1.5' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
-                    <span class="text-[10px] font-semibold">Khách hàng</span>
+                    <span class="text-[10px] font-medium">Khách hàng</span>
                 </a>
 
                 <!-- Betting Tickets -->
                 <a href="{{ route('user.betting-tickets.index') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-all duration-200 {{ request()->routeIs('user.betting-tickets*') ? 'text-primary' : 'text-gray-500 active:scale-95' }}">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.betting-tickets*') ? '2.5' : '2' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.betting-tickets*') ? 'text-primary' : 'text-gray-500' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.betting-tickets*') ? '2' : '1.5' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
-                    <span class="text-[10px] font-semibold">Thống kê</span>
+                    <span class="text-[10px] font-medium">Thống kê</span>
                 </a>
 
                 <!-- KQXS -->
                 <a href="{{ route('user.kqxs') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-all duration-200 {{ request()->routeIs('user.kqxs*') ? 'text-primary' : 'text-gray-500 active:scale-95' }}">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.kqxs*') ? '2.5' : '2' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.kqxs*') ? 'text-primary' : 'text-gray-500' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.kqxs*') ? '2' : '1.5' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
-                    <span class="text-[10px] font-semibold">KQXS</span>
+                    <span class="text-[10px] font-medium">KQXS</span>
                 </a>
             </div>
         </nav>
