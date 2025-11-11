@@ -135,15 +135,15 @@
                                     <h3 class="text-sm font-semibold text-gray-900">{{ $customer->name }}</h3>
                                     <span class="text-xs text-gray-500">•</span>
                                     <!-- <span class="text-xs text-gray-600">{{ $customerTickets->count() }} phiếu</span> -->
-                            @if($pendingCount > 0)
-                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200">
-                                            ⚠️ {{ $pendingCount }} chưa tính
-                            </span>
-                            @else
-                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-green-700 bg-green-50 border border-green-200">
-                                            ✓ Đã tính xong
-                            </span>
-                            @endif
+                                    @if($pendingCount > 0)
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200">
+                                                        ⚠️ {{ $pendingCount }} chưa tính
+                                        </span>
+                                        @else
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-green-700 bg-green-50 border border-green-200">
+                                                        ✓ Đã tính xong
+                                        </span>
+                                        @endif
                                 </div>
                             </div>
                         </div>
@@ -164,11 +164,6 @@
                                     {{ $customerProfit >= 0 ? '+' : '' }}{{ number_format($customerProfit / 1000, 0) }}k
                                 </div>
                             </div>
-                            <button type="button"
-                                    onclick="event.stopPropagation(); copySettlementMessage('{{ $customerId }}', '{{ \App\Support\Region::label($filterRegion ?? $globalRegion) }}', '{{ \Carbon\Carbon::parse($filterDate ?? $globalDate)->format('d/m/Y') }}', {{ $customerXac }}, {{ $customerThang }}, {{ $customerProfit }}, {{ json_encode($bettingTypeWins) }})"
-                                    class="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors border-l border-gray-200 ml-3">
-                                📋 Copy
-                            </button>
                         </div>
                     </button>
                     
@@ -575,58 +570,6 @@
 
 @push('scripts')
 <script>
-// Copy settlement message function
-window.copySettlementMessage = function(customerId, region, date, xac, thang, profit, bettingTypeWins) {
-    try {
-        // Format message theo yêu cầu
-        let message = `Miền ${region}\n`;
-        message += `Ngày ${date}\n`;
-        message += `Tổng tiền xác: ${formatAmount(xac)}\n`;
-
-        // Thêm các loại cược ăn
-        if (bettingTypeWins && Object.keys(bettingTypeWins).length > 0) {
-            for (const [type, amount] of Object.entries(bettingTypeWins)) {
-                message += `${type}: ${formatAmount(amount)}\n`;
-            }
-        }
-
-        // Thêm tổng lãi/thua
-        if (profit >= 0) {
-            message += `Tổng lãi: ${formatAmount(profit)}\n`;
-        } else {
-            message += `Tổng thua: ${formatAmount(profit)}\n`;
-        }
-
-        // Thêm tổng ngày lãi/lỗ
-        if (profit >= 0) {
-            message += `Tổng ngày lãi: ${formatAmount(profit)}`;
-        } else {
-            message += `Tổng ngày lỗ: ${formatAmount(profit)}`;
-        }
-
-        // Copy to clipboard
-        navigator.clipboard.writeText(message).then(() => {
-            // Show success notification
-            showNotification('Đã copy tin nhắn chốt tiền!', 'success');
-        }).catch(err => {
-            console.error('Failed to copy:', err);
-            showNotification('Không thể copy. Vui lòng thử lại.', 'error');
-        });
-    } catch (error) {
-        console.error('Error copying message:', error);
-        showNotification('Có lỗi xảy ra khi copy.', 'error');
-    }
-};
-
-// Format amount helper
-function formatAmount(amount) {
-    if (typeof amount !== 'number') {
-        amount = parseFloat(amount) || 0;
-    }
-    const amountInK = amount / 1000;
-    const formatted = amount % 1000 === 0 ? Math.round(amountInK) : amountInK.toFixed(1);
-    return formatted + 'k';
-}
 
 // Show notification helper
 function showNotification(message, type = 'success') {

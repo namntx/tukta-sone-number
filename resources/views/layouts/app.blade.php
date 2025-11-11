@@ -157,7 +157,7 @@
                         @auth
                             <!-- Dark Mode Toggle - DISABLED -->
                             {{-- <button type="button" 
-                                    class="dark-mode-toggle p-2 rounded-lg text-gray-600 hover:bg-gray-100:bg-gray-700 transition-colors"
+                                    class="dark-mode-toggle p-2 rounded-lg text-gray-600 hover:bg-gray-100 bg-gray-700 transition-colors"
                                     aria-label="Toggle dark mode">
                                 <!-- Sun icon (light mode) -->
                                 <svg class="dark-mode-sun-icon w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,7 +194,7 @@
                         @else
                             <!-- Dark Mode Toggle (for guests) - DISABLED -->
                             {{-- <button type="button" 
-                                    class="dark-mode-toggle p-2 rounded-lg text-gray-600 hover:bg-gray-100:bg-gray-700 transition-colors"
+                                    class="dark-mode-toggle p-2 rounded-lg text-gray-600 hover:bg-gray-100 bg-gray-700 transition-colors"
                                     aria-label="Toggle dark mode">
                                 <!-- Sun icon (light mode) -->
                                 <svg class="dark-mode-sun-icon w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
