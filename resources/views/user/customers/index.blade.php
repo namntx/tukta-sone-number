@@ -28,7 +28,7 @@
                    value="{{ request('search') }}"
                    placeholder="Tìm tên/SĐT..."
                    class="flex-1 input-sm">
-            <button type="submit" class="btn btn-secondary btn-sm btn-icon">
+            <button type="submit" class="btn bg-gray-100 btn-sm btn-icon">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
@@ -41,7 +41,7 @@
         @if($customers->count() > 0)
             @foreach($customers as $customer)
             <div class="bg-white border border-gray-200 rounded-lg flex items-center">
-                <a href="{{ route('user.customers.show', $customer) }}" class="flex-1 min-w-0 px-4 py-2.5 hover:bg-gray-50:bg-gray-700 transition-colors">
+                <a href="{{ route('user.customers.show', $customer) }}" class="flex-1 min-w-0 px-4 py-2.5 hover:bg-gray-50 bg-gray-700 transition-colors">
                     <div class="flex items-center gap-2 mb-0.5">
                         <h3 class="text-sm font-semibold text-gray-900 truncate">{{ $customer->name }}</h3>
                         @if($customer->is_active)

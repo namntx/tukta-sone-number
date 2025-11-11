@@ -8,7 +8,7 @@
     <div class="sticky top-14 z-10 bg-gray-50 border-b border-gray-200 -mx-3 px-3 py-2 mb-3">
         <div class="flex items-center justify-between">
             <h1 class="text-base font-semibold text-gray-900">Backup & Restore</h1>
-            <a href="{{ route('user.customers.index') }}" class="btn btn-secondary btn-sm btn-icon">
+            <a href="{{ route('user.customers.index') }}" class="btn bg-gray-100 btn-sm btn-icon">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                 </svg>

@@ -16,11 +16,10 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <a href="{{ route('user.betting-tickets.index') }}" 
-                       class="px-3 inline-flex items-center justify-center py-1.5 bg-gray-600 text-white text-xs font-medium rounded-lg hover:bg-gray-700 transition">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                       class="btn bg-gray-100 btn-icon">
+                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                         </svg>
-                        Quay lại
                     </a>
                 </div>
             </div>

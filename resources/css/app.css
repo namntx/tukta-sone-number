@@ -153,8 +153,8 @@ select.error {
 
 .btn-secondary {
     @apply bg-white text-gray-700 border border-gray-300;
-    @apply hover:bg-gray-50:bg-gray-700;
-    @apply focus:ring-gray-300:ring-gray-600;
+    @apply hover:bg-gray-50 bg-gray-700;
+    @apply focus:ring-gray-300 ring-gray-600;
 }
 
 .btn-success {
@@ -274,7 +274,7 @@ select.error {
     @apply flex items-center justify-between p-3;
     @apply bg-white border-b border-gray-200;
     @apply transition-colors duration-150;
-    @apply active:bg-gray-50:bg-gray-700;
+    @apply active:bg-gray-50 bg-gray-700;
     min-height: 56px;
 }
 
