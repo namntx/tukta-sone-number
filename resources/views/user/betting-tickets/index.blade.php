@@ -5,11 +5,11 @@
 @section('content')
 <div class="pb-4">
     <!-- Header -->
-    <div class="sticky top-14 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-3 px-3 py-2 mb-3">
+    <div class="sticky top-14 z-10 bg-gray-50 border-b border-gray-200 -mx-3 px-3 py-2 mb-3">
         <div class="flex items-center justify-between mb-2">
             <div class="flex-1 min-w-0">
-                <h1 class="text-base font-semibold text-gray-900 dark:text-gray-100">Phiếu cược</h1>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
+                <h1 class="text-base font-semibold text-gray-900">Phiếu cược</h1>
+                <p class="text-xs text-gray-500">
                     {{ \App\Support\Region::label($filterRegion ?? $globalRegion) }} · {{ \Carbon\Carbon::parse($filterDate ?? $globalDate)->format('d/m/Y') }}
                 </p>
             </div>
@@ -90,10 +90,10 @@
                 @endphp
                 
                 <!-- Customer Card -->
-                <div class="mb-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div class="mb-3 bg-white border border-gray-200 rounded-lg overflow-hidden">
                     <!-- Customer Header - Click để mở/đóng -->
                     <button type="button" onclick="toggleCustomer('{{ $customerId }}')" 
-                            class="w-full px-4 py-2.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700">
+                            class="w-full px-4 py-2.5 bg-white hover:bg-gray-50:bg-gray-700 transition-colors flex items-center justify-between gap-3 border-b border-gray-100">
                         <div class="flex items-center gap-2.5 flex-1 min-w-0">
                             <!-- Arrow Icon -->
                             <svg id="icon-{{ $customerId }}" class="w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,15 +103,15 @@
                             <!-- Customer Name và Thông tin -->
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2.5 flex-wrap">
-                                    <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{ $customer->name }}</h3>
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">•</span>
-                                    <!-- <span class="text-xs text-gray-600 dark:text-gray-400">{{ $customerTickets->count() }} phiếu</span> -->
+                                    <h3 class="text-sm font-semibold text-gray-900">{{ $customer->name }}</h3>
+                                    <span class="text-xs text-gray-500">•</span>
+                                    <!-- <span class="text-xs text-gray-600">{{ $customerTickets->count() }} phiếu</span> -->
                             @if($pendingCount > 0)
-                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/50 border border-orange-200 dark:border-orange-800">
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200">
                                             ⚠️ {{ $pendingCount }} chưa tính
                             </span>
                             @else
-                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/50 border border-green-200 dark:border-green-800">
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium text-green-700 bg-green-50 border border-green-200">
                                             ✓ Đã tính xong
                             </span>
                             @endif
@@ -122,16 +122,16 @@
                         <!-- Financial Summary - Compact -->
                         <div class="flex items-center gap-3 flex-shrink-0">
                             <div class="text-right">
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Xác</div>
-                                <div class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ number_format($customerXac / 1000, 0) }}k</div>
+                                <div class="text-xs text-gray-500">Xác</div>
+                                <div class="text-xs font-semibold text-gray-700">{{ number_format($customerXac / 1000, 0) }}k</div>
                             </div>
                             <div class="text-right">
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Thắng</div>
-                                <div class="text-xs font-semibold text-green-600 dark:text-green-400">{{ number_format($customerThang / 1000, 0) }}k</div>
+                                <div class="text-xs text-gray-500">Thắng</div>
+                                <div class="text-xs font-semibold text-green-600">{{ number_format($customerThang / 1000, 0) }}k</div>
                             </div>
-                            <div class="text-right border-l border-gray-200 dark:border-gray-700 pl-3">
-                                <div class="text-xs text-gray-500 dark:text-gray-400">Lời/Lỗ</div>
-                                <div class="text-xs font-bold {{ $customerProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                            <div class="text-right border-l border-gray-200 pl-3">
+                                <div class="text-xs text-gray-500">Lời/Lỗ</div>
+                                <div class="text-xs font-bold {{ $customerProfit >= 0 ? 'text-green-600' : 'text-red-600' }}">
                                     {{ $customerProfit >= 0 ? '+' : '' }}{{ number_format($customerProfit / 1000, 0) }}k
                                 </div>
                             </div>
@@ -157,19 +157,19 @@
                             @endphp
                             
                             <!-- Message Card -->
-                            <div class="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                            <div class="border-b border-gray-200 last:border-b-0">
                                 <!-- Message Header -->
-                                <div class="w-full px-3 sm:px-4 py-2.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between gap-2">
+                                <div class="w-full px-3 sm:px-4 py-2.5 bg-white hover:bg-gray-50:bg-gray-700 transition-colors flex items-center justify-between gap-2">
                                     <button type="button" onclick="toggleMessage('{{ $messageId }}')" 
                                             class="flex items-center gap-2.5 flex-1 min-w-0 text-left">
                                         <!-- Arrow Icon -->
-                                        <svg id="icon-msg-{{ $messageId }}" class="w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg id="icon-msg-{{ $messageId }}" class="w-4 h-4 text-gray-500 transition-transform duration-200 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                         </svg>
                                         
                                         <!-- Message Content -->
                                         <div class="flex-1 min-w-0">
-                                            <div class="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 break-words">
+                                            <div class="text-xs sm:text-sm font-medium text-gray-900 break-words">
                                                 {{ Str::limit($originalMessage, 100) }}
                                             </div>
                                         </div>
@@ -184,14 +184,14 @@
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" 
-                                                class="px-2 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/50 rounded-md hover:bg-red-100 dark:hover:bg-red-900/70 hover:text-red-700 dark:hover:text-red-300 transition-colors border border-red-200 dark:border-red-800">
+                                                class="px-2 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100:bg-red-900/70 hover:text-red-700:text-red-300 transition-colors border border-red-200">
                                             Xoá
                                         </button>
                                     </form>
                                 </div>
                                 
                                 <!-- Statistics Table - Ẩn mặc định -->
-                                <div id="message-{{ $messageId }}" class="hidden bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
+                                <div id="message-{{ $messageId }}" class="hidden bg-gray-50 border-t border-gray-200">
                                     @php
                                         // Group tickets: tách riêng bao lô 2, 3, 4 số
                                         $ticketsByType = $messageTickets->groupBy(function($ticket) {
@@ -230,17 +230,17 @@
                                     
                                     <div class="px-2 sm:px-3 py-2">
                                         <div class="overflow-x-auto -mx-2 sm:mx-0">
-                                            <table class="w-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-                                                <thead class="bg-gray-100 dark:bg-gray-900/50">
+                                            <table class="w-full bg-white rounded-lg border border-gray-200 shadow-sm">
+                                                <thead class="bg-gray-100">
                                                     <tr>
-                                                        <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 whitespace-nowrap">Loại cược</th>
-                                                        <th class="px-2 py-2 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 whitespace-nowrap">Cược</th>
-                                                        <th class="px-2 py-2 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 whitespace-nowrap">Ăn</th>
-                                                        <th class="px-2 py-2 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 whitespace-nowrap">Xác</th>
-                                                        <th class="px-2 py-2 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 whitespace-nowrap">Ăn/Thua</th>
+                                                        <th class="px-2 py-2 text-left text-xs font-semibold text-gray-700 border-b border-gray-200 whitespace-nowrap">Loại cược</th>
+                                                        <th class="px-2 py-2 text-right text-xs font-semibold text-gray-700 border-b border-gray-200 whitespace-nowrap">Cược</th>
+                                                        <th class="px-2 py-2 text-right text-xs font-semibold text-gray-700 border-b border-gray-200 whitespace-nowrap">Ăn</th>
+                                                        <th class="px-2 py-2 text-right text-xs font-semibold text-gray-700 border-b border-gray-200 whitespace-nowrap">Xác</th>
+                                                        <th class="px-2 py-2 text-right text-xs font-semibold text-gray-700 border-b border-gray-200 whitespace-nowrap">Ăn/Thua</th>
                                                     </tr>
                                                 </thead>
-                                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                            <tbody class="divide-y divide-gray-200">
                                                 @foreach($ticketsByType as $groupKey => $typeTickets)
                                                     @php
                                                         $bettingType = $typeTickets->first()->bettingType;
@@ -315,10 +315,10 @@
                                                         
                                                         if ($typePayoutAmount > 0) {
                                                             $typeEatThua = $typePayoutAmount - $typeXacAmount;
-                                                            $typeEatThuaColor = $typeEatThua >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400';
+                                                            $typeEatThuaColor = $typeEatThua >= 0 ? 'text-green-700' : 'text-red-700';
                                                         } else {
                                                             $typeEatThua = -$typeXacAmount;
-                                                            $typeEatThuaColor = 'text-red-700 dark:text-red-400';
+                                                            $typeEatThuaColor = 'text-red-700';
                                                         }
                                                         
                                                         $totalBetAmount += $typeBetAmount;
@@ -331,26 +331,26 @@
                                                     @endphp
                                                     
                                                     <!-- Betting Type Row -->
-                                                    <tr class="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer" 
+                                                    <tr class="hover:bg-blue-50:bg-blue-900/20 transition-colors cursor-pointer" 
                                                         onclick="toggleTypeTickets('{{ $messageId }}-{{ $uniqueTypeId }}')">
                                                         <td class="px-2 py-2">
                                                             <div class="flex items-center gap-1">
-                                                                <span class="text-xs font-medium text-gray-900 dark:text-gray-100 truncate max-w-[120px] sm:max-w-none">{{ $displayName }}</span>
+                                                                <span class="text-xs font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">{{ $displayName }}</span>
                                                             </div>
                                                         </td>
-                                                        <td class="px-2 py-2 text-right text-xs whitespace-nowrap text-gray-900 dark:text-gray-100">
+                                                        <td class="px-2 py-2 text-right text-xs whitespace-nowrap text-gray-900">
                                                             @php
                                                                 $betAmountInK = $typeBetAmount / 1000;
                                                                 echo $typeBetAmount % 1000 == 0 ? (int)$betAmountInK : number_format($betAmountInK, 1, '.', '');
                                                             @endphp
                                                         </td>
-                                                        <td class="px-2 py-2 text-right text-xs whitespace-nowrap {{ $typeWinAmount > 0 ? 'text-green-700 dark:text-green-400 font-semibold' : 'text-gray-500 dark:text-gray-400' }}">
+                                                        <td class="px-2 py-2 text-right text-xs whitespace-nowrap {{ $typeWinAmount > 0 ? 'text-green-700 font-semibold' : 'text-gray-500' }}">
                                                             @php
                                                                 $winAmountInK = $typeWinAmount / 1000;
                                                                 echo $typeWinAmount % 1000 == 0 ? (int)$winAmountInK : number_format($winAmountInK, 1, '.', '');
                                                             @endphp
                                                         </td>
-                                                        <td class="px-2 py-2 text-right text-xs text-blue-700 dark:text-blue-400 font-semibold whitespace-nowrap">{{ number_format($typeXacAmount / 1000, 0) }}k</td>
+                                                        <td class="px-2 py-2 text-right text-xs text-blue-700 font-semibold whitespace-nowrap">{{ number_format($typeXacAmount / 1000, 0) }}k</td>
                                                         <td class="px-2 py-2 text-right text-xs font-semibold whitespace-nowrap {{ $typeEatThuaColor }}">
                                                             {{ $typeEatThua >= 0 ? '+' : '' }}{{ number_format($typeEatThua / 1000, 0) }}k
                                                         </td>
@@ -359,7 +359,7 @@
                                                     <!-- Tickets List Row - Ẩn mặc định -->
                                                     <tr id="tickets-{{ $messageId }}-{{ $uniqueTypeId }}" class="hidden">
                                                         <td colspan="5" class="px-0 py-0">
-                                                            <div class="bg-gray-50 dark:bg-gray-900/50 border-t-2 border-blue-200 dark:border-blue-800 px-3 py-2 space-y-2 max-h-80 overflow-y-auto">
+                                                            <div class="bg-gray-50 border-t-2 border-blue-200 px-3 py-2 space-y-2 max-h-80 overflow-y-auto">
                                                                 @foreach($typeTickets as $ticket)
                         @php
                             $bettingData = $ticket->betting_data ?? [];
@@ -388,7 +388,7 @@
                                 $ticketProfit = null;
                             }
                             
-                            $profitColor = $ticket->result === 'pending' ? 'text-gray-400 dark:text-gray-500' : ($ticketProfit >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400');
+                            $profitColor = $ticket->result === 'pending' ? 'text-gray-400' : ($ticketProfit >= 0 ? 'text-green-700' : 'text-red-700');
                             
                             // Tính số lần trúng (số lô) cho bao lô
                             $winCount = null;
@@ -400,33 +400,33 @@
                         @endphp
                                                                     
                                                                     <!-- Individual Ticket Card -->
-                                                                    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-2.5 hover:shadow-sm transition-shadow">
+                                                                    <div class="bg-white border border-gray-200 rounded-md p-2.5 hover:shadow-sm transition-shadow">
                                                                         <div class="flex items-start justify-between gap-2.5">
                                                                             <!-- Ticket Info -->
                                 <div class="flex-1 min-w-0">
                                                                                 <div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold {{ $ticket->result === 'win' ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300' : ($ticket->result === 'lose' ? 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400') }}">
+                                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold {{ $ticket->result === 'win' ? 'bg-green-100 text-green-700' : ($ticket->result === 'lose' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600') }}">
                                                                                         @if($ticket->result === 'win') ✓
                                                                                         @elseif($ticket->result === 'lose') ✗
                                                                                         @else ⏳
                                                                                         @endif
                                         </span>
-                                                                                    <span class="text-xs font-medium text-gray-900 dark:text-gray-100">{{ Str::limit($ticket->station, 200) }}</span>
-                                                                                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ \Carbon\Carbon::parse($ticket->created_at)->format('H:i') }}</span>
+                                                                                    <span class="text-xs font-medium text-gray-900">{{ Str::limit($ticket->station, 200) }}</span>
+                                                                                    <span class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($ticket->created_at)->format('H:i') }}</span>
                                     </div>
                                                                                 
                                     @if(!empty($displayNumbers))
-                                                                                <div class="text-xs font-medium {{ $ticket->result === 'win' ? 'text-green-700 dark:text-green-400' : ($ticket->result === 'lose' ? 'text-red-700 dark:text-red-400' : 'text-gray-600 dark:text-gray-400') }} mb-1.5">
+                                                                                <div class="text-xs font-medium {{ $ticket->result === 'win' ? 'text-green-700' : ($ticket->result === 'lose' ? 'text-red-700' : 'text-gray-600') }} mb-1.5">
                                                                                     {{ Str::limit(implode(' ', array_unique($displayNumbers)), 40) }}
                                     </div>
                                     @endif
                                                                                 
                                                                                 <div class="flex items-center gap-2.5 text-xs flex-wrap">
-                                                                                    <span class="text-gray-600 dark:text-gray-400">
-                                                                                        Cược: <span class="font-semibold text-gray-900 dark:text-gray-100">{{ number_format($ticket->bet_amount / 1000, 1) }}k</span>
+                                                                                    <span class="text-gray-600">
+                                                                                        Cược: <span class="font-semibold text-gray-900">{{ number_format($ticket->bet_amount / 1000, 1) }}k</span>
                                                                                     </span>
                                                                                     @if($winCount !== null && $winCount > 0)
-                                                                                        <span class="text-green-700 dark:text-green-400 font-semibold">
+                                                                                        <span class="text-green-700 font-semibold">
                                                                                             Trúng {{ $winCount }} lô
                                                                                         </span>
                                                                                     @endif
@@ -441,7 +441,7 @@
                                                                             <!-- Action Buttons -->
                                                                             <div class="flex items-center gap-1.5 flex-shrink-0">
                                                                                 <a href="{{ route('user.betting-tickets.edit', $ticket) }}" 
-                                                                                   class="px-2 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/50 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/70 transition-colors border border-indigo-200 dark:border-indigo-800">
+                                                                                   class="px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 rounded-md hover:bg-indigo-100:bg-indigo-900/70 transition-colors border border-indigo-200">
                                                                                     ✏️
                                                                                 </a>
                                                                                 <form method="POST" action="{{ route('user.betting-tickets.destroy', $ticket) }}" 
@@ -450,7 +450,7 @@
                                                                                     @csrf
                                                                                     @method('DELETE')
                                                                                     <button type="submit" 
-                                                                                            class="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/50 rounded-md hover:bg-red-100 dark:hover:bg-red-900/70 transition-colors border border-red-200 dark:border-red-800">
+                                                                                            class="px-2 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100:bg-red-900/70 transition-colors border border-red-200">
                                                                                         🗑️
                                                                                     </button>
                                                                                 </form>
@@ -463,23 +463,23 @@
                                                     </tr>
                                                 @endforeach
                                             </tbody>
-                                                <tfoot class="bg-gray-200 dark:bg-gray-900/70 border-t-2 border-gray-300 dark:border-gray-600">
+                                                <tfoot class="bg-gray-200 border-t-2 border-gray-300">
                                                     <tr>
-                                                        <td class="px-2 py-2 font-semibold text-xs text-gray-900 dark:text-gray-100 whitespace-nowrap">📊 Tổng:</td>
-                                                        <td class="px-2 py-2 text-right font-semibold text-xs text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                                                        <td class="px-2 py-2 font-semibold text-xs text-gray-900 whitespace-nowrap">📊 Tổng:</td>
+                                                        <td class="px-2 py-2 text-right font-semibold text-xs text-gray-900 whitespace-nowrap">
                                                             @php
                                                                 $totalBetAmountInK = $totalBetAmount / 1000;
                                                                 echo $totalBetAmount % 1000 == 0 ? (int)$totalBetAmountInK : number_format($totalBetAmountInK, 1, '.', '');
                                                             @endphp
                                                         </td>
-                                                        <td class="px-2 py-2 text-right font-semibold text-xs whitespace-nowrap {{ $totalWinAmount > 0 ? 'text-green-700 dark:text-green-400' : 'text-gray-900 dark:text-gray-100' }}">
+                                                        <td class="px-2 py-2 text-right font-semibold text-xs whitespace-nowrap {{ $totalWinAmount > 0 ? 'text-green-700' : 'text-gray-900' }}">
                                                             @php
                                                                 $totalWinAmountInK = $totalWinAmount / 1000;
                                                                 echo $totalWinAmount % 1000 == 0 ? (int)$totalWinAmountInK : number_format($totalWinAmountInK, 1, '.', '');
                                                             @endphp
                                                         </td>
-                                                        <td class="px-2 py-2 text-right font-semibold text-xs text-blue-700 dark:text-blue-400 whitespace-nowrap">{{ number_format($totalXacAmount / 1000, 0) }}k</td>
-                                                        <td class="px-2 py-2 text-right font-semibold text-xs whitespace-nowrap {{ $totalEatThua >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400' }}">
+                                                        <td class="px-2 py-2 text-right font-semibold text-xs text-blue-700 whitespace-nowrap">{{ number_format($totalXacAmount / 1000, 0) }}k</td>
+                                                        <td class="px-2 py-2 text-right font-semibold text-xs whitespace-nowrap {{ $totalEatThua >= 0 ? 'text-green-700' : 'text-red-700' }}">
                                                             {{ $totalEatThua >= 0 ? '+' : '' }}{{ number_format($totalEatThua / 1000, 0) }}k
                                                         </td>
                                                     </tr>
@@ -495,13 +495,13 @@
             @endforeach
         @else
             <div class="py-16 text-center">
-                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
-                    <svg class="h-8 w-8 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 mb-4">
+                    <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                 </div>
-                <h3 class="text-base font-medium text-gray-900 dark:text-gray-100 mb-1">Chưa có phiếu cược</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Bắt đầu bằng cách thêm phiếu cược đầu tiên</p>
+                <h3 class="text-base font-medium text-gray-900 mb-1">Chưa có phiếu cược</h3>
+                <p class="text-sm text-gray-500 mb-4">Bắt đầu bằng cách thêm phiếu cược đầu tiên</p>
                 <a href="{{ route('user.betting-tickets.create') }}" 
                    class="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

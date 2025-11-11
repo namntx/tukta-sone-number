@@ -5,9 +5,9 @@
 @section('content')
 <div class="pb-4">
     <!-- Header -->
-    <div class="sticky top-14 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-3 px-3 py-2 mb-3">
+    <div class="sticky top-14 z-10 bg-gray-50 border-b border-gray-200 -mx-3 px-3 py-2 mb-3">
         <div class="flex items-center justify-between mb-2">
-            <h1 class="text-base font-semibold text-gray-900 dark:text-gray-100">Khách hàng</h1>
+            <h1 class="text-base font-semibold text-gray-900">Khách hàng</h1>
             <div class="flex items-center gap-2">
                 <!-- <a href="{{ route('user.backup-restore.index') }}" class="btn btn-secondary btn-sm">
                     <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -40,15 +40,15 @@
     <div class="space-y-1.5">
         @if($customers->count() > 0)
             @foreach($customers as $customer)
-            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center">
-                <a href="{{ route('user.customers.show', $customer) }}" class="flex-1 min-w-0 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <div class="bg-white border border-gray-200 rounded-lg flex items-center">
+                <a href="{{ route('user.customers.show', $customer) }}" class="flex-1 min-w-0 px-4 py-2.5 hover:bg-gray-50:bg-gray-700 transition-colors">
                     <div class="flex items-center gap-2 mb-0.5">
-                        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{{ $customer->name }}</h3>
+                        <h3 class="text-sm font-semibold text-gray-900 truncate">{{ $customer->name }}</h3>
                         @if($customer->is_active)
                         <span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
                         @endif
                     </div>
-                    <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <div class="flex items-center gap-2 text-xs text-gray-500">
                         @if($customer->phone)
                         <span>{{ $customer->phone }}</span>
                         @endif
@@ -58,17 +58,17 @@
                             $dailyNetProfit = $dailyWin - $dailyLose;
                         @endphp
                         @if($dailyWin > 0 || $dailyLose > 0)
-                        <span class="text-gray-300 dark:text-gray-600">•</span>
+                        <span class="text-gray-300">•</span>
                         <span class="{{ $dailyNetProfit >= 0 ? 'text-green-600' : 'text-red-600' }} font-medium">
                             {{ $dailyNetProfit >= 0 ? '+' : '' }}{{ number_format($dailyNetProfit / 1000, 1) }}k
                         </span>
                         @endif
                     </div>
                 </a>
-                <div class="flex items-center gap-2 flex-shrink-0 px-4 py-2.5 border-l border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-2 flex-shrink-0 px-4 py-2.5 border-l border-gray-200">
                     <button type="button"
                             onclick="event.stopPropagation(); event.preventDefault(); window.location.href='{{ route('user.customers.edit', $customer) }}'; return false;"
-                            class="px-3 py-1.5 h-8 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-900/70 rounded-md transition-colors flex items-center gap-1">
+                            class="px-3 py-1.5 h-8 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100:bg-blue-900/70 rounded-md transition-colors flex items-center gap-1">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                         </svg>
@@ -76,7 +76,7 @@
                     </button>
                     <button type="button"
                             onclick="event.stopPropagation(); event.preventDefault(); handleDelete('{{ $customer->id }}', '{{ addslashes($customer->name) }}', '{{ route('user.customers.destroy', $customer) }}'); return false;"
-                            class="px-3 py-1.5 h-8 text-xs font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/50 hover:bg-red-100 dark:hover:bg-red-900/70 rounded-md transition-colors flex items-center gap-1">
+                            class="px-3 py-1.5 h-8 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100:bg-red-900/70 rounded-md transition-colors flex items-center gap-1">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>

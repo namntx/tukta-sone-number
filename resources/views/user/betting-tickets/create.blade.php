@@ -10,14 +10,14 @@
 
 <div class="pb-4">
   <!-- Header -->
-  <div class="sticky top-14 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-3 px-3 py-2 mb-3">
+  <div class="sticky top-14 z-10 bg-gray-50 border-b border-gray-200 -mx-3 px-3 py-2 mb-3">
     <div class="flex items-center justify-between">
       <div class="flex-1 min-w-0">
-        <h1 class="text-base font-semibold text-gray-900 dark:text-gray-100">Thêm phiếu cược</h1>
+        <h1 class="text-base font-semibold text-gray-900">Thêm phiếu cược</h1>
         <div class="flex items-center gap-2 mt-1">
-          <span class="text-xs text-gray-500 dark:text-gray-400">{{ \App\Support\Region::label($globalRegion) }}</span>
-          <span class="text-xs text-gray-400 dark:text-gray-600">•</span>
-          <span class="text-xs text-gray-500 dark:text-gray-400">{{ \Carbon\Carbon::parse($globalDate)->format('d/m/Y') }}</span>
+          <span class="text-xs text-gray-500">{{ \App\Support\Region::label($globalRegion) }}</span>
+          <span class="text-xs text-gray-400">•</span>
+          <span class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($globalDate)->format('d/m/Y') }}</span>
         </div>
       </div>
       <a href="{{ route('user.betting-tickets.index') }}" class="btn btn-secondary btn-sm btn-icon">
@@ -37,9 +37,9 @@
     <input type="hidden" name="station" id="station" value="">
 
     <!-- Customer Selection -->
-    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg mb-3">
+    <div class="bg-white border border-gray-200 rounded-lg mb-3">
       <div class="p-4">
-        <label for="customer_id" class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+        <label for="customer_id" class="block text-sm font-semibold text-gray-900 mb-3">
           Khách hàng <span class="text-red-500">*</span>
         </label>
         <select id="customer_id" name="customer_id" 
@@ -58,9 +58,9 @@
     </div>
 
     <!-- Message Input -->
-    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg mb-3">
+    <div class="bg-white border border-gray-200 rounded-lg mb-3">
       <div class="p-4">
-        <label for="original_message" class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+        <label for="original_message" class="block text-sm font-semibold text-gray-900 mb-3">
           Tin nhắn cược <span class="text-red-500">*</span>
         </label>
         <textarea id="original_message" name="original_message" rows="6"
@@ -87,23 +87,23 @@
 
     <!-- Parse Result -->
     <div id="parse-result" class="hidden">
-      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg mb-3">
+      <div class="bg-white border border-gray-200 rounded-lg mb-3">
         <div class="p-4 space-y-5">
           <!-- Tổng tiền theo loại cược -->
           <div id="total-summary-table" class="hidden">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Tổng tiền cược & xác</h3>
-            <div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">Tổng tiền cược & xác</h3>
+            <div class="overflow-hidden rounded-lg border border-gray-200 bg-white">
               <table class="w-full text-xs">
                 <thead>
-                  <tr class="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                    <th class="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Loại cược</th>
-                    <th class="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">Tiền cược</th>
-                    <th class="px-3 py-2 text-right font-semibold text-gray-700 dark:text-gray-300">Tiền xác</th>
+                  <tr class="bg-gray-50 border-b border-gray-200">
+                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Loại cược</th>
+                    <th class="px-3 py-2 text-right font-semibold text-gray-700">Tiền cược</th>
+                    <th class="px-3 py-2 text-right font-semibold text-gray-700">Tiền xác</th>
                   </tr>
                 </thead>
-                <tbody id="total-summary-table-body" class="divide-y divide-gray-100 dark:divide-gray-700">
+                <tbody id="total-summary-table-body" class="divide-y divide-gray-100">
                 </tbody>
-                <tfoot id="total-summary-table-footer" class="bg-gray-50 dark:bg-gray-900/50">
+                <tfoot id="total-summary-table-footer" class="bg-gray-50">
                 </tfoot>
               </table>
             </div>
@@ -111,15 +111,15 @@
           
           <!-- Preview Numbers -->
           <div id="preview-numbers" class="hidden">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Preview số</h3>
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">Preview số</h3>
             <div id="preview-numbers-content" class="space-y-2"></div>
           </div>
           
           <!-- Kết quả phân tích chi tiết -->
           <div id="parse-details" class="hidden">
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-              <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Kết quả phân tích</h3>
-              <div id="parse-content" class="text-xs text-gray-600 dark:text-gray-400"></div>
+            <div class="border-t border-gray-200 pt-4">
+              <h3 class="text-sm font-semibold text-gray-900 mb-3">Kết quả phân tích</h3>
+              <div id="parse-content" class="text-xs text-gray-600"></div>
             </div>
           </div>
         </div>
@@ -318,18 +318,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const costInK = (summaryData.totalCostXac / 1000).toFixed(1);
             
             tableBodyHtml += `<tr>
-              <td class="px-3 py-2 text-gray-900 dark:text-gray-100">${summaryData.label}</td>
-              <td class="px-3 py-2 text-right text-blue-600 dark:text-blue-400 font-semibold">${amountInK}k</td>
-              <td class="px-3 py-2 text-right text-green-600 dark:text-green-400 font-semibold">${costInK}k</td>
+              <td class="px-3 py-2 text-gray-900">${summaryData.label}</td>
+              <td class="px-3 py-2 text-right text-blue-600 font-semibold">${amountInK}k</td>
+              <td class="px-3 py-2 text-right text-green-600 font-semibold">${costInK}k</td>
             </tr>`;
           });
           
           const grandAmountInK = (grandTotalAmount / 1000).toFixed(1);
           const grandCostInK = (grandTotalCostXac / 1000).toFixed(1);
-          const tableFooterHtml = `<tr class="bg-gray-50 dark:bg-gray-900/50 border-t-2 border-gray-300 dark:border-gray-600">
-            <td class="px-3 py-2 text-gray-900 dark:text-gray-100 font-semibold">Tổng cộng</td>
-            <td class="px-3 py-2 text-right text-blue-600 dark:text-blue-400 font-semibold">${grandAmountInK}k</td>
-            <td class="px-3 py-2 text-right text-green-600 dark:text-green-400 font-semibold">${grandCostInK}k</td>
+          const tableFooterHtml = `<tr class="bg-gray-50 border-t-2 border-gray-300">
+            <td class="px-3 py-2 text-gray-900 font-semibold">Tổng cộng</td>
+            <td class="px-3 py-2 text-right text-blue-600 font-semibold">${grandAmountInK}k</td>
+            <td class="px-3 py-2 text-right text-green-600 font-semibold">${grandCostInK}k</td>
           </tr>`;
           
           if (tableBodyHtml) {
@@ -419,15 +419,15 @@ document.addEventListener('DOMContentLoaded', function() {
           Object.keys(numbersByDetailedType).sort().forEach(key => {
             const typeData = numbersByDetailedType[key];
             
-            previewHtml += `<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-              <div class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">${typeData.label}</div>
+            previewHtml += `<div class="bg-white border border-gray-200 rounded-lg p-3">
+              <div class="text-sm font-semibold text-gray-900 mb-2">${typeData.label}</div>
               <div class="flex flex-wrap gap-2">
                 ${typeData.numbers.map(item => {
                   // Extract station name from item.station (format: " [station name]")
                   const stationMatch = item.station.match(/\[(.+?)\]/);
                   const stationCode = stationMatch ? getStationCode(stationMatch[1]) : '';
                   const stationLabel = stationCode ? ` [${stationCode}]` : '';
-                  return `<span class="px-3 py-1.5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border border-blue-200 dark:border-blue-800 rounded-lg text-xs font-semibold text-blue-700 dark:text-blue-300 shadow-sm">${item.number}${stationLabel}</span>`;
+                  return `<span class="px-3 py-1.5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg text-xs font-semibold text-blue-700 shadow-sm">${item.number}${stationLabel}</span>`;
                 }).join('')}
               </div>
             </div>`;
@@ -442,15 +442,15 @@ document.addEventListener('DOMContentLoaded', function() {
           
           // Parse Details
           const parseDetailsDiv = document.getElementById('parse-details');
-          let html = `<p class="text-green-600 dark:text-green-400 font-medium mb-3 text-xs">✓ Phân tích được ${data.multiple_bets.length} phiếu cược</p>`;
+          let html = `<p class="text-green-600 font-medium mb-3 text-xs">✓ Phân tích được ${data.multiple_bets.length} phiếu cược</p>`;
           data.multiple_bets.forEach((bet, idx) => {
-            html += `<div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2 mb-2">
-              <div class="text-xs font-medium text-gray-900 dark:text-gray-100">
-                <span class="text-blue-600 dark:text-blue-400">${bet.type || 'N/A'}</span>
-                <span class="text-gray-500 dark:text-gray-400">•</span>
-                <span class="text-green-600 dark:text-green-400">${(bet.numbers || []).join(', ')}</span>
+            html += `<div class="bg-gray-50 rounded-lg p-2 mb-2">
+              <div class="text-xs font-medium text-gray-900">
+                <span class="text-blue-600">${bet.type || 'N/A'}</span>
+                <span class="text-gray-500">•</span>
+                <span class="text-green-600">${(bet.numbers || []).join(', ')}</span>
               </div>
-              <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${bet.station || '-'} • ${(bet.amount || 0).toLocaleString()}đ</div>
+              <div class="text-xs text-gray-500 mt-0.5">${bet.station || '-'} • ${(bet.amount || 0).toLocaleString()}đ</div>
             </div>`;
           });
           parseContent.innerHTML = html;
@@ -462,11 +462,11 @@ document.addEventListener('DOMContentLoaded', function() {
           document.getElementById('parse-details').classList.add('hidden');
           
           parseContent.innerHTML = `
-            <div class="space-y-2 text-sm text-gray-900 dark:text-gray-100">
+            <div class="space-y-2 text-sm text-gray-900">
               <p><strong>Loại:</strong> ${data.betting_type?.name || 'N/A'}</p>
               <p><strong>Số:</strong> ${data.numbers?.join(', ') || 'N/A'}</p>
               <p><strong>Tiền:</strong> ${(data.amount || 0).toLocaleString()}đ</p>
-              <p class="text-green-600 dark:text-green-400 font-medium">✓ Tin nhắn hợp lệ</p>
+              <p class="text-green-600 font-medium">✓ Tin nhắn hợp lệ</p>
             </div>
           `;
           document.getElementById('parse-details').classList.remove('hidden');
