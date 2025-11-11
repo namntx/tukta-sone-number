@@ -5,23 +5,21 @@
 @section('content')
 <div class="pb-4">
     <!-- Sticky Header -->
-    <div class="sticky top-0 z-10 bg-white shadow-sm border-b border-gray-200 mb-3">
-        <div class="py-2.5">
-            <div class="flex items-center justify-between mb-2 px-3">
-                <div class="flex-1 min-w-0">
-                    <h1 class="text-lg font-bold text-gray-900">Báo cáo nhà cái</h1>
-                    <p class="text-xs text-gray-500 mt-0.5">
-                        {{ \App\Support\Region::label($region) }} · {{ \Carbon\Carbon::parse($reportDate)->format('d/m/Y') }}
-                    </p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <a href="{{ route('user.betting-tickets.index') }}" 
-                       class="btn bg-gray-100 btn-icon">
-                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                    </a>
-                </div>
+    <div class="sticky top-14 z-10 bg-gray-50 border-b border-gray-200 -mx-3 px-3 py-2 mb-3">
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex-1 min-w-0">
+                <h1 class="text-lg font-bold text-gray-900">Báo cáo nhà cái</h1>
+                <p class="text-xs text-gray-500 mt-0.5">
+                    {{ \App\Support\Region::label($region) }} · {{ \Carbon\Carbon::parse($reportDate)->format('d/m/Y') }}
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('user.betting-tickets.index') }}" 
+                class="btn bg-gray-100 btn-icon">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                </a>
             </div>
         </div>
     </div>
@@ -94,9 +92,13 @@
                 @endphp
             <div class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition p-3">
                 <div class="flex items-center justify-between">
-                    <div class="flex-1 min-w-0">
+                    <div class="flex-1 min-w-0 sm:flex-row flex items-center flex-col justify-between">
                         <h4 class="font-semibold text-gray-900">{{ $report['customer']->name }}</h4>
-                        <p class="text-xs text-gray-500 mt-0.5">{{ $report['tickets']->count() }} phiếu</p>
+                        <button type="button"
+                                onclick="copySettlementMessage('{{ \App\Support\Region::label($region) }}', '{{ \Carbon\Carbon::parse($reportDate)->format('d/m/Y') }}', {{ $report['total_xac'] }}, {{ $report['total_thang'] }}, {{ $report['profit'] }}, {{ json_encode($bettingTypeWins) }})"
+                                class="mt-2 px-3 py-1 btn-sm text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors border-l border-gray-300">
+                            Copy tin chốt
+                        </button>
                     </div>
                     <div class="flex items-center gap-4 ml-4">
                         <div class="text-right">
@@ -107,19 +109,16 @@
                             <div class="text-[10px] text-gray-500 mb-0.5">Tiền thắng</div>
                             <div class="text-sm font-semibold text-green-600">{{ number_format($report['total_thang'] / 1000, 1) }}k</div>
                         </div>
-                        <div class="text-right border-l border-gray-300 pl-4 min-w-[70px]">
-                            <div class="text-[10px] font-semibold {{ $report['profit'] >= 0 ? 'text-green-600' : 'text-red-600' }} mb-0.5">
-                                {{ $report['profit'] >= 0 ? 'Lời' : 'Lỗ' }}
-                            </div>
-                            <div class="text-base font-bold {{ $report['profit'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                {{ $report['profit'] >= 0 ? '+' : '' }}{{ number_format($report['profit'] / 1000, 1) }}k
+                        <div class="flex flex-col">
+                            <div class="text-right border-l border-gray-300 pl-4 min-w-[70px]">
+                                <div class="text-[10px] font-semibold {{ $report['profit'] >= 0 ? 'text-green-600' : 'text-red-600' }} mb-0.5">
+                                    {{ $report['profit'] >= 0 ? 'Lời' : 'Lỗ' }}
+                                </div>
+                                <div class="text-base font-bold {{ $report['profit'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                    {{ $report['profit'] >= 0 ? '+' : '' }}{{ number_format($report['profit'] / 1000, 1) }}k
+                                </div>
                             </div>
                         </div>
-                        <button type="button"
-                                onclick="copySettlementMessage('{{ \App\Support\Region::label($region) }}', '{{ \Carbon\Carbon::parse($reportDate)->format('d/m/Y') }}', {{ $report['total_xac'] }}, {{ $report['total_thang'] }}, {{ $report['profit'] }}, {{ json_encode($bettingTypeWins) }})"
-                                class="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors border-l border-gray-300 ml-2">
-                            📋 Copy
-                        </button>
                     </div>
                 </div>
             </div>
