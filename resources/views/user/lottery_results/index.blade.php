@@ -96,7 +96,7 @@
   </div>
 
   <!-- Results by Region - Mobile Stack -->
-  <div class="space-y-3 px-3">
+  <div class="space-y-3">
     @foreach(['nam','trung','bac'] as $reg)
       @php
         $rows = ($byRegion[$reg] ?? collect())->values();

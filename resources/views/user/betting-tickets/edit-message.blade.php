@@ -5,11 +5,11 @@
 @section('content')
 <div class="pb-4">
   <!-- Header -->
-  <div class="sticky top-14 z-10 bg-gray-50 border-b border-gray-200 -mx-3 px-3 py-2 mb-3">
+  <div class="sticky top-14 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-3 px-3 py-2 mb-3">
     <div class="flex items-center justify-between">
       <div class="flex-1 min-w-0">
-        <h1 class="text-base font-semibold text-gray-900 truncate">Sửa tin nhắn cược</h1>
-        <p class="text-xs text-gray-500">
+        <h1 class="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">Sửa tin nhắn cược</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
           {{ $bettingTicket->customer->name }} · {{ $ticketsWithSameMessage }} phiếu cược
         </p>
       </div>
@@ -59,7 +59,7 @@
     <!-- Message Input -->
     <div class="card">
       <div class="card-body">
-        <label for="original_message" class="block text-sm font-semibold text-gray-900 mb-3">
+        <label for="original_message" class="block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
           Tin nhắn cược <span class="text-red-500">*</span>
         </label>
         <textarea id="original_message" name="original_message" rows="15"
@@ -76,13 +76,13 @@
     </div>
 
     <!-- Info Card -->
-    <div class="card bg-yellow-50 border-yellow-200">
+    <div class="card bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
       <div class="card-body">
         <div class="flex items-start gap-2">
-          <svg class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
           </svg>
-          <div class="text-sm text-yellow-800">
+          <div class="text-sm text-yellow-800 dark:text-yellow-300">
             <p class="font-semibold mb-1">Lưu ý:</p>
             <ul class="list-disc list-inside space-y-1 text-xs">
               <li>Tất cả {{ $ticketsWithSameMessage }} phiếu cược có cùng tin nhắn này sẽ bị xóa</li>

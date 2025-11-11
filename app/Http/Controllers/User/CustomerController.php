@@ -474,7 +474,7 @@ class CustomerController extends Controller
                 'cuoc_an' => $typeWinAmount,
                 'xac' => $typeXacAmount,
                 'an_thua' => $typeEatThua,
-                'an_thua_color' => $typeEatThua >= 0 ? 'text-green-700' : 'text-red-700',
+                'an_thua_color' => $typeEatThua >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400',
             ];
         }
 

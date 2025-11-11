@@ -5,11 +5,11 @@
 @section('content')
 <div class="pb-4">
   <!-- Header -->
-  <div class="sticky top-14 z-10 bg-gray-50 border-b border-gray-200 -mx-3 px-3 py-2 mb-3">
+  <div class="sticky top-14 z-10 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 -mx-3 px-3 py-2 mb-3">
     <div class="flex items-center justify-between">
       <div class="flex-1 min-w-0">
-        <h1 class="text-base font-semibold text-gray-900">Thêm khách hàng</h1>
-        <p class="text-xs text-gray-500">Tạo khách hàng mới và thiết lập bảng giá</p>
+        <h1 class="text-base font-semibold text-gray-900 dark:text-gray-100">Thêm khách hàng</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Tạo khách hàng mới và thiết lập bảng giá</p>
       </div>
       <a href="{{ route('user.customers.index') }}" class="btn btn-secondary btn-sm btn-icon">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -39,22 +39,22 @@
     <!-- Basic Info -->
     <div class="card">
       <div class="card-header">
-        <h3 class="text-sm font-semibold text-gray-900">Thông tin cơ bản</h3>
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Thông tin cơ bản</h3>
       </div>
       <div class="card-body space-y-2.5">
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Tên khách hàng <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tên khách hàng <span class="text-red-500">*</span></label>
           <input type="text" name="name" required value="{{ old('name') }}">
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Số điện thoại</label>
+          <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Số điện thoại</label>
           <input type="tel" name="phone" value="{{ old('phone') }}">
         </div>
 
         <div class="grid grid-cols-2 gap-2.5">
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">Trạng thái</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Trạng thái</label>
             <select name="is_active">
               <option value="1" {{ old('is_active','1')=='1'?'selected':'' }}>Hoạt động</option>
               <option value="0" {{ old('is_active')=='0'?'selected':'' }}>Khóa</option>
@@ -62,15 +62,15 @@
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">Vai trò</label>
+            <label class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Vai trò</label>
             <div class="flex items-center gap-3 pt-1.5">
               <label class="inline-flex items-center gap-1">
                 <input type="radio" name="is_owner" value="0" {{ old('is_owner','0')=='0'?'checked':'' }}>
-                <span class="text-xs text-gray-800">Khách</span>
+                <span class="text-xs text-gray-800 dark:text-gray-200">Khách</span>
               </label>
               <label class="inline-flex items-center gap-1">
                 <input type="radio" name="is_owner" value="1" {{ old('is_owner')=='1'?'checked':'' }}>
-                <span class="text-xs text-gray-800">Chủ</span>
+                <span class="text-xs text-gray-800 dark:text-gray-200">Chủ</span>
               </label>
             </div>
           </div>
@@ -81,7 +81,7 @@
     <!-- Rates -->
     <div class="card">
       <div class="card-header">
-        <h3 class="text-sm font-semibold text-gray-900">Bảng giá</h3>
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Bảng giá</h3>
       </div>
       <div class="card-body">
         <!-- Region Tabs -->
@@ -90,7 +90,7 @@
           @foreach($regions as $rKey => $rLabel)
             <button type="button"
               class="tab-btn flex-shrink-0 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors
-                     {{ $firstTab ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-300' }}"
+                     {{ $firstTab ? 'bg-primary text-white border-primary' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700' }}"
               data-tab="{{ $rKey }}">
               {{ $rLabel }}
             </button>
@@ -108,14 +108,14 @@
                 if ($rKey === 'bac' && $isBayLoGroup) continue;
               @endphp
               <div>
-                <div class="text-xs font-semibold text-gray-700 mb-1.5">{{ $groupTitle }}</div>
+                <div class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{{ $groupTitle }}</div>
                 <div class="space-y-1.5">
                   @foreach($pairs as $betKey => $label)
                     @if($rKey==='bac' && in_array($betKey, ['baylo_2','baylo_3'], true)) @continue @endif
                     @php $val = $initialRates[$rKey][$betKey] ?? ['commission'=>null,'payout_times'=>null]; @endphp
-                    <div class="flex items-end gap-1.5 bg-gray-50 rounded-lg p-2">
+                    <div class="flex items-end gap-1.5 bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2">
                       <div class="flex-1">
-                        <label class="block text-xs text-gray-600 mb-0.5">{{ $label }}</label>
+                        <label class="block text-xs text-gray-600 dark:text-gray-400 mb-0.5">{{ $label }}</label>
                         <input type="number" step="any" min="0"
                                name="rates[{{ $rKey }}][{{ $betKey }}][commission]"
                                value="{{ old("rates.$rKey.$betKey.commission", $val['commission']) }}"
@@ -162,10 +162,10 @@ document.addEventListener('DOMContentLoaded', function () {
       const tab = btn.dataset.tab;
       btns.forEach(b => {
         b.classList.remove('bg-primary','text-white','border-primary');
-        b.classList.add('bg-white','text-gray-700','border-gray-300');
+        b.classList.add('bg-white','dark:bg-gray-800','text-gray-700','dark:text-gray-300','border-gray-300','dark:border-gray-700');
       });
       btn.classList.add('bg-primary','text-white','border-primary');
-      btn.classList.remove('bg-white','text-gray-700','border-gray-300');
+      btn.classList.remove('bg-white','dark:bg-gray-800','text-gray-700','dark:text-gray-300','border-gray-300','dark:border-gray-700');
       panes.forEach(p => p.classList.toggle('hidden', p.dataset.tab !== tab));
     });
   });

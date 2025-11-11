@@ -578,6 +578,9 @@ class BettingMessageParser
             // NEW: chế độ bắt N đài (2d/3d/4d/2dai/3dai/4dai)
             'dai_count'           => null,  // 2|3|4
             'dai_capture_remaining'=> 0,    // còn bao nhiêu đài cần bắt sau token Ndai
+            
+            // NEW: flag để track cú pháp "chục X"
+            'waiting_for_chuc_number' => false,
         ];
     
         $outBets = [];
@@ -626,6 +629,58 @@ class BettingMessageParser
         // ---------- 4) scan ----------
         foreach ($tokens as $tok) {
     
+            // Xử lý cú pháp "chục X": chuc 4, chục 4, chuc4, chuc 4
+            // Pattern 1: "chuc" hoặc "chục" (sau normalize) - đánh dấu chờ số tiếp theo
+            if (preg_match('/^chuc$/i', $tok)) {
+                $ctx['waiting_for_chuc_number'] = true;
+                $addEvent($events, 'chuc_token_detected', ['token' => $tok]);
+                continue;
+            }
+            
+            // Pattern 2: "chuc4", "chuc 4" (dính liền hoặc có khoảng trắng đã được normalize)
+            if (preg_match('/^chuc(\d)$/i', $tok, $m)) {
+                $chucNumber = (int)$m[1];
+                if ($chucNumber >= 1 && $chucNumber <= 9) {
+                    // Sinh dãy số từ X0 đến X9
+                    $chucNumbers = [];
+                    for ($i = 0; $i <= 9; $i++) {
+                        $chucNumbers[] = str_pad((string)($chucNumber * 10 + $i), 2, '0', STR_PAD_LEFT);
+                    }
+                    // Thêm vào numbers_group
+                    $ctx['numbers_group'] = array_merge($ctx['numbers_group'] ?? [], $chucNumbers);
+                    $ctx['numbers_group'] = array_values(array_unique($ctx['numbers_group']));
+                    $ctx['last_numbers'] = $ctx['numbers_group'];
+                    $ctx['just_saw_station'] = false;
+                    $ctx['last_token_type'] = 'number';
+                    $addEvent($events, 'chuc_expand', ['chuc' => $chucNumber, 'numbers' => $chucNumbers]);
+                    continue;
+                }
+            }
+            
+            // Pattern 3: Nếu đang chờ số sau "chục" và token hiện tại là số 1-9
+            if (!empty($ctx['waiting_for_chuc_number']) && preg_match('/^(\d)$/', $tok, $m)) {
+                $chucNumber = (int)$m[1];
+                if ($chucNumber >= 1 && $chucNumber <= 9) {
+                    // Sinh dãy số từ X0 đến X9
+                    $chucNumbers = [];
+                    for ($i = 0; $i <= 9; $i++) {
+                        $chucNumbers[] = str_pad((string)($chucNumber * 10 + $i), 2, '0', STR_PAD_LEFT);
+                    }
+                    // Thêm vào numbers_group
+                    $ctx['numbers_group'] = array_merge($ctx['numbers_group'] ?? [], $chucNumbers);
+                    $ctx['numbers_group'] = array_values(array_unique($ctx['numbers_group']));
+                    $ctx['last_numbers'] = $ctx['numbers_group'];
+                    $ctx['just_saw_station'] = false;
+                    $ctx['last_token_type'] = 'number';
+                    $ctx['waiting_for_chuc_number'] = false; // Reset flag
+                    $addEvent($events, 'chuc_expand', ['chuc' => $chucNumber, 'numbers' => $chucNumbers]);
+                    continue;
+                } else {
+                    // Số không hợp lệ, reset flag và xử lý như số thông thường
+                    $ctx['waiting_for_chuc_number'] = false;
+                }
+            }
+    
             // Ndai / Nd
             if (preg_match('/^([234])d(ai)?$/', $tok, $m)) {
                 $count = (int)$m[1];
@@ -640,6 +695,11 @@ class BettingMessageParser
                 $ctx['last_numbers']         = []; // reset để không kế thừa số từ group cũ
                 $addEvent($events, 'dai_count_set', ['count'=>$count,'token'=>$tok]);
                 continue;
+            }
+    
+            // Reset flag chục nếu gặp token không phải số 1-9 (sau khi đã xử lý pattern 3)
+            if (!empty($ctx['waiting_for_chuc_number']) && !preg_match('/^(\d)$/', $tok)) {
+                $ctx['waiting_for_chuc_number'] = false;
             }
     
             // số 2-4 chữ số (giữ leading zero)
@@ -700,6 +760,7 @@ class BettingMessageParser
                 // Sau dấu chấm, context phải reset hoàn toàn để tránh contamination
                 $ctx['dai_count'] = null;
                 $ctx['dai_capture_remaining'] = 0;
+                $ctx['waiting_for_chuc_number'] = false; // Reset chục flag
                 $ctx['stations'] = []; // Reset stations to accept new station after period
                 $ctx['last_numbers'] = []; // Reset last_numbers to prevent inheritance across betting slips
                 $ctx['last_type'] = null; // Reset last_type to prevent type inheritance across betting slips

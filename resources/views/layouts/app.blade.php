@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi" class="h-full">
+<html lang="vi" class="h-full" id="html-root">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
@@ -66,11 +66,84 @@
     
     
     @stack('styles')
+    
+    <!-- Dark Mode Script - Run immediately to prevent flash -->
+    <script>
+        (function() {
+            'use strict';
+            const html = document.documentElement;
+            const themeKey = 'dark-mode-preference';
+            
+            // Get saved preference or default to light mode
+            function getThemePreference() {
+                try {
+                    const saved = localStorage.getItem(themeKey);
+                    if (saved === 'dark' || saved === 'light') {
+                        return saved === 'dark';
+                    }
+                } catch (e) {
+                    // localStorage not available
+                }
+                // Check system preference only if no manual preference
+                try {
+                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        return true;
+                    }
+                } catch (e) {
+                    // matchMedia not available
+                }
+                return false;
+            }
+            
+            // Apply theme immediately - this is the SINGLE source of truth
+            function applyTheme(isDark) {
+                // Directly manipulate class list - no async operations
+                if (isDark) {
+                    html.classList.add('dark');
+                } else {
+                    html.classList.remove('dark');
+                }
+                
+                // Save preference
+                try {
+                    localStorage.setItem(themeKey, isDark ? 'dark' : 'light');
+                } catch (e) {
+                    // localStorage not available, ignore
+                }
+                
+                // Return the new state
+                return isDark;
+            }
+            
+            // Initialize theme immediately on page load (before body renders)
+            const initialIsDark = getThemePreference();
+            applyTheme(initialIsDark);
+            
+            // Expose functions globally for toggle handler
+            window.__darkMode = {
+                apply: applyTheme,
+                get: getThemePreference,
+                toggle: function() {
+                    // Read current state directly from DOM (DOM is the visual source of truth)
+                    const currentlyDark = html.classList.contains('dark');
+                    // Toggle to opposite state
+                    const newState = !currentlyDark;
+                    // Apply the new state
+                    applyTheme(newState);
+                    // Return new state
+                    return newState;
+                },
+                isDark: function() {
+                    return html.classList.contains('dark');
+                }
+            };
+        })();
+    </script>
 </head>
 <body class="h-full font-sans antialiased @auth @if(!auth()->user()->isAdmin()) pb-16 md:pb-0 @endif @endauth">
     <div class="min-h-full safe-bottom">
         <!-- Navigation Bar -->
-        <nav class="bg-white sticky top-0 z-50 safe-top border-b border-gray-200">
+        <nav class="bg-white dark:bg-gray-800 sticky top-0 z-50 safe-top border-b border-gray-200 dark:border-gray-700">
             <div class="max-w-7xl mx-auto px-3">
                 <div class="flex justify-between items-center h-14">
                     <div class="flex items-center space-x-2">
@@ -110,32 +183,32 @@
                         <div class="hidden md:ml-4 md:flex md:space-x-4">
                             @if(auth()->user()->isAdmin())
                                 <a href="{{ route('admin.dashboard') }}"
-                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium text-gray-600 hover:text-gray-900">
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
                                     Admin
                                 </a>
                                 <a href="{{ route('admin.users.index') }}"
-                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium text-gray-600 hover:text-gray-900">
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
                                     Users
                                 </a>
                                 <a href="{{ route('admin.plans.index') }}"
-                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium text-gray-600 hover:text-gray-900">
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
                                     Plans
                                 </a>
                             @else
                                 <a href="{{ route('user.dashboard') }}"
-                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.dashboard') ? 'text-primary' : 'text-gray-600 hover:text-gray-900' }}">
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.dashboard') ? 'text-primary' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100' }}">
                                     Trang chủ
                                 </a>
                                 <a href="{{ route('user.customers.index') }}"
-                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.customers*') ? 'text-primary' : 'text-gray-600 hover:text-gray-900' }}">
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.customers*') ? 'text-primary' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100' }}">
                                     Khách hàng
                                 </a>
                                 <a href="{{ route('user.betting-tickets.index') }}"
-                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.betting-tickets*') ? 'text-primary' : 'text-gray-600 hover:text-gray-900' }}">
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.betting-tickets*') ? 'text-primary' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100' }}">
                                     Thống kê
                                 </a>
                                 <a href="{{ route('user.kqxs') }}"
-                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.kqxs*') ? 'text-primary' : 'text-gray-600 hover:text-gray-900' }}">
+                                   class="inline-flex items-center px-1 pt-1 text-xs font-medium {{ request()->routeIs('user.kqxs*') ? 'text-primary' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100' }}">
                                     KQXS
                                 </a>
                             @endif
@@ -144,6 +217,20 @@
                     <!-- Right side -->
                     <div class="flex items-center space-x-1.5">
                         @auth
+                            <!-- Dark Mode Toggle -->
+                            <button type="button" 
+                                    class="dark-mode-toggle p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                    aria-label="Toggle dark mode">
+                                <!-- Sun icon (light mode) -->
+                                <svg class="dark-mode-sun-icon w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                                </svg>
+                                <!-- Moon icon (dark mode) -->
+                                <svg class="dark-mode-moon-icon w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                                </svg>
+                            </button>
+
                             <!-- Subscription Badge -->
                             @if(!auth()->user()->isAdmin())
                                 @php
@@ -162,11 +249,24 @@
                             <!-- Logout -->
                             <form method="POST" action="{{ route('logout') }}" class="hidden md:inline">
                                 @csrf
-                                <button type="submit" class="text-xs text-gray-600 hover:text-gray-900">
+                                <button type="submit" class="text-xs text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">
                                     Thoát
                                 </button>
                             </form>
                         @else
+                            <!-- Dark Mode Toggle (for guests) -->
+                            <button type="button" 
+                                    class="dark-mode-toggle p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                    aria-label="Toggle dark mode">
+                                <!-- Sun icon (light mode) -->
+                                <svg class="dark-mode-sun-icon w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                                </svg>
+                                <!-- Moon icon (dark mode) -->
+                                <svg class="dark-mode-moon-icon w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                                </svg>
+                            </button>
                             <a href="{{ route('login') }}" class="text-xs font-medium text-primary hover:text-primary-dark">
                                 Đăng nhập
                             </a>
@@ -177,7 +277,7 @@
         </nav>
 
         <!-- Main content -->
-        <main class="max-w-7xl mx-auto py-4 px-3 animate-fade-in">
+        <main class="max-w-7xl mx-auto py-4 px-3 animate-fade-in @auth @if(!auth()->user()->isAdmin()) pb-24 md:pb-4 @endif @endauth">
             <!-- Flash Messages -->
             @if(session('success'))
                 <div class="alert alert-success mb-4" role="alert">
@@ -221,11 +321,11 @@
         <!-- Bottom Navigation (Mobile/Tablet Only) -->
         @auth
         @if(!auth()->user()->isAdmin())
-        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white safe-bottom z-50 border-t border-gray-200 no-print">
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 safe-bottom z-50 border-t border-gray-200 dark:border-gray-700 no-print">
             <div class="flex justify-around items-center h-16 px-1">
                 <!-- Dashboard -->
                 <a href="{{ route('user.dashboard') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.dashboard') ? 'text-primary' : 'text-gray-500' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.dashboard') ? 'text-primary' : 'text-gray-500 dark:text-gray-400' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.dashboard') ? '2' : '1.5' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                     </svg>
@@ -234,7 +334,7 @@
 
                 <!-- Customers -->
                 <a href="{{ route('user.customers.index') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.customers*') ? 'text-primary' : 'text-gray-500' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.customers*') ? 'text-primary' : 'text-gray-500 dark:text-gray-400' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.customers*') ? '2' : '1.5' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
@@ -243,7 +343,7 @@
 
                 <!-- Betting Tickets -->
                 <a href="{{ route('user.betting-tickets.index') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.betting-tickets*') ? 'text-primary' : 'text-gray-500' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.betting-tickets*') ? 'text-primary' : 'text-gray-500 dark:text-gray-400' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.betting-tickets*') ? '2' : '1.5' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
@@ -252,7 +352,7 @@
 
                 <!-- KQXS -->
                 <a href="{{ route('user.kqxs') }}"
-                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.kqxs*') ? 'text-primary' : 'text-gray-500' }}">
+                   class="flex flex-col items-center justify-center flex-1 gap-0.5 py-2 {{ request()->routeIs('user.kqxs*') ? 'text-primary' : 'text-gray-500 dark:text-gray-400' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="{{ request()->routeIs('user.kqxs*') ? '2' : '1.5' }}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                     </svg>
@@ -356,6 +456,69 @@
                 hiddenForm.submit();
             }
         }
+        
+        // Dark Mode Toggle - Handle button clicks (simplified, direct approach)
+        (function() {
+            'use strict';
+            const html = document.documentElement;
+            const themeKey = 'dark-mode-preference';
+            
+            // Direct toggle handler - works immediately without waiting
+            function handleToggleClick(e) {
+                const toggleButton = e.target.closest('.dark-mode-toggle');
+                if (!toggleButton) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Prefer global function if available
+                if (window.__darkMode && typeof window.__darkMode.toggle === 'function') {
+                    window.__darkMode.toggle();
+                    return;
+                }
+                
+                // Fallback: direct DOM manipulation
+                const isCurrentlyDark = html.classList.contains('dark');
+                const shouldBeDark = !isCurrentlyDark;
+                
+                if (shouldBeDark) {
+                    html.classList.add('dark');
+                } else {
+                    html.classList.remove('dark');
+                }
+                
+                try {
+                    localStorage.setItem(themeKey, shouldBeDark ? 'dark' : 'light');
+                } catch (e) {
+                    // localStorage not available
+                }
+            }
+            
+            // Attach listener immediately - use capture phase for early handling
+            document.addEventListener('click', handleToggleClick, true);
+            
+            // System theme change listener (only if no manual preference)
+            if (window.matchMedia) {
+                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                mediaQuery.addEventListener('change', function(e) {
+                    try {
+                        if (!localStorage.getItem(themeKey)) {
+                            if (window.__darkMode && typeof window.__darkMode.apply === 'function') {
+                                window.__darkMode.apply(e.matches);
+                            } else {
+                                if (e.matches) {
+                                    html.classList.add('dark');
+                                } else {
+                                    html.classList.remove('dark');
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        // Ignore errors
+                    }
+                });
+            }
+        })();
     </script>
 </body>
 </html>
