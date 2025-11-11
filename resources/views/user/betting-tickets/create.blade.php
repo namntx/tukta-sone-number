@@ -135,7 +135,7 @@
         Xử lý
       </button>
       <a href="{{ route('user.betting-tickets.index') }}" 
-         class="btn btn-secondary w-full text-center">
+         class="btn bg-gray-200 w-full text-center">
         Hủy
       </a>
     </div>

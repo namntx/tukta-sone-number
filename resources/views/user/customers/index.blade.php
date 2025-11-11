@@ -41,7 +41,7 @@
         @if($customers->count() > 0)
             @foreach($customers as $customer)
             <div class="bg-white border border-gray-200 rounded-lg flex items-center">
-                <a href="{{ route('user.customers.show', $customer) }}" class="flex-1 min-w-0 px-4 py-2.5 hover:bg-gray-50 bg-gray-700 transition-colors">
+                <a href="{{ route('user.customers.show', $customer) }}" class="flex-1 min-w-0 px-4 py-2.5 hover:bg-gray-50 transition-colors">
                     <div class="flex items-center gap-2 mb-0.5">
                         <h3 class="text-sm font-semibold text-gray-900 truncate">{{ $customer->name }}</h3>
                         @if($customer->is_active)

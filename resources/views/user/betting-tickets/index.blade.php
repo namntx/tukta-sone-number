@@ -93,7 +93,7 @@
                 <div class="mb-3 bg-white border border-gray-200 rounded-lg overflow-hidden">
                     <!-- Customer Header - Click để mở/đóng -->
                     <button type="button" onclick="toggleCustomer('{{ $customerId }}')" 
-                            class="w-full px-4 py-2.5 bg-white hover:bg-gray-50 bg-gray-700 transition-colors flex items-center justify-between gap-3 border-b border-gray-100">
+                            class="w-full px-4 py-2.5 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between gap-3 border-b border-gray-100">
                         <div class="flex items-center gap-2.5 flex-1 min-w-0">
                             <!-- Arrow Icon -->
                             <svg id="icon-{{ $customerId }}" class="w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,7 +159,7 @@
                             <!-- Message Card -->
                             <div class="border-b border-gray-200 last:border-b-0">
                                 <!-- Message Header -->
-                                <div class="w-full px-3 sm:px-4 py-2.5 bg-white hover:bg-gray-50 bg-gray-700 transition-colors flex items-center justify-between gap-2">
+                                <div class="w-full px-3 sm:px-4 py-2.5 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between gap-2">
                                     <button type="button" onclick="toggleMessage('{{ $messageId }}')" 
                                             class="flex items-center gap-2.5 flex-1 min-w-0 text-left">
                                         <!-- Arrow Icon -->
