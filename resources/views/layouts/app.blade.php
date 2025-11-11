@@ -67,76 +67,14 @@
     
     @stack('styles')
     
-    <!-- Dark Mode Script - Run immediately to prevent flash -->
+    <!-- Dark Mode Script - DISABLED: Website always uses light mode -->
     <script>
         (function() {
             'use strict';
             const html = document.documentElement;
-            const themeKey = 'dark-mode-preference';
             
-            // Get saved preference or default to light mode
-            function getThemePreference() {
-                try {
-                    const saved = localStorage.getItem(themeKey);
-                    if (saved === 'dark' || saved === 'light') {
-                        return saved === 'dark';
-                    }
-                } catch (e) {
-                    // localStorage not available
-                }
-                // Check system preference only if no manual preference
-                try {
-                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                        return true;
-                    }
-                } catch (e) {
-                    // matchMedia not available
-                }
-                return false;
-            }
-            
-            // Apply theme immediately - this is the SINGLE source of truth
-            function applyTheme(isDark) {
-                // Directly manipulate class list - no async operations
-                if (isDark) {
-                    html.classList.add('dark');
-                } else {
-                    html.classList.remove('dark');
-                }
-                
-                // Save preference
-                try {
-                    localStorage.setItem(themeKey, isDark ? 'dark' : 'light');
-                } catch (e) {
-                    // localStorage not available, ignore
-                }
-                
-                // Return the new state
-                return isDark;
-            }
-            
-            // Initialize theme immediately on page load (before body renders)
-            const initialIsDark = getThemePreference();
-            applyTheme(initialIsDark);
-            
-            // Expose functions globally for toggle handler
-            window.__darkMode = {
-                apply: applyTheme,
-                get: getThemePreference,
-                toggle: function() {
-                    // Read current state directly from DOM (DOM is the visual source of truth)
-                    const currentlyDark = html.classList.contains('dark');
-                    // Toggle to opposite state
-                    const newState = !currentlyDark;
-                    // Apply the new state
-                    applyTheme(newState);
-                    // Return new state
-                    return newState;
-                },
-                isDark: function() {
-                    return html.classList.contains('dark');
-                }
-            };
+            // Force light mode - remove dark class if present
+            html.classList.remove('dark');
         })();
     </script>
 </head>
@@ -217,8 +155,8 @@
                     <!-- Right side -->
                     <div class="flex items-center space-x-1.5">
                         @auth
-                            <!-- Dark Mode Toggle -->
-                            <button type="button" 
+                            <!-- Dark Mode Toggle - DISABLED -->
+                            {{-- <button type="button" 
                                     class="dark-mode-toggle p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                     aria-label="Toggle dark mode">
                                 <!-- Sun icon (light mode) -->
@@ -229,7 +167,7 @@
                                 <svg class="dark-mode-moon-icon w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                                 </svg>
-                            </button>
+                            </button> --}}
 
                             <!-- Subscription Badge -->
                             @if(!auth()->user()->isAdmin())
@@ -254,8 +192,8 @@
                                 </button>
                             </form>
                         @else
-                            <!-- Dark Mode Toggle (for guests) -->
-                            <button type="button" 
+                            <!-- Dark Mode Toggle (for guests) - DISABLED -->
+                            {{-- <button type="button" 
                                     class="dark-mode-toggle p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                                     aria-label="Toggle dark mode">
                                 <!-- Sun icon (light mode) -->
@@ -266,7 +204,7 @@
                                 <svg class="dark-mode-moon-icon w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                                 </svg>
-                            </button>
+                            </button> --}}
                             <a href="{{ route('login') }}" class="text-xs font-medium text-primary hover:text-primary-dark">
                                 Đăng nhập
                             </a>
@@ -457,66 +395,19 @@
             }
         }
         
-        // Dark Mode Toggle - Handle button clicks (simplified, direct approach)
+        // Dark Mode Toggle - DISABLED: Website always uses light mode
         (function() {
             'use strict';
             const html = document.documentElement;
-            const themeKey = 'dark-mode-preference';
             
-            // Direct toggle handler - works immediately without waiting
-            function handleToggleClick(e) {
-                const toggleButton = e.target.closest('.dark-mode-toggle');
-                if (!toggleButton) return;
-                
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Prefer global function if available
-                if (window.__darkMode && typeof window.__darkMode.toggle === 'function') {
-                    window.__darkMode.toggle();
-                    return;
-                }
-                
-                // Fallback: direct DOM manipulation
-                const isCurrentlyDark = html.classList.contains('dark');
-                const shouldBeDark = !isCurrentlyDark;
-                
-                if (shouldBeDark) {
-                    html.classList.add('dark');
-                } else {
-                    html.classList.remove('dark');
-                }
-                
-                try {
-                    localStorage.setItem(themeKey, shouldBeDark ? 'dark' : 'light');
-                } catch (e) {
-                    // localStorage not available
-                }
-            }
+            // Ensure dark class is always removed
+            html.classList.remove('dark');
             
-            // Attach listener immediately - use capture phase for early handling
-            document.addEventListener('click', handleToggleClick, true);
-            
-            // System theme change listener (only if no manual preference)
-            if (window.matchMedia) {
-                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-                mediaQuery.addEventListener('change', function(e) {
-                    try {
-                        if (!localStorage.getItem(themeKey)) {
-                            if (window.__darkMode && typeof window.__darkMode.apply === 'function') {
-                                window.__darkMode.apply(e.matches);
-                            } else {
-                                if (e.matches) {
-                                    html.classList.add('dark');
-                                } else {
-                                    html.classList.remove('dark');
-                                }
-                            }
-                        }
-                    } catch (err) {
-                        // Ignore errors
-                    }
-                });
+            // Remove any dark mode preference from localStorage
+            try {
+                localStorage.removeItem('dark-mode-preference');
+            } catch (e) {
+                // localStorage not available, ignore
             }
         })();
     </script>
