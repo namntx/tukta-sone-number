@@ -62,6 +62,36 @@
         <h3 class="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">Báo cáo theo khách hàng</h3>
         <div class="space-y-2">
             @foreach($customerReport as $report)
+                @php
+                    // Tính tổng theo loại cược cho copy message
+                    $bettingTypeWins = [];
+                    foreach ($report['tickets'] as $t) {
+                        if ($t->result === 'win' && $t->win_amount > 0) {
+                            $bettingType = $t->bettingType;
+                            $typeKey = $bettingType->name;
+
+                            // Nếu là bao lô, thêm số digits vào tên
+                            if ($bettingType && $bettingType->code === 'bao_lo') {
+                                $bettingData = $t->betting_data ?? [];
+                                $digits = null;
+                                if (is_array($bettingData)) {
+                                    if (isset($bettingData[0]) && is_array($bettingData[0])) {
+                                        $digits = $bettingData[0]['meta']['digits'] ?? null;
+                                    } elseif (isset($bettingData['meta']['digits'])) {
+                                        $digits = $bettingData['meta']['digits'];
+                                    }
+                                }
+                                $digits = $digits ?? 2;
+                                $typeKey = 'Bao lô ' . $digits . ' số';
+                            }
+
+                            if (!isset($bettingTypeWins[$typeKey])) {
+                                $bettingTypeWins[$typeKey] = 0;
+                            }
+                            $bettingTypeWins[$typeKey] += $t->win_amount;
+                        }
+                    }
+                @endphp
             <div class="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition p-3">
                 <div class="flex items-center justify-between">
                     <div class="flex-1 min-w-0">
@@ -85,6 +115,11 @@
                                 {{ $report['profit'] >= 0 ? '+' : '' }}{{ number_format($report['profit'] / 1000, 1) }}k
                             </div>
                         </div>
+                        <button type="button"
+                                onclick="copySettlementMessage('{{ \App\Support\Region::label($region) }}', '{{ \Carbon\Carbon::parse($reportDate)->format('d/m/Y') }}', {{ $report['total_xac'] }}, {{ $report['total_thang'] }}, {{ $report['profit'] }}, {{ json_encode($bettingTypeWins) }})"
+                                class="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors border-l border-gray-300 ml-2">
+                            📋 Copy
+                        </button>
                     </div>
                 </div>
             </div>
@@ -105,4 +140,81 @@
     </div>
     @endif
 </div>
+
+@push('scripts')
+<script>
+// Copy settlement message function
+window.copySettlementMessage = function(region, date, xac, thang, profit, bettingTypeWins) {
+    try {
+        // Format message theo yêu cầu
+        let message = `Miền ${region}\n`;
+        message += `Ngày ${date}\n`;
+        message += `Tổng tiền xác: ${formatAmount(xac)}\n`;
+
+        // Thêm các loại cược ăn
+        if (bettingTypeWins && Object.keys(bettingTypeWins).length > 0) {
+            for (const [type, amount] of Object.entries(bettingTypeWins)) {
+                message += `${type}: ${formatAmount(amount)}\n`;
+            }
+        }
+
+        // Thêm tổng lãi/thua
+        if (profit >= 0) {
+            message += `Tổng lãi: ${formatAmount(profit)}\n`;
+        } else {
+            message += `Tổng thua: ${formatAmount(profit)}\n`;
+        }
+
+        // Thêm tổng ngày lãi/lỗ
+        if (profit >= 0) {
+            message += `Tổng ngày lãi: ${formatAmount(profit)}`;
+        } else {
+            message += `Tổng ngày lỗ: ${formatAmount(profit)}`;
+        }
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(message).then(() => {
+            // Show success notification
+            showNotification('Đã copy tin nhắn chốt tiền!', 'success');
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            showNotification('Không thể copy. Vui lòng thử lại.', 'error');
+        });
+    } catch (error) {
+        console.error('Error copying message:', error);
+        showNotification('Có lỗi xảy ra khi copy.', 'error');
+    }
+};
+
+// Format amount helper
+function formatAmount(amount) {
+    if (typeof amount !== 'number') {
+        amount = parseFloat(amount) || 0;
+    }
+    const amountInK = amount / 1000;
+    const formatted = amount % 1000 === 0 ? Math.round(amountInK) : amountInK.toFixed(1);
+    return formatted + 'k';
+}
+
+// Show notification helper
+function showNotification(message, type = 'success') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+</script>
+@endpush
 @endsection
